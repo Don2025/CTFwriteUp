@@ -1,6 +1,6 @@
-# BUUCTF
+# Pwn
 
-## Pwn
+## BUUCTF
 
 ### [test_your_nc](https://buuoj.cn/challenges#test_your_nc)
 
@@ -207,6 +207,35 @@ io.interactive()
 发送`payload`监听成功后`ls`查看文件目录再`cat flag`即可得到`flag{af006b52-6eb0-4df4-9706-dcbb4dc8cff2}`。
 
 ![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level0/5.png)
+
+------
+
+## ADWorld
+
+#### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
+
+先`file ./get_shell`查看文件类型和`checksec --file=get_shell`检查了一下文件保护情况。`nc`进去`ls`后发现可以直接`cat flag`，从而得到`cyberpeace{307531652bd497aefcfef07598c97cd3}`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5049/1.png)
+
+提交`flag`后，我还是决定用`IDA Pro 64bit`打开附件`get_shell`来分析一下，发现该程序输出字符串后直接给定了一个系统调用。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5049/2.png)
+
+可以按`F5`反汇编源码并查看主函数。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5049/3.png)
+
+编写`Python`代码拿到`cyberpeace{307531652bd497aefcfef07598c97cd3}`。
+
+```python
+from pwn import *
+
+io = remote('111.200.241.244', 59901)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5049/4.png)
 
 ------
 
