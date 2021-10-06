@@ -239,3 +239,27 @@ io.interactive()
 
 ------
 
+#### [hello_pwn](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5052&page=1)
+
+先`file ./hello_pwn`查看文件类型和`checksec --file=hello_pwn`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5052/1.png)
+
+用`IDA Pro 64bit`打开附件`hello_pwn`，按`F5`反汇编源码并查看主函数，发现`read()`函数很可疑，单击`unk_601068`变量查看其在内存中的地址情况。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5052/2.png)
+
+发现`unk_601068`变量和`dword_60106C`的偏移量为`0x4`，这个数值小于`read()`函数的范围限制。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5052/3.png)
+
+当`dword_60106C`的数值等于`1853186401`时会调用子函数`sub_400686()`，查看详情发现该子函数是系统调用`cat flag.txt`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5052/4.png)
+
+构造payload时先用四个字节占满`unk_601068`变量，再用`p64()`函数将`dword_60106C`的数值赋值为`1853186401`，编写`Python`代码即可得到`cyberpeace{285b4e962d0debee56c43f8f174f2e22}`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5052/5.png)
+
+------
+
