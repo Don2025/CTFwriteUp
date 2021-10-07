@@ -24,7 +24,7 @@ cat flag #直接输出flag即可
 
 ![](https://paper.tanyaodan.com/BUUCTF/rip/1.png)
 
-用`IDA Pro 64bit`打开`pwn1`后按`F5`反汇编源码并查看主函数，发现`gets()`函数读取输入到变量`s`中，`s`的长度只有`0xf`，即可用栈大小只有`15`字节，但是`gets()`并没有限制输入，显然存在栈溢出漏洞。
+用`IDA Pro 64bit`打开`pwn1`后按`F5`反汇编源码并查看主函数，发现`gets()`函数读取输入到变量`s`中，`s`的长度只有`0xf`，即可用栈大小只有`15`字节，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。
 
 ![](https://paper.tanyaodan.com/BUUCTF/rip/2.png)
 
@@ -64,7 +64,7 @@ cat flag #直接输出flag即可
 
 ![](https://paper.tanyaodan.com/BUUCTF/warmup_csaw_2016/1.png)
 
-用`IDA Pro 64bit`打开`warmup_csaw_2016`后按`F5`反汇编源码并查看主函数，发现`gets()`函数读取输入到变量`v5`中，`v5`的长度只有`0x40f`，即可用栈大小只有`64`字节，但是`gets()`并没有限制输入，显然存在栈溢出漏洞。
+用`IDA Pro 64bit`打开`warmup_csaw_2016`后按`F5`反汇编源码并查看主函数，发现`gets()`函数读取输入到变量`v5`中，`v5`的长度只有`0x40f`，即可用栈大小只有`64`字节，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。
 
 ![](https://paper.tanyaodan.com/BUUCTF/warmup_csaw_2016/2.png)
 
@@ -245,7 +245,7 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/ADWorld/pwn/5052/1.png)
 
-用`IDA Pro 64bit`打开附件`hello_pwn`，按`F5`反汇编源码并查看主函数，发现`read()`函数很可疑，单击`unk_601068`变量查看其在内存中的地址情况。
+用`IDA Pro 64bit`打开附件`hello_pwn`，按`F5`反汇编源码并查看主函数，发现`read()`函数很可疑，双击`unk_601068`变量查看其在内存中的地址情况。
 
 ![](https://paper.tanyaodan.com/ADWorld/pwn/5052/2.png)
 
@@ -257,9 +257,39 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/ADWorld/pwn/5052/4.png)
 
-构造payload时先用四个字节占满`unk_601068`变量，再用`p64()`函数将`dword_60106C`的数值赋值为`1853186401`，编写`Python`代码即可得到`cyberpeace{285b4e962d0debee56c43f8f174f2e22}`。
+构造`payload`时先用`4`个字节占满`unk_601068`变量，再用`p64()`函数将`dword_60106C`的数值赋值为`1853186401`，编写`Python`代码即可得到`cyberpeace{285b4e962d0debee56c43f8f174f2e22}`。
 
 ![](https://paper.tanyaodan.com/ADWorld/pwn/5052/5.png)
+
+------
+
+## CTFShow
+
+#### pwn02
+
+先`file ./stack`查看文件类型和`checksec --file=stack`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn02/1.png)
+
+用`IDA Pro 32bit`打开附件`stack`，按`F5`反汇编源码并查看主函数，发现`pwnme()`函数很可疑。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn02/2.png)
+
+双击`pwnme()`函数可以看到该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0x9`，即可用栈大小只有`9`字节，但是`fgets()`函数限制输入50个字节，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn02/3.png)
+
+双击`s`变量查看其在内存中的地址信息，构造`payload`时可以先用`9`个字节栈满`s`变量，然后再加上`r`的`4`个字节。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn02/4.png)
+
+在`Function Window`中注意到有一个名为`stack()`的函数，函数返回值直接是系统调用，因此构造`payload`时需要再加上这个`stack()`函数的起始地址即可。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn02/5.png)
+
+编写`Python`代码即可得到`ctfshow{62a18b45-a931-4c43-9a7a-21726633f01e}`。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn02/6.png)
 
 ------
 
