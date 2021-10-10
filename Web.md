@@ -42,3 +42,15 @@ document.onselectstart=new Function("return false")
 
 ------
 
+### [backup](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=0&id=5064)
+
+`dirsearch -u http://111.200.241.244:55833/`扫描靶机发现网站目录下有个名为`index.php.bak`的文件。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5064/1.png)
+
+将`index.php.bak`文件下载后用`Sublime Text`打开即可得到`Cyberpeace{855A1C4B3401294CB6604CCC98BDE334}`。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5064/2.png)
+
+------
+
