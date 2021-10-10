@@ -54,3 +54,12 @@ document.onselectstart=new Function("return false")
 
 ------
 
+### [cookie](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=0&id=5065)
+
+打开靶机后可以看到一行信息：`你知道什么是cookie吗？`用`Burp Suite`抓包后`Send to Repeater`，接着再`Send Request`即可在右侧的`Response`中看到`flag`：`cyberpeace{b40aedb023a3f5e8139db61290274fd5}`。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5065/1.png)
+
+------
+
+#### 
