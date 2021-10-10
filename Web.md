@@ -26,4 +26,19 @@ document.onselectstart=new Function("return false")
 
 ------
 
-#### 
+### [robots](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=0&id=5063)
+
+`dirsearch -u http://111.200.241.244:60105/`扫描靶机发现网站目录下有个名为`robots.txt`的文件。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5063/1.png)
+
+访问`http://111.200.241.244:60105/robots.txt`后发现另一个文件`f1ag_1s_h3re.php`。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5063/2.png)
+
+访问`http://111.200.241.244:60105/f1ag_1s_h3re.php`后得到`cyberpeace{4a262386808d63cf055543bc2caea780}`。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5063/3.png)
+
+------
+
