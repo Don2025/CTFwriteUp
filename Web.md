@@ -128,3 +128,12 @@ if($b>1234){
 
 ------
 
+### [get_post](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=0&id=5062)
+
+访问靶机可以看到：`请用GET方式提交一个名为a,值为1的变量`，访问`http://111.200.241.244:55979/?a=1`可以看到`请再以POST方式随便提交一个名为b,值为2的变量`，`F12`用`HackBar`来添加`POST`请求数据`b=2`即可得到`cyberpeace{5c2ef3d86768127bbaccfc5cb2eb143d}`。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5062/1.png)
+
+------
+
+#### 
