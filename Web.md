@@ -100,4 +100,31 @@ document.onselectstart=new Function("return false")
 
 ------
 
-#### 
+### [simple_php](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=0&id=5072)
+
+`PHP`代码审计题。靶机中给出的`PHP`代码如下，我直接在源码中写注释啦：
+
+```php
+<?php
+show_source(__FILE__);
+include("config.php");
+$a=@$_GET['a'];
+$b=@$_GET['b'];
+if($a==0 and $a){  //同时满足$a==0和$a时显示flag1
+    echo $flag1;
+}
+if(is_numeric($b)){ //
+    exit();
+}
+if($b>1234){
+    echo $flag2;
+}
+?>
+```
+
+由于`PHP`是弱类型语言，所以当`$a=fuck`时`'fuck'==0`为真，可以得到`flag1`。`is_numeric()`函数用于判断变量是否为数字或数字字符串，是则返回`true`，否则返回`FALSE`，当`$b=6666r`时`is_numeric($b)`会返回真并且`'6666r'>1234`为真，从而得到`flag2`，因此直接访问`http://111.200.241.244:56134/?a=fuck&b=6666r`就能得到`Cyberpeace{647E37C7627CC3E4019EC69324F66C7C}`。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5072/1.png)
+
+------
+
