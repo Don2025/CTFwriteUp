@@ -266,4 +266,11 @@ print(flag)  #Cyberpeace{786OsErtk12}
 
 ------
 
-#### 
+### [baby_web](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=1&id=5411)
+
+题目描述：`想想初始页面是哪个`。然而直接访问靶机`/index.php`会被重定向到`1.php`，那不好意思，那我只能`Burp Suite`抓包了，`Send to Repeater`后`Send Request`即可在`Response`中的`HTTP`头中看到`flag{very_baby_web}`。
+
+![](https://paper.tanyaodan.com/ADWorld/web/5411/1.png)
+
+------
+
