@@ -274,3 +274,29 @@ print(flag)  #Cyberpeace{786OsErtk12}
 
 ------
 
+### [Training-WWW-Robots](https://adworld.xctf.org.cn/task/answer?type=web&number=3&grade=1&id=4748)
+
+靶机中给出的信息如下：
+
+```html
+In this little training challenge, you are going to learn about the Robots_exclusion_standard.
+The robots.txt file is used by web crawlers to check if they are allowed to crawl and index your website or only parts of it.
+Sometimes these files reveal the directory structure instead protecting the content from being crawled.
+
+Enjoy!
+```
+
+直接访问`http://111.200.241.244:49579/robots.txt`，可以看到以下信息：
+
+```html
+User-agent: *
+Disallow: /fl0g.php
+
+User-agent: Yandex
+Disallow: *
+```
+
+访问`http://111.200.241.244:49579/fl0g.php`即可拿到`cyberpeace{abe0ddcfd221dc9db56b6551842a5fa0}`。
+
+------
+
