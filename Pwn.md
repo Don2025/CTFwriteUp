@@ -4,7 +4,7 @@
 
 ### [test_your_nc](https://buuoj.cn/challenges#test_your_nc)
 
-这题亏我还先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+这题亏我还先`file ./test`查看文件类型再`checksec --file=test`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/BUUCTF/test_your_nc/1.png)
 
@@ -20,7 +20,7 @@ cat flag #直接输出flag即可
 
 ### [rip](https://buuoj.cn/challenges#rip)
 
-先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+先`file ./pwn1`查看文件类型再`checksec --file=pwn1`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/BUUCTF/rip/1.png)
 
@@ -60,11 +60,11 @@ cat flag #直接输出flag即可
 
 ### [warmup_csaw_2016](https://buuoj.cn/challenges#warmup_csaw_2016)
 
-先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+先`file ./warmup_csaw_2016`查看文件类型再`checksec --file=warmup_csaw_2016`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/BUUCTF/warmup_csaw_2016/1.png)
 
-用`IDA Pro 64bit`打开`warmup_csaw_2016`后按`F5`反汇编源码并查看主函数，发现`gets()`函数读取输入到变量`v5`中，`v5`的长度只有`0x40f`，即可用栈大小只有`64`字节，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。
+用`IDA Pro 64bit`打开`warmup_csaw_2016`后按`F5`反汇编源码并查看主函数，发现`gets()`函数读取输入到变量`v5`中，`v5`的长度只有`0x40`，即可用栈大小只有`64`字节，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。
 
 ![](https://paper.tanyaodan.com/BUUCTF/warmup_csaw_2016/2.png)
 
@@ -89,7 +89,7 @@ io.interactive()
 
 ### [ciscn_2019_n_1](https://buuoj.cn/challenges#ciscn_2019_n_1)
 
-先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+先`file ./ciscn_2019_n_1`查看文件类型再`checksec --file=ciscn_2019_n_1`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_n_1/1.png)
 
@@ -126,7 +126,7 @@ io.interactive()
 
 ### [pwn1_sctf_2016](https://buuoj.cn/challenges#pwn1_sctf_2016)
 
-先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+先`file ./pwn1_sctf_2016`查看文件类型再`checksec --file=pwn1_sctf_2016`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/BUUCTF/pwn1_sctf_2016/1.png)
 
@@ -173,7 +173,7 @@ io.interactive()
 
 ### [jarvisoj_level0](https://buuoj.cn/challenges#jarvisoj_level0)
 
-先`file ./test`查看文件类型和`checksec --file=test`检查了一下文件保护情况。
+先`file ./level0`查看文件类型再`checksec --file=level0`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level0/1.png)
 
@@ -214,7 +214,7 @@ io.interactive()
 
 #### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
 
-先`file ./get_shell`查看文件类型和`checksec --file=get_shell`检查了一下文件保护情况。`nc`进去`ls`后发现可以直接`cat flag`，从而得到`cyberpeace{307531652bd497aefcfef07598c97cd3}`。
+先`file ./get_shell`查看文件类型再`checksec --file=get_shell`检查一下文件保护情况。`nc`进去`ls`后发现可以直接`cat flag`，从而得到`cyberpeace{307531652bd497aefcfef07598c97cd3}`。
 
 ![](https://paper.tanyaodan.com/ADWorld/pwn/5049/1.png)
 
@@ -241,7 +241,7 @@ io.interactive()
 
 #### [hello_pwn](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5052&page=1)
 
-先`file ./hello_pwn`查看文件类型和`checksec --file=hello_pwn`检查了一下文件保护情况。
+先`file ./hello_pwn`查看文件类型再`checksec --file=hello_pwn`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/ADWorld/pwn/5052/1.png)
 
@@ -265,7 +265,7 @@ io.interactive()
 
 #### [level0](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5053)
 
-先`file ./hello_pwn`查看文件类型和`checksec --file=hello_pwn`检查了一下文件保护情况。
+先`file ./level0`查看文件类型再`checksec --file=level0`一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/ADWorld/pwn/5053/1.png)
 
@@ -312,7 +312,7 @@ io.interactive()
 
 #### pwn02
 
-先`file ./stack`查看文件类型和`checksec --file=stack`检查了一下文件保护情况。
+先`file ./stack`查看文件类型再`checksec --file=stack`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn02/1.png)
 
@@ -340,7 +340,7 @@ io.interactive()
 
 #### pwn05
 
-先`file ./stack`查看文件类型和`checksec --file=stack`检查了一下文件保护情况。
+先`file ./pwn05`查看文件类型再`checksec --file=pwn05`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn05/1.png)
 
@@ -381,7 +381,7 @@ io.interactive()
 
 #### pwn06
 
-先`file ./stack`查看文件类型和`checksec --file=stack`检查了一下文件保护情况。
+先`file ./pwn06`查看文件类型和`checksec --file=pwn06`检查一下文件保护情况。
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn06/1.png)
 
