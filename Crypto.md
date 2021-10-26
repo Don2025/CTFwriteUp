@@ -210,3 +210,23 @@ if __name__ == '__main__':
 
 ------
 
+### [easy_RSA](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5114)
+
+打开`.txt`文件可以看到以下内容：
+
+> 在一次RSA密钥对生成中，假设p=473398607161，q=4511491，e=17，求解出d。
+
+```python
+from gmpy2 import *
+
+p = mpz(473398607161)
+q = mpz(4511491)
+e = mpz(17)
+phi_n = (p-1)*(q-1) 
+d = invert(e, phi_n)
+flag = 'cyberpeace{' + str(d) + '}'
+print(flag)  # cyberpeace{125631357777427553}
+```
+
+------
+
