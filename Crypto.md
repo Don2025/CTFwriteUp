@@ -427,3 +427,40 @@ flag = decode1(decode2(decode3(final).decode('ISO-8859-1')))
 print(flag) # cyberpeace{interestinghhhhh}
 ```
 
+------
+
+### [转轮机加密](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5113)
+
+打开`.txt`文件后，提取有用的信息，编写`Python`代码即可得到`flag`：`fireinthehole`。
+
+```python
+code = ['ZWAXJGDLUBVIQHKYPNTCRMOSFE', 'KPBELNACZDTRXMJQOYHGVSFUWI',
+    'BDMAIZVRNSJUWFHTEQGYXPLOCK', 'RPLNDVHGFCUKTEBSXQYIZMJWAO',
+    'IHFRLABEUOTSGJVDKCPMNZQWXY', 'AMKGHIWPNYCJBFZDRUSLOQXVET',
+    'GWTHSPYBXIZULVKMRAFDCEONJQ', 'NOZUTWDCVRJLXKISEFAPMYGHBQ',
+    'XPLTDSRFHENYVUBMCQWAOIKZGJ', 'UDNAJFBOWTGVRSCZQKELMXYIHP',
+    'MNBVCXZQWERTPOIUYALSKDJFHG', 'LVNCMXZPQOWEIURYTASBKJDFHG',
+    'JZQAWSXCDERFVBGTYHNUMKILOP'
+]
+ciphertext = 'NFQKSEVOQOFNP'
+cipher = '2,3,7,5,13,12,9,1,8,10,4,11,6'.split(',')
+cnt = 0
+print("解密后为：")
+for i in cipher:
+    index=code[int(i)-1].index(ciphertext[cnt])
+    cnt += 1
+    code[int(i)-1]=code[int(i)-1][index:]+code[int(i)-1][:index]
+    print(code[int(i)-1])
+print('每一列为：')
+for i in range(len(code[0])):
+      s = ''
+      print("第{}列的是:".format(i+1),end="")
+      for j in cipher:
+          s += code[int(j)-1][i]
+      print(s.lower())
+flag = 'fireinthehole' # 二战时期
+print(flag)
+```
+
+------
+
