@@ -348,3 +348,82 @@ print(flag)  # cyberpeace{125631357777427553}
 
 ------
 
+### [easychallenge](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5119)
+
+这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
+
+我们可以使用[**python-uncompyle6**](https://github.com/rocky/python-uncompyle6)来对`.pyc`文件进行反编译从而得到`.py`文件。
+
+```bash
+pip install uncompyle6
+uncompyle6 -o . main.pyc
+```
+
+打开反编译得到的`.py`文件可以看到以下`Python2.x`版本的源码：
+
+```python
+# uncompyle6 version 3.7.4
+# Python bytecode 2.7 (62211)
+# Decompiled from: Python 3.8.8 (default, Apr 13 2021, 15:08:03) [MSC v.1916 64 bit (AMD64)]
+# Embedded file name: ans.py
+# Compiled at: 2018-08-09 11:29:44
+import base64
+
+def encode1(ans):
+    s = ''
+    for i in ans:
+        x = ord(i) ^ 36
+        x = x + 25
+        s += chr(x)
+    return s
+
+def encode2(ans):
+    s = ''
+    for i in ans:
+        x = ord(i) + 36
+        x = x ^ 36
+        s += chr(x)
+    return s
+
+def encode3(ans):
+    return base64.b32encode(ans)
+
+flag = ' '
+print 'Please Input your flag:'
+flag = raw_input()
+final = 'UC7KOWVXWVNKNIC2XCXKHKK2W5NLBKNOUOSK3LNNVWW3E==='
+if encode3(encode2(encode1(flag))) == final:
+    print 'correct'
+else:
+    print 'wrong'
+```
+
+要得到原始`flag`的话，首先进入函数的顺序改成先`decode3`再`decode2`最后`decode1`，然后每个函数内部运算，`+`变`-`，`-`变`+`，异或运算的逆过程就是再做一次异或，`base64.b32encode()`改成`base64.32decode()`，需要注意的是`base64.32decode()`后不能使用`decode('utf-8')`来解码会报错，应该使用`decode('ISO-8859-1')`。运行`Python`代码即可得到`cyberpeace{interestinghhhhh}`。
+
+```python
+import base64 # 需要注意的是之前那题base64的脚本文件我命名为了base64.py 所以这里会报错 把那题的文件改成Base64.py即可
+
+def decode1(ans):
+    s = ''
+    for i in ans:
+        x = ord(i) - 25
+        x = x ^ 36
+        s += chr(x)
+    return s
+
+def decode2(ans):
+    s = ''
+    for i in ans:
+        x = ord(i) ^ 36
+        x = x - 36
+        s += chr(x)
+    return s
+
+def decode3(ans):
+    return base64.b32decode(ans)
+
+final = 'UC7KOWVXWVNKNIC2XCXKHKK2W5NLBKNOUOSK3LNNVWW3E==='
+flag = decode1(decode2(decode3(final).decode('ISO-8859-1')))
+print(flag) # cyberpeace{interestinghhhhh}
+```
+
