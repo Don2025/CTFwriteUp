@@ -464,3 +464,35 @@ print(flag)
 
 ------
 
+### [Normal_RSA](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5115)
+
+附件给出了`flag.enc`和`pubkey.pem`两个文件。用`Kali Linux`打开终端输入`openssl`。输入以下代码查看信息：
+
+```bash
+rsa -pubin -text -modulus -in warmup -in pubkey.pem
+```
+
+![](https://paper.tanyaodan.com/ADWorld/crypto/5115/1.png)
+
+其中`Exponent`指的是`RSA`中的`e`，`Modulus`指的是`N`，即p和q的乘积，因式分解后可以得到：
+
+```python
+p = 275127860351348928173285174381581152299
+q = 319576316814478949870590164193048041239
+e = 65537
+```
+
+使用 [rsatool.py](https://github.com/ius/rsatool) 这个工具来通过`p`、`q`、`e`计算`d`，并生成`.pem`文件。
+
+![](https://paper.tanyaodan.com/ADWorld/crypto/5115/2.png)
+
+输入以下命令即可得到`PCTF{256b_i5_m3dium}`。
+
+```bash
+python rsatool.py -f PEM -o private.pem -p 275127860351348928173285174381581152299 -q 319576316814478949870590164193048041239 -e 65537
+```
+
+![](https://paper.tanyaodan.com/ADWorld/crypto/5115/3.png)
+
+------
+
