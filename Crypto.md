@@ -398,7 +398,7 @@ else:
     print 'wrong'
 ```
 
-要得到原始`flag`的话，首先进入函数的顺序改成先`decode3`再`decode2`最后`decode1`，然后每个函数内部运算，`+`变`-`，`-`变`+`，异或运算的逆过程就是再做一次异或，`base64.b32encode()`改成`base64.32decode()`，需要注意的是`base64.32decode()`后不能使用`decode('utf-8')`来解码会报错，应该使用`decode('ISO-8859-1')`。运行`Python`代码即可得到`cyberpeace{interestinghhhhh}`。
+要得到原始`flag`的话，首先进入函数的顺序改成先`decode3`再`decode2`最后`decode1`，然后每个函数内部运算，`+`变`-`，`-`变`+`，异或运算的逆过程就是再做一次异或，`base64.b32encode()`改成`base64.b32decode()`，需要注意的是`base64.b32decode()`后不能使用`decode('utf-8')`来解码会报错，应该使用`decode('ISO-8859-1')`。运行`Python`代码即可得到`cyberpeace{interestinghhhhh}`。
 
 ```python
 import base64 # 需要注意的是之前那题base64的脚本文件我命名为了base64.py 所以这里会报错 把那题的文件改成Base64.py即可
@@ -493,6 +493,46 @@ python rsatool.py -f PEM -o private.pem -p 2751278603513489281732851743815811522
 ```
 
 ![](https://paper.tanyaodan.com/ADWorld/crypto/5115/3.png)
+
+------
+
+### [Broadcast](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=5522)
+
+这题的附件给出了一系列的文件：
+
+![](https://paper.tanyaodan.com/ADWorld/crypto/5522/1.png)
+
+用`Sublime Text`打开`task.py`查看源代码如下：
+
+```python
+#!/usr/bin/env python3
+from Crypto.Util import number
+from Crypto.PublicKey import RSA
+from hashlib import sha256
+import json
+
+#from secret import msg
+msg = 'Hahaha, Hastad\'s method don\'t work on this. Flag is flag{fa0f8335-ae80-448e-a329-6fb69048aae4}.'
+assert len(msg) == 95
+
+Usernames = ['Alice', 'Bob', 'Carol', 'Dan', 'Erin']
+N = [ ( number.getPrime(1024) * number.getPrime(1024) ) for _ in range(4) ]
+PKs = [ RSA.construct( (N[0], 3) ), RSA.construct( (N[1], 3) ), RSA.construct( (N[2], 5) ), RSA.construct( (N[3], 5) ) ]
+
+for i in range(4):
+    name = Usernames[i+1]
+    open(name+'Public.pem', 'wb').write( PKs[i].exportKey('PEM') )
+    data = {'from': sha256( b'Alice' ).hexdigest(),
+            'to'  : sha256( name.encode() ).hexdigest(),
+            'msg' : msg
+            }
+    data = json.dumps(data, sort_keys=True)
+    m = number.bytes_to_long( data.encode() )
+    cipher = pow(m, PKs[i].e, PKs[i].n)
+    open(name+'Cipher.enc', 'wb').write( number.long_to_bytes(cipher) )
+```
+
+好家伙，真的像题目描述所述的那样明文存储，提交`flag{fa0f8335-ae80-448e-a329-6fb69048aae4}`即可。
 
 ------
 
