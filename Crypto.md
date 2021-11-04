@@ -679,3 +679,18 @@ s = base64.b64decode(s).decode('utf-8')
 
 ------
 
+### [工业协议分析2](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=5525)
+
+用`wireshark`打开`.pcapng`文件，发现存在大量`UDP`流量包，大部分`UDP`流量包的长度相同，只有一些长度的`UDP`流量包仅出现过一次，猜测它们可能有异常。
+
+![](https://paper.tanyaodan.com/ADWorld/crypto/5525/1.png)
+
+将字符串`666c61677b37466f4d3253746b6865507a7d`进行16进制ASCII码解码即可得到`flag{7FoM2StkhePz}`。
+
+```python
+flag = bytes.fromhex('666c61677b37466f4d3253746b6865507a7d').decode('utf-8')
+print(flag) # flag{7FoM2StkhePz}
+```
+
+------
+
