@@ -587,9 +587,54 @@ function ck(s) {
 }
 ```
 
-将传入函数的字符串`s`中的每个字符与数组`a`中的数字对比，只要相差`3`，就输出`true`。所以只要将`a`中的数字减`3`，换成`ASCII`字符，即可得到正确的字符串`security-xbu`。在`index.html`网页中输入`security-xbu`即可得到`flag`：`RenIbyd8Fgg5hawvQm7TDQ`。
+将传入函数的字符串`s`中的每个字符与数组`a`中的数字对比，只要相差`3`，就输出`true`。所以只要将`a`中的数字减`3`，换成`ASCII`字符，编写`Python`代码运行即可得到正确的字符串`security-xbu`。
+
+```python
+a = [118, 104, 102, 120, 117, 108, 119, 124, 48, 123, 101, 120]
+flag = ''.join(chr(i-3) for i in a)
+print(flag)
+```
+
+在`index.html`网页中输入`security-xbu`即可得到`flag`：`RenIbyd8Fgg5hawvQm7TDQ`。
 
 ![](https://paper.tanyaodan.com/ADWorld/crypto/4869/1.png)
+
+------
+
+### [flag_in_your_hand](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=4626)
+
+这题的附件给出了两个文件：`script-min.js`和`index.html`，代码审计时发现关键代码段：
+
+```javascript
+function ck(s) {
+    try {
+        ic
+    } catch (e) {
+        return;
+    }
+    var a = [118, 104, 102, 120, 117, 108, 119, 124, 48,123,101,120];
+    if (s.length == a.length) {
+        for (i = 0; i < s.length; i++) {
+            if (a[i] - s.charCodeAt(i) != 3)
+                return ic = false;
+        }
+        return ic = true;
+    }
+    return ic = false;
+}
+```
+
+将传入函数的字符串`s`中的每个字符与数组`a`中的数字对比，只要相差`3`，就输出`true`。所以只要将`a`中的数字减`3`，换成`ASCII`字符，编写`Python`代码运行即可得到正确的字符串`security-xbu`。
+
+```python
+a = [118, 104, 102, 120, 117, 108, 119, 124, 48, 123, 101, 120]
+flag = ''.join(chr(i-3) for i in a)
+print(flag)
+```
+
+在`index.html`网页中输入`security-xbu`即可得到`flag`：`RenIbyd8Fgg5hawvQm7TDQ`。
+
+![](https://paper.tanyaodan.com/ADWorld/crypto/4626/1.png)
 
 ------
 
