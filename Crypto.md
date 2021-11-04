@@ -638,3 +638,28 @@ print(flag)
 
 ------
 
+### [告诉你个秘密](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=4929)
+
+打开`.txt`文件可以看到以下信息：
+
+```
+636A56355279427363446C4A49454A7154534230526D6843
+56445A31614342354E326C4B4946467A5769426961453067
+```
+
+怀疑是`16`进制的`ASCII`码，编写`Python`代码解码后可以得到`cjV5RyBscDlJIEJqTSB0RmhCVDZ1aCB5N2lKIFFzWiBiaE0g`。
+
+```python
+s=bytes.fromhex('636A56355279427363446C4A49454A7154534230526D684356445A31614342354E326C4B4946467A5769426961453067')
+```
+
+将得到的字符串进行`base64`解码后得到`r5yG lp9I BjM tFhBT6uh y7iJ QsZ bhM`，注意我们是把俩个数字串一起解码的，其实这组字符串本来应该是`r5yG lp9I BjM tFhB T6uh y7iJ QsZ bhM`。
+
+```python
+s = base64.b64decode(s).decode('utf-8')
+```
+
+观察键盘可以发现每一组字母在键盘上围出一个字母，`r5yG => T`，`lp9I => O`，`BjM => N`，`tFhB => G`，`T6uh => Y`，`y7iJ => U`，`QsZ => A`，`bhM => N`，最终得到`flag`：`TONGYUAN`提交即可。
+
+------
+
