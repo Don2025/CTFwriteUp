@@ -663,3 +663,19 @@ s = base64.b64decode(s).decode('utf-8')
 
 ------
 
+### [你猜猜](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=4930)
+
+打开`.txt`文件可以看到以下信息：
+
+```
+504B03040A0001080000626D0A49F4B5091F1E0000001200000008000000666C61672E7478746C9F170D35D0A45826A03E161FB96870EDDFC7C89A11862F9199B4CD78E7504B01023F000A0001080000626D0A49F4B5091F1E00000012000000080024000000000000002000000000000000666C61672E7478740A0020000000000001001800AF150210CAF2D1015CAEAA05CAF2D1015CAEAA05CAF2D101504B050600000000010001005A000000440000000000
+```
+
+`504B0304`是经典的`zip`文件开头，用`WinHex`新建文件然后将`.txt`中的数据拷贝进去，保存为`.zip`文件，这里我命名为了`a.zip`。解压`a.zip`时发现需要解压密码，使用`Ziperello`暴力破解可以得到解压密码`123456`。
+
+![](https://paper.tanyaodan.com/ADWorld/crypto/4930/1.png)
+
+输入`123456`解压缩文件后，打开`flag.txt`可以得到`daczcasdqwdcsdzasd`。
+
+------
+
