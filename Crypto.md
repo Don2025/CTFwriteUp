@@ -694,3 +694,30 @@ print(flag) # flag{7FoM2StkhePz}
 
 ------
 
+### [sherlock](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=5526)
+
+打开`.txt`文件后发现文件中的字符有一些莫名奇妙的大写字符，观察后发现所有的大写字符都是字母`Z`，`E`，`R`，`O`，`N`，`E`组成的。
+
+编写`Python`代码提取所有大写字母拼接，再把`ZERO`替换成`0`，`ONE`替换成`1`，即可得到`flag`：`BITSCTF{h1d3_1n_pl41n_5173}`。
+
+```python
+import re
+
+with open('./sherlock.txt') as f:
+    data = f.read()
+s = ''
+for x in data:
+    if x.isupper():
+        s += x
+print(s)
+s = s.replace('ZERO', '0').replace('ONE', '1')
+print(s)
+l = re.findall(r'.{8}', s)
+flag = ''
+for x in l:
+	flag += chr(int(x, 2))
+print(flag) # BITSCTF{h1d3_1n_pl41n_5173}
+```
+
+------
+
