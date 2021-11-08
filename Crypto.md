@@ -741,3 +741,26 @@ print(flag)
 
 ------
 
+### crypto5
+
+打开`.txt`文件后发现给出`p=447685307`, `q=2037`, `e=17`, `c=704796792`, 求`m`, `flag{m}`。
+
+编写`Python`代码即可得到`flag`：`flag{904332399012}`。
+
+```python
+from gmpy2 import *
+
+p = mpz(447685307)
+q = mpz(2037)
+e = mpz(17)
+c = mpz(704796792)
+n = p*q
+phi_n = (p-1)*(q-1)
+d = invert(e, phi_n)
+m = powmod(c, d, n)  # m = c^d%n
+flag = 'flag{' + str(m) + '}' 
+print(flag)
+```
+
+------
+
