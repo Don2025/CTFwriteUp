@@ -721,3 +721,23 @@ print(flag) # BITSCTF{h1d3_1n_pl41n_5173}
 
 ------
 
+## CTFShow
+
+### crypto4
+
+打开`.txt`文件后发现给出了`p=447685307`, `q=2037`, `e=17`, 求`d`, `flag{d}`。编写`Python`代码即可得到`flag`：`flag{53616899001}`。
+
+```python
+from gmpy2 import *
+
+p = mpz(447685307)
+q = mpz(2037)
+e = mpz(17)
+phi_n = (p-1)*(q-1) 
+d = invert(e, phi_n)
+flag = 'flag{' + str(d) + '}'
+print(flag)
+```
+
+------
+
