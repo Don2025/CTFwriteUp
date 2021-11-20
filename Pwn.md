@@ -506,7 +506,7 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/1.png)
 
-用`IDA Pro 32bit`打开附件`babyrop`，按`F5`反汇编源码并查看主函数，可以看到将一个随机数赋值给了`buf`变量。
+用`IDA Pro 32bit`打开附件`babyrop`，按`F5`  反汇编源码并查看主函数，可以看到将一个随机数赋值给了`buf`变量。
 
 ![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/2.png)
 
@@ -1417,6 +1417,56 @@ io.interactive()
 ```
 
 ![](https://paper.tanyaodan.com/CTFShow/1024_happy_checkin/4.png)
+
+------
+
+## Pwnable.kr
+
+### fd
+
+这是**Pwnable.kr**的第一个挑战`fd`，来自**[Toddler's Bottle]**部分。题目描述中可以看到有个小孩在问他妈什么是Linux中的文件描述符，现在可以知道标题`fd`就是`file descriptor`的缩写。
+
+```bash
+Mommy! what is a file descriptor in Linux?
+
+* try to play the wargame your self but if you are ABSOLUTE beginner, follow this tutorial link:
+https://youtu.be/971eZhMHQQw
+
+ssh fd@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+![](https://paper.tanyaodan.com/Pwnable/kr/fd/1.png)
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+![](https://paper.tanyaodan.com/Pwnable/kr/fd/2.png)
+
+我们可以看到三个文件`fd`、`fd.c`和`flag`，其中`fd`是`ELF`二进制可执行文件，`fd.c`是编译二进制文件的`C`代码，用户`fd`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat fd.c`来查看`fd.c`的代码。
+
+![](https://paper.tanyaodan.com/Pwnable/kr/fd/3.png)
+
+我们通过代码审计可以看到变量`buf`被分配了`32`个字节作为缓冲区，该程序首先检查用户是否输入了两个参数(包括文件名)，如果没有就会得到一条`printf`输出语句提示需要给该可执行文件传递一个参数。
+
+然后我们发现有个`int`型变量`fd`被赋值为`atoi(argv[1])-0x1234`，即用户输入的数字被`atoi()`函数转换成`int`型后与`0x1234`的差值。此外还有一个`int`型变量`len`的值是`read(fd, buf, 32)`的函数返回值，当`fd`的值为`0`的时候，程序将从`stdin`中读入`32`个字节数据到`buf`变量中，因此我们输入的参数应该是`0x1234`的十进制值`4660`。
+
+接着有一个字符串比较函数`strcmp()`，如果`buf`变量的值等于字符串`LETMEWIN`的话，`strcmp()`函数返回值就为0，此时`if`条件就为真，程序会系统调用输出`flag`：`mommy! I think I know what a file descriptor is!!`。
+
+![](https://paper.tanyaodan.com/Pwnable/kr/fd/4.png)
+
+有了以上思路后，我们也可以编写`Python`代码来获取`flag`：`mommy! I think I know what a file descriptor is!!`。
+
+```python
+from pwn import *
+
+shell = ssh(user='fd', host='pwnable.kr', port=2222, password='guest')
+io = shell.process(executable='./fd', argv=['fd', '4660'])
+io.sendline(b'LETMEWIN')
+io.interactive() 
+```
+
+![](https://paper.tanyaodan.com/Pwnable/kr/fd/5.png)
 
 ------
 
