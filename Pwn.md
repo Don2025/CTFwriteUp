@@ -99,6 +99,38 @@ cat flag #直接输出flag即可
 
 ------
 
+### [others_shellcode](https://buuoj.cn/challenges#others_shellcode)
+
+先`file ./other_shellcode`查看文件类型再`checksec --file=./other_shellcode`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/others_shellcode/1.png)
+
+在本地尝试运行一下这个程序，好家伙发现这直接执行了`shell`，尝试输入`cat flag`就拿到本地生成的`flag`啦。
+
+![](https://paper.tanyaodan.com/BUUCTF/others_shellcode/2.png)
+
+用`IDA Pro 32bit`打开附件`shell_asm`后按`F5`反汇编源码并查看主函数，发现有个`getShell()`函数很可疑。
+
+![](https://paper.tanyaodan.com/BUUCTF/others_shellcode/3.png)
+
+双击`getShell()`函数查看详情，发现程序将字符串`/bin//sh`赋值给了`char`型数组`v1`，并把`int`型变量`result`赋值为`11`，但是这都不是重点，重点是`__asm {int 80h}`这行代码，它在`C`语言里嵌入了汇编语言，并且用`int 80h`进行系统调用`shell`。
+
+![](https://paper.tanyaodan.com/BUUCTF/others_shellcode/4.png)
+
+编写`Python`代码连接`node4.buuoj.cn`的监听端口`28021`，发送`cat flag`即可得到`flag{12aab39b-9d20-4f50-a9a8-b52320ed3771}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 28021)
+io.sendline(b'cat flag')
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/others_shellcode/5.png)
+
+------
+
 ### [rip](https://buuoj.cn/challenges#rip)
 
 先`file ./pwn1`查看文件类型再`checksec --file=pwn1`检查一下文件保护情况。
