@@ -84,7 +84,57 @@ print(flag)
 
 ### [re1](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5073)
 
-用`file`查看`.exe`文件发现是`PE32`，用`IDA Pro 32bit`以二进制文件形式打开附件给出的`.exe`文件后按`shift + F12`查看`Strings window`可以发现`flag`：`DUTCTF{We1c0met0DUTCTF}`。
+用`file`查看`.exe`文件发现是`PE32`，用`IDA Pro 32bit`以二进制文件形式打开附件给出的`.exe`文件后按`shift + F12`查看`Strings window`可以发现`flag``DUTCTF{We1c0met0DUTCTF}`。
 
 ------
+
+## BUUCTF
+
+### [reverse2](https://buuoj.cn/challenges#reverse2)
+
+用 `file`查看`reverse2.exe`发现是`64bit`的`X86`架构编译的`ELF`文件，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int result; // eax
+  int stat_loc; // [rsp+4h] [rbp-3Ch] BYREF
+  int i; // [rsp+8h] [rbp-38h]
+  __pid_t pid; // [rsp+Ch] [rbp-34h]
+  char s2[24]; // [rsp+10h] [rbp-30h] BYREF
+  unsigned __int64 v8; // [rsp+28h] [rbp-18h]
+
+  v8 = __readfsqword(0x28u);
+  pid = fork();
+  if ( pid )
+  {
+    waitpid(pid, &stat_loc, 0);
+  }
+  else
+  {
+    for ( i = 0; i <= strlen(&flag); ++i )
+    {
+      if ( *(&flag + i) == 105 || *(&flag + i) == 114 )
+        *(&flag + i) = 49;
+    }
+  }
+  printf("input the flag:");
+  __isoc99_scanf("%20s", s2);
+  if ( !strcmp(&flag, s2) )
+    result = puts("this is the right flag!");
+  else
+    result = puts("wrong flag!");
+  return result;
+}
+```
+
+双击`flag`变量可以看到以下信息：
+
+![](https://paper.tanyaodan.com/BUUCTF/reverse2/1.png)
+
+分析源码发现程序执行了字符替换，把字母`i`和`r`替换成了数字`1`。
+
+![](https://paper.tanyaodan.com/BUUCTF/reverse2/2.png)
+
+因此最终的`flag`为`flag{hack1ng_fo1_fun}`。
 
