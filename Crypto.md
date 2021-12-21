@@ -1007,3 +1007,21 @@ print(flag) # flag{p&q_4re_t00_c1o5ed}
 
 ------
 
+## CTFHub
+
+### 2020-BJDCTF-Crypto-sign in
+
+打开`.txt`文件可以看到以下信息：
+
+> welcome to crypto world！！
+> 密文：424a447b57653163306d655f74345f424a444354467d
+
+显然这是`16`进制的`ASCII`码，编写`Python`代码进行解码即可得到`BJD{We1c0me_t4_BJDCTF}`。
+
+```python
+flag = bytes.fromhex('424a447b57653163306d655f74345f424a444354467d').decode('utf-8')
+print(flag)
+```
+
+------
+
