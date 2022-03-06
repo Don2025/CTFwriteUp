@@ -84,7 +84,61 @@ print(flag)
 
 ### [re1](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5073)
 
-用`file`查看`.exe`文件发现是`PE32`，用`IDA Pro 32bit`以二进制文件形式打开附件给出的`.exe`文件后按`shift + F12`查看`Strings window`可以发现`flag``DUTCTF{We1c0met0DUTCTF}`。
+用`file`查看`.exe`文件发现是`PE32`，用`IDA Pro 32bit`以二进制文件形式打开附件给出的`.exe`文件后按`shift + F12`查看`Strings window`可以发现`flag`：`DUTCTF{We1c0met0DUTCTF}`。
+
+------
+
+### [open-source](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5076)
+
+这道题的附件是一个`.c`文件，直接查看源码：
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(int argc, char *argv[]) {
+    if (argc != 4) {
+    	printf("what?\n");
+    	exit(1);
+    }
+    // first = 51966;
+    unsigned int first = atoi(argv[1]);
+    if (first != 0xcafe) {  
+    	printf("you are wrong, sorry.\n");
+    	exit(2);
+    }
+    // second = 25;
+    unsigned int second = atoi(argv[2]);
+    if (second % 5 == 3 || second % 17 != 8) {
+    	printf("ha, you won't get it!\n");
+    	exit(3);
+    }
+    // argv[3] = "h4cky0u";
+    if (strcmp("h4cky0u", argv[3])) {
+    	printf("so close, dude!\n");
+    	exit(4);
+    }
+
+    printf("Brr wrrr grr\n");
+
+    unsigned int hash = first * 31337 + (second % 17) * 11 + strlen(argv[3]) - 1615810207;
+
+    printf("Get your key: ");
+    printf("%x\n", hash);
+    return 0;
+}
+```
+
+可以看到`flag`应该就是变量`hash`的`16`进制数值，由判断条件`argc != 4`可知命令行需要输入`4`个参数，其中参数`first=0xcafe;`即`first=51966;`，由判断条件`second%5==3 || second%17!=8`可以令`second=25;`，由判断条件`strcmp("h4cky0u", argv[3])`可知`argv[3]="h4cky0u";`，`%x`表示输出该数的`16`进制值。
+
+直接在命令行输入`./a 51966 25 h4cky0u`即可看到以下结果：
+
+```bash
+Brr wrrr grr
+Get your key: c0ffee
+```
+
+提交`flag{c0ffee}`即可。
 
 ------
 
