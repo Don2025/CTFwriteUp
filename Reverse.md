@@ -424,6 +424,46 @@ print(flag)
 
 ------
 
+### [no-strings-attached](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5080)
+
+`file`查看文件可以看到以下信息：
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/1.png)
+
+使用`IDA Pro 32bit`打开附件，按`F5`进行反编译可以看到以下源码：
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/2.png)
+
+第一个函数用于区域设置；第二个获取时间，搞了个随机数种子，还输出了欢迎语；第三个函数里只输出了句话让用户输入，都没啥用。双击`authenticate()`函数可以看到调用`decrypt()`函数的这行代码很关键，用户输入要和`s2`进行字符串比较，显然`s2`就是`flag`。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/3.png)
+
+双击`decrypt()`函数可以看到源码如下：
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/4.png)
+
+查看汇编代码，发现`decrypt()` 函数执行结束后，会将一个结果放入内存中。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/5.png)
+
+这就需要用`gdb`进行动态调试，在`decrypt()`函数处设置断点，执行完该函数后再执行一步来读取`$eax`寄存器中的内容，即可得到`flag`。
+
+```bash
+gdb ./no-strings-attached -q
+b decrypt
+r
+n
+x/sw $eax
+```
+
+`break/b` 可以设置断点，`gdb`可以直接根据已知函数名来对该函数设置断点，也可通过`*指定地址`下断点。 `run/r`可以运行程序，`next/n`表示单步步过，`s` 表示单步步入（如果此行代码中有函数调用，则进入该函数），` x` 指令表示查看寄存器内容，参数`/s`表示用字符串形式显示，`/w`表示四字节宽，因此`/sw` 表示以四字节宽来显示字符串。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/6.png)
+
+本题的`flag`就是`9447{you_are_an_international_mystery}`。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
