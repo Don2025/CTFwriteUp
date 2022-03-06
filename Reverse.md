@@ -142,6 +142,24 @@ Get your key: c0ffee
 
 ------
 
+### [simple-unpack](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5077)
+
+题目描述中有说这是一个被加壳的二进制文件，在`Kali-Linux`中使用命令行`upx -d 文件名`进行脱壳。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/simple-unpack/1.png)
+
+`file ./simple-unpack`发现该文件是`64`位的，用`IDA Pro 64bit`以`ELF 64 for x86-64`形式打开文件后，按`F5`进行反编译可以看到以下源码：
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/simple-unpack/2.png)
+
+双击`flag`即可得到`flag{Upx_1s_n0t_a_d3liv3r_c0mp4ny}`。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/simple-unpack/3.png)
+
+如果题目没有提示，不知道需要脱壳的话，也可以直接用`file`查看`.exe`文件发现是`ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`以二进制文件形式打开附件给出的`.exe`文件后按`shift + F12`查看`Strings window`可以发现`flag`：`flag{Upx_1s_n0t_a_d3liv3r_c0mp4ny}`。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
