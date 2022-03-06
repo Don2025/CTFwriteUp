@@ -160,6 +160,38 @@ Get your key: c0ffee
 
 ------
 
+### [logmein](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5078)
+
+用`file`查看`.exe`文件发现是`ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开附件，按`F5`进行反编译可以看到以下源码：
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/logmein/1.png)
+
+分析代码逻辑，`v8`是加密后数据，`v7`相当于密钥，将`v8`逐个字符与`v7`中的字符逐个进行异或后，得到的字符串就是正确的密码。
+
+编写`Python`代码即可得到`flag`：`RC3-2016-XORISGUD`。
+
+```python
+v6 = 7
+v7 = bytes.fromhex('65626D61726168')[::-1].decode('utf-8')
+v8 = ':\"AL_RT^L*.?+6/46'
+flag = ''
+for i in range(0, len(v8)):
+    flag += chr(ord(v7[i%v6])^ord(v8[i]))
+print(flag)
+```
+
+可以`./logmein`验证一下`RC3-2016-XORISGUD`这个密码是否正确：
+
+```bash
+Welcome to the RC3 secure password guesser.
+To continue, you must enter the correct password.
+Enter your guess: RC3-2016-XORISGUD
+You entered the correct password!
+Great job!
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
