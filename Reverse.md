@@ -192,6 +192,238 @@ Great job!
 
 ------
 
+### [game](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5074)
+
+`file`查看文件可以看到：`./game.exe: PE32 executable (console) Intel 80386, for MS Windows`。使用`IDA Pro 32bit`打开附件，按`F5`进行反编译可以看到以下源码：
+
+```c
+// attributes: thunk
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  return main_0(argc, argv, envp);
+}
+```
+
+双击`main_0()`函数，可以看到以下源码：
+
+```c
+int __cdecl main_0(int argc, const char **argv, const char **envp)
+{
+  int i; // [esp+DCh] [ebp-20h]
+  int v5; // [esp+F4h] [ebp-8h] BYREF
+
+  sub_45A7BE(&unk_50B110);
+  sub_45A7BE(&unk_50B158);
+  sub_45A7BE(&unk_50B1A0);
+  sub_45A7BE(&unk_50B1E8);
+  sub_45A7BE(&unk_50B230);
+  sub_45A7BE(&unk_50B278);
+  sub_45A7BE(&unk_50B2C0);
+  sub_45A7BE(&unk_50B308);
+  sub_45A7BE("二                                                     |\n");
+  sub_45A7BE("|              by 0x61                                 |\n");
+  sub_45A7BE("|                                                      |\n");
+  sub_45A7BE("|------------------------------------------------------|\n");
+  sub_45A7BE(
+    "Play a game\n"
+    "The n is the serial number of the lamp,and m is the state of the lamp\n"
+    "If m of the Nth lamp is 1,it's on ,if not it's off\n"
+    "At first all the lights were closed\n");
+  sub_45A7BE("Now you can input n to change its state\n");
+  sub_45A7BE(
+    "But you should pay attention to one thing,if you change the state of the Nth lamp,the state of (N-1)th and (N+1)th w"
+    "ill be changed too\n");
+  sub_45A7BE("When all lamps are on,flag will appear\n");
+  sub_45A7BE("Now,input n \n");
+  while ( 1 )
+  {
+    while ( 1 )
+    {
+      sub_45A7BE("input n,n(1-8)\n");
+      sub_459418();
+      sub_45A7BE("n=");
+      sub_4596D4("%d", &v5);
+      sub_45A7BE("\n");
+      if ( v5 >= 0 && v5 <= 8 )
+        break;
+      sub_45A7BE("sorry,n error,try again\n");
+    }
+    if ( v5 )
+    {
+      sub_4576D6(v5 - 1);
+    }
+    else
+    {
+      for ( i = 0; i < 8; ++i )
+      {
+        if ( (unsigned int)i >= 9 )
+          j____report_rangecheckfailure();
+        byte_532E28[i] = 0;
+      }
+    }
+    j__system("CLS");
+    sub_458054();
+    if ( byte_532E28[0] == 1
+      && byte_532E28[1] == 1
+      && byte_532E28[2] == 1
+      && byte_532E28[3] == 1
+      && byte_532E28[4] == 1
+      && byte_532E28[5] == 1
+      && byte_532E28[6] == 1
+      && byte_532E28[7] == 1 )
+    {
+      sub_457AB4();
+    }
+  }
+}
+```
+
+双击`sub_457AB4()`函数，可以看到以下源码：
+
+```c
+// attributes: thunk
+int sub_457AB4(void)
+{
+  return sub_45E940();
+}
+```
+
+再双击`sub_45E940()`函数，可以看到以下源码：
+
+```c
+int sub_45E940()
+{
+  int i; // [esp+D0h] [ebp-94h]
+  char v2[22]; // [esp+DCh] [ebp-88h]
+  char v3[32]; // [esp+F2h] [ebp-72h] BYREF
+  char v4[4]; // [esp+112h] [ebp-52h] BYREF
+  char v5[64]; // [esp+120h] [ebp-44h]
+
+  sub_45A7BE("done!!! the flag is ");
+  v5[0] = 18;
+  v5[1] = 64;
+  v5[2] = 98;
+  v5[3] = 5;
+  v5[4] = 2;
+  v5[5] = 4;
+  v5[6] = 6;
+  v5[7] = 3;
+  v5[8] = 6;
+  v5[9] = 48;
+  v5[10] = 49;
+  v5[11] = 65;
+  v5[12] = 32;
+  v5[13] = 12;
+  v5[14] = 48;
+  v5[15] = 65;
+  v5[16] = 31;
+  v5[17] = 78;
+  v5[18] = 62;
+  v5[19] = 32;
+  v5[20] = 49;
+  v5[21] = 32;
+  v5[22] = 1;
+  v5[23] = 57;
+  v5[24] = 96;
+  v5[25] = 3;
+  v5[26] = 21;
+  v5[27] = 9;
+  v5[28] = 4;
+  v5[29] = 62;
+  v5[30] = 3;
+  v5[31] = 5;
+  v5[32] = 4;
+  v5[33] = 1;
+  v5[34] = 2;
+  v5[35] = 3;
+  v5[36] = 44;
+  v5[37] = 65;
+  v5[38] = 78;
+  v5[39] = 32;
+  v5[40] = 16;
+  v5[41] = 97;
+  v5[42] = 54;
+  v5[43] = 16;
+  v5[44] = 44;
+  v5[45] = 52;
+  v5[46] = 32;
+  v5[47] = 64;
+  v5[48] = 89;
+  v5[49] = 45;
+  v5[50] = 32;
+  v5[51] = 65;
+  v5[52] = 15;
+  v5[53] = 34;
+  v5[54] = 18;
+  v5[55] = 16;
+  v5[56] = 0;
+  v2[0] = 123;
+  v2[1] = 32;
+  v2[2] = 18;
+  v2[3] = 98;
+  v2[4] = 119;
+  v2[5] = 108;
+  v2[6] = 65;
+  v2[7] = 41;
+  v2[8] = 124;
+  v2[9] = 80;
+  v2[10] = 125;
+  v2[11] = 38;
+  v2[12] = 124;
+  v2[13] = 111;
+  v2[14] = 74;
+  v2[15] = 49;
+  v2[16] = 83;
+  v2[17] = 108;
+  v2[18] = 94;
+  v2[19] = 108;
+  v2[20] = 84;
+  v2[21] = 6;
+  qmemcpy(v3, "`S,yhn _uec{", 12);
+  v3[12] = 127;
+  v3[13] = 119;
+  v3[14] = 96;
+  v3[15] = 48;
+  v3[16] = 107;
+  v3[17] = 71;
+  v3[18] = 92;
+  v3[19] = 29;
+  v3[20] = 81;
+  v3[21] = 107;
+  v3[22] = 90;
+  v3[23] = 85;
+  v3[24] = 64;
+  v3[25] = 12;
+  v3[26] = 43;
+  v3[27] = 76;
+  v3[28] = 86;
+  v3[29] = 13;
+  v3[30] = 114;
+  v3[31] = 1;
+  strcpy(v4, "u~");
+  for ( i = 0; i < 56; ++i )
+  {
+    v2[i] ^= v5[i];
+    v2[i] ^= 0x13u;
+  }
+  return sub_45A7BE("%s\n");
+}
+```
+
+根据代码逻辑，可以编写出以下`Python`代码，运行得到`flag`：`zsctf{T9is_tOpic_1s_v5ry_int7resting_b6t_others_are_n0t}`。
+
+```python
+a = [123,32,18,98,119,108,65,41,124,80,125,38,124,111,74,49,83,108,94,108,84,6,96,83,44,121,104,110,32,95,117,101,99,123,127,119,96,48,107,71,92,29,81,107,90,85,64,12,43,76,86,13,114,1,117,126]
+b = [18,64,98,5,2,4,6,3,6,48,49,65,32,12,48,65,31,78,62,32,49,32,1,57,96,3,21,9,4,62,3,5,4,1,2,3,44,65,78,32,16,97,54,16,44,52,32,64,89,45,32,65,15,34,18,16]
+for i in range(0, 56):
+    a[i] ^= b[i]
+    a[i] ^= 0x13
+flag = ''.join(chr(i) for i in a)
+print(flag)
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
