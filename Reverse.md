@@ -23,6 +23,44 @@ print(flag) # CrackMeJustForFun
 
 ------
 
+### [Shuffle](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4942)
+
+用 `file`查看`maze`，可以看到信息`./Shuffle: ELF 32-bit LSB executable, Intel 80386`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：	
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  time_t v3; // ebx
+  __pid_t v4; // eax
+  int i; // [esp+14h] [ebp-44h]
+  unsigned int v7; // [esp+18h] [ebp-40h]
+  unsigned int v8; // [esp+1Ch] [ebp-3Ch]
+  char v9; // [esp+20h] [ebp-38h]
+  char s[40]; // [esp+24h] [ebp-34h] BYREF
+  unsigned int v11; // [esp+4Ch] [ebp-Ch]
+
+  v11 = __readgsdword(0x14u);
+  strcpy(s, "SECCON{Welcome to the SECCON 2014 CTF!}");
+  v3 = time(0);
+  v4 = getpid();
+  srand(v3 + v4);
+  for ( i = 0; i <= 99; ++i )
+  {
+    v7 = rand() % 0x28u;
+    v8 = rand() % 0x28u;
+    v9 = s[v7];
+    s[v7] = s[v8];
+    s[v8] = v9;
+  }
+  puts(s);
+  return 0;
+}
+```
+
+`flag`都写出来了，直接提交`SECCON{Welcome to the SECCON 2014 CTF!}`即可。
+
+------
+
 ### [python-trade](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5083)
 
 这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
