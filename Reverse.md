@@ -464,6 +464,55 @@ x/sw $eax
 
 ------
 
+### [csaw2013reversing2](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5081)
+
+用 `file`查看`csaw2013reversing2.exe`，可以看到信息`./csaw2013reversing2.exe: PE32 executable (console) Intel 80386, for MS Windows`。用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  int v3; // ecx
+  CHAR *lpMem; // [esp+8h] [ebp-Ch]
+  HANDLE hHeap; // [esp+10h] [ebp-4h]
+
+  hHeap = HeapCreate(0x40000u, 0, 0);
+  lpMem = (CHAR *)HeapAlloc(hHeap, 8u, SourceSize + 1);
+  memcpy_s(lpMem, SourceSize, &unk_409B10, SourceSize);
+  if ( !sub_40102A() && !IsDebuggerPresent() )
+  {
+    MessageBoxA(0, lpMem + 1, "Flag", 2u);
+    HeapFree(hHeap, 0, lpMem);
+    HeapDestroy(hHeap);
+    ExitProcess(0);
+  }
+  __debugbreak();
+  sub_401000(v3 + 4, lpMem);
+  ExitProcess(0xFFFFFFFF);
+}
+```
+
+注意到 `MessageBoxA(0, lpMem + 1, "Flag", 2u);` 这行代码，这行代码在一个`if`代码块中，而这个`if`语句的判断条件默认不成立，直接跳转到后面代码中输出乱码。回到汇编语言代码，`loc_401096` 中有一个 `int3` 断点可以`Trap to Debugger`，`loc_4010B9`可以输出弹窗。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/1.png)
+
+所以解题思路就是让程序跳转到 `loc_401096` 进行解码， 将`int3` 改成 `nop(0x90)`，再跳转到 `loc_4010B9` 输出弹窗。而不是直接执行`loc_4010B9`输出含有乱码的弹窗。
+
+使用`ollydbg`打开`csaw2013reversing2.exe`，将`0040109A`这条`int 3`语句前的`je short csaw2013.00BF10B9`修改为`je short csaw2013.00BF1096`。![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/2.png)
+
+将`int3` 这个断点中断改成 `nop(0x90)`。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/3.png)
+
+再将后面的那条`je short csaw2013.00BF10EF`修改为`je short csaw2013.00BF10B9`。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/4.png)
+
+`run`执行程序即可输出包含`flag`的无码弹窗，从而得到`flag`：`flag{reversing_is_not_that_hard!}`。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/5.png)
+
+------
+
 ### [getit](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5082)
 
 用 `file`查看`getit`，可以看到信息`./getit: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
@@ -527,6 +576,10 @@ for i in range(0, len(s)):
 flag = 'SharifCTF' + flag + '}'  #因为这题来源SharifCTF 2016
 print(flag) # SharifCTF{b70c59275fcfa8aebf2d5911223c6589}
 ```
+
+------
+
+
 
 ------
 
