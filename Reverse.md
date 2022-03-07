@@ -77,7 +77,7 @@ def decode(s):
     return ans
 
 flag = decode('XlNkVmtUI1MgXWBZXCFeKY+AaXNt')
-print(flag)
+print(flag) # nctf{d3c0mpil1n9_PyC}
 ```
 
 ------
@@ -419,7 +419,7 @@ for i in range(0, 56):
     a[i] ^= b[i]
     a[i] ^= 0x13
 flag = ''.join(chr(i) for i in a)
-print(flag)
+print(flag) # zsctf{T9is_tOpic_1s_v5ry_int7resting_b6t_others_are_n0t}
 ```
 
 ------
@@ -461,6 +461,72 @@ x/sw $eax
 ![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/6.png)
 
 本题的`flag`就是`9447{you_are_an_international_mystery}`。
+
+------
+
+### [getit](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5082)
+
+用 `file`查看`getit`，可以看到信息`./getit: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char v3; // al
+  int i; // [rsp+0h] [rbp-40h]
+  int j; // [rsp+4h] [rbp-3Ch]
+  FILE *stream; // [rsp+8h] [rbp-38h]
+  char filename[24]; // [rsp+10h] [rbp-30h] BYREF
+  unsigned __int64 v9; // [rsp+28h] [rbp-18h]
+
+  v9 = __readfsqword(0x28u);
+  for ( i = 0; i < strlen(s); ++i )
+  {
+    if ( (i & 1) != 0 )
+      v3 = 1;
+    else
+      v3 = -1;
+    *(&t + i + 10) = s[i] + v3;
+  }
+  strcpy(filename, "/tmp/flag.txt");
+  stream = fopen(filename, "w");
+  fprintf(stream, "%s\n", u);
+  for ( j = 0; j < strlen(&t); ++j )
+  {
+    fseek(stream, p[j], 0);
+    fputc(*(&t + p[j]), stream);
+    fseek(stream, 0LL, 0);
+    fprintf(stream, "%s\n", u);
+  }
+  fclose(stream);
+  remove(filename);
+  return 0;
+}
+```
+
+分析主函数的代码逻辑，首先是判断字符串`v5`的长度是否小于字符串`s`的长度，然后经过运算，将得到的`flag`写入文件。`flag.txt`文件所在的位置是`/tmp`目录，这个目录是`Linux`系统中的临时文件夹，当程序运行完成后，生成`flag`的`txt`文件就会被清理，因此无法再在该目录中找到文件。
+
+在`IDA`中查看汇编代码，追踪`strlen`可以找到`for()`的判断条件位置，还要进行一步查找`fseek()`函数。根据汇编代码，可以确定`jnb loc_4008B5`就是`fseek()`函数，而`mov eax,[rbp+var_3C]`中每次移动的值应该就是`flag`中的一部分，继续审计汇编代码可以看到`mov rdx, [rbp+stream] `，所以`flag`最终应该会存放在寄存器`$rdx`中。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/getit/1.png)
+
+`vim ~/.gdbinit`然后取消`#source /home/tyd/ctf/gdb/pwndbg/gdbinit.py`前的`#`注释以启用`pwndbg`。接着使用`pwndbg`来动态调试程序，`b *0x400832`在地址`0x400832`处设置断点，`r/run`运行程序，可以直接看到每个寄存器中存储的数值信息，而`$rdx`寄存器中存放着`flag`：`SharifCTF{b70c59275fcfa8aebf2d5911223c6589}`。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/getit/2.png)
+
+此外，这道题还可根据代码审计的结果编写`Python`代码，运行即可得到`flag`：`SharifCTF{b70c59275fcfa8aebf2d5911223c6589}`。
+
+```python
+s = 'c61b68366edeb7bdce3c6820314b7498'
+flag = ''
+for i in range(0, len(s)):
+    if i&1:
+        v3 = 1
+    else:
+        v3 = -1
+    flag += chr(ord(s[i])+v3)
+flag = 'SharifCTF' + flag + '}'  #因为这题来源SharifCTF 2016
+print(flag) # SharifCTF{b70c59275fcfa8aebf2d5911223c6589}
+```
 
 ------
 
