@@ -579,7 +579,152 @@ print(flag) # SharifCTF{b70c59275fcfa8aebf2d5911223c6589}
 
 ------
 
+### [maze](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5084)
 
+用 `file`查看`maze`，可以看到信息`./maze: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：	
+
+```c
+__int64 __fastcall main(int a1, char **a2, char **a3)
+{
+  __int64 v3; // rbx
+  int v4; // eax
+  char v5; // bp
+  char v6; // al
+  const char *v7; // rdi
+  unsigned int v9; // [rsp+0h] [rbp-28h] BYREF
+  int v10[9]; // [rsp+4h] [rbp-24h] BYREF
+
+  v10[0] = 0;
+  v9 = 0;
+  puts("Input flag:");
+  scanf("%s", &s1);
+  if ( strlen(&s1) != 24 || strncmp(&s1, "nctf{", 5uLL) || *(&byte_6010BF + 24) != 125 )
+  {
+LABEL_22:
+    puts("Wrong flag!");
+    exit(-1);
+  }
+  v3 = 5LL;
+  if ( strlen(&s1) - 1 > 5 )
+  {
+    while ( 1 )
+    {
+      v4 = *(&s1 + v3);
+      v5 = 0;
+      if ( v4 > 78 )
+      {
+        if ( (unsigned __int8)v4 == 79 )  // 79,'O'
+        {
+          v6 = sub_400650(v10);
+          goto LABEL_14;
+        }
+        if ( (unsigned __int8)v4 == 111 )  // 111,'o'
+        {
+          v6 = sub_400660(v10);
+          goto LABEL_14;
+        }
+      }
+      else
+      {
+        if ( (unsigned __int8)v4 == 46 )  // 46,'.'
+        {
+          v6 = sub_400670(&v9);
+          goto LABEL_14;
+        }
+        if ( (unsigned __int8)v4 == 48 )  //48,'0'
+        {
+          v6 = sub_400680(&v9);
+LABEL_14:
+          v5 = v6;
+          goto LABEL_15;
+        }
+      }
+LABEL_15:
+      if ( !(unsigned __int8)sub_400690(asc_601060, (unsigned int)v10[0], v9) )
+        goto LABEL_22;
+      if ( ++v3 >= strlen(&s1) - 1 )
+      {
+        if ( v5 )
+          break;
+LABEL_20:
+        v7 = "Wrong flag!";
+        goto LABEL_21;
+      }
+    }
+  }
+  if ( asc_601060[8 * v9 + v10[0]] != 35 ) // 当前位置 = 8(迷宫横长) * 当前纵坐标 + 当前横坐标
+    goto LABEL_20;
+  v7 = "Congratulations!";
+LABEL_21:
+  puts(v7);
+  return 0LL;
+}
+```
+
+审计代码可以发现`flag`的长度为`24`，且开头前`5`个字符是`nctf{`，最后一位字符是`}`。此外还能看到四个判断语句分别进入四个函数：
+
+```c
+bool __fastcall sub_400650(_DWORD *a1) // *a1 = v10 横坐标
+{
+  int v1; // eax
+
+  v1 = (*a1)--;   // 横坐标-1,即左移
+  return v1 > 0;
+}
+
+bool __fastcall sub_400660(int *a1) // *a1 = v10 横坐标
+{
+  int v1; // eax
+
+  v1 = *a1 + 1;  //横坐标+1,即右移
+  *a1 = v1;
+  return v1 < 8;
+}
+
+bool __fastcall sub_400670(_DWORD *a1) // *a1 = v9 纵坐标
+{
+  int v1; // eax
+
+  v1 = (*a1)--;  // 纵坐标-1,即上移
+  return v1 > 0;
+}
+
+bool __fastcall sub_400680(int *a1) // *a1 = v9 纵坐标
+{
+  int v1; // eax
+
+  v1 = *a1 + 1;  // 纵坐标+1,即下移
+  *a1 = v1;
+  return v1 < 8;
+}
+```
+
+根据进入这四个函数的`if`语句判断条件，可以确定`O`: 左，`o`: 右，`.`: 上，`0`: 下。从上往下以此追踪，可以发现这些函数最终会跳到`lable15`处继续执行。对`lable15`进行分析，发现`asc_601060`中存储着特殊字符串。`asc_601060[8 * v9 + v10[0]] != 35`，即判断当前位置的字符是否为`#`，其中当前位置 = 8(迷宫横长) * 当前纵坐标 + 当前横坐标。编写`Python`代码来查看这个 `8×8` 的迷宫。
+
+```python
+maze = '  *******   *  **** * ****  * ***  *#  *** *** ***     *********'
+g = ''
+s = ''
+for i in range(0, len(maze)):
+    g += maze[i]
+    if (i+1)%8==0:
+        g += s + '\n'
+        s = ''
+print(g)
+```
+
+这个迷宫的字符图如下所示，迷宫的走法是：右下右右下下左下下下右右右右上上左左。根据`O`: 左，`o`: 右，`.`: 上，`0`: 下 来进行移动，可以得到`flag`：`nctf{o0oo00O000oooo..OO}`。
+
+```
+  ******
+*   *  *
+*** * **
+**  * **
+*  *#  *
+** *** *
+**     *
+********
+```
 
 ------
 
