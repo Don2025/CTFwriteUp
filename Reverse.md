@@ -856,7 +856,97 @@ INT_PTR __stdcall DialogFunc(HWND hDlg, UINT a2, WPARAM a3, LPARAM a4)
 
 代码审计后发现`v11`中存储的值`CZ9dmq4c8g9G7bAX`就是本题的`flag`。
 
+------
 
+### [Mysterious](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5480)
+
+用 `file`查看`Mysterious.exe`，可以看到信息`./Mysterious.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+// attributes: thunk
+int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+{
+  return _WinMain@16_0(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
+}
+```
+
+双击`_WinMain@16_0`函数，可以看到以下代码：
+
+```c
+int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+{
+  DialogBoxParamA(hInstance, (LPCSTR)0x65, 0, DialogFunc, 0);
+  return 0;
+}
+```
+
+双击`DialogFunc`函数，可以看到以下代码：
+
+```c
+// attributes: thunk
+INT_PTR __stdcall DialogFunc(HWND a1, UINT a2, WPARAM a3, LPARAM a4)
+{
+  return sub_401090(a1, a2, a3, a4);
+}
+```
+
+再双击`sub_401090`函数，可以看到以下代码：
+
+```c
+int __stdcall sub_401090(HWND hWnd, int a2, int a3, int a4)
+{
+  int v4; // eax
+  char Source[260]; // [esp+50h] [ebp-310h] BYREF
+  CHAR Text[5]; // [esp+154h] [ebp-20Ch] BYREF
+  char v8[252]; // [esp+159h] [ebp-207h] BYREF
+  __int16 v9; // [esp+255h] [ebp-10Bh]
+  char v10; // [esp+257h] [ebp-109h]
+  int Value; // [esp+258h] [ebp-108h]
+  CHAR String[260]; // [esp+25Ch] [ebp-104h] BYREF
+
+  memset(String, 0, sizeof(String));
+  Value = 0;
+  if ( a2 == 16 )
+  {
+    DestroyWindow(hWnd);
+    PostQuitMessage(0);
+  }
+  else if ( a2 == 273 )
+  {
+    if ( a3 == 1000 )
+    {
+      GetDlgItemTextA(hWnd, 1002, String, 260);
+      strlen(String);
+      if ( strlen(String) > 6 )
+        ExitProcess(0);
+      v4 = atoi(String);
+      Value = v4 + 1;
+      if ( v4 == 122 && String[3] == 120 && String[5] == 122 && String[4] == 121 )
+      {
+        strcpy(Text, "flag");
+        memset(v8, 0, sizeof(v8));
+        v9 = 0;
+        v10 = 0;
+        _itoa(Value, Source, 10);
+        strcat(Text, "{");
+        strcat(Text, Source);
+        strcat(Text, "_");
+        strcat(Text, "Buff3r_0v3rf|0w");
+        strcat(Text, "}");
+        MessageBoxA(0, Text, "well done", 0);
+      }
+      SetTimer(hWnd, 1u, 0x3E8u, TimerFunc);
+    }
+    if ( a3 == 1001 )
+      KillTimer(hWnd, 1u);
+  }
+  return 0;
+}
+```
+
+由那几个`strcat()`函数可知`flag`为`flag{ + Source + _Buff3r_0v3rf|0w}`，而`Source`是由`int`型变量`Value`经过`_itoa()`函数转换而来的，其中`Value = v4 + 1`，而由判断语句可知 `v4==122` 成立时才能执行 `if` 代码块中的内容，由此得知`Source = 123`，所以这题的`flag`是`flag{123_Buff3r_0v3rf|0w}`
+
+------
 
 ## BUUCTF
 
