@@ -944,7 +944,69 @@ int __stdcall sub_401090(HWND hWnd, int a2, int a3, int a4)
 }
 ```
 
-由那几个`strcat()`函数可知`flag`为`flag{ + Source + _Buff3r_0v3rf|0w}`，而`Source`是由`int`型变量`Value`经过`_itoa()`函数转换而来的，其中`Value = v4 + 1`，而由判断语句可知 `v4==122` 成立时才能执行 `if` 代码块中的内容，由此得知`Source = 123`，所以这题的`flag`是`flag{123_Buff3r_0v3rf|0w}`
+由那几个`strcat()`函数可知`flag`为`flag{ + Source + _Buff3r_0v3rf|0w}`，而`Source`是由`int`型变量`Value`经过`_itoa()`函数转换而来的，其中`Value = v4 + 1`，而由判断语句可知 `v4==122` 成立时才能执行 `if` 代码块中的内容，由此得知`Source = 123`，所以这题的`flag`是`flag{123_Buff3r_0v3rf|0w}`。
+
+------
+
+### [re4-unvm-me](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5033)
+
+这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
+
+我们可以使用[**python-uncompyle6**](https://github.com/rocky/python-uncompyle6)来对`.pyc`文件进行反编译从而得到`.py`文件。
+
+```bash
+uncompyle6 -o . re4-unvm-me.pyc
+```
+
+打开反编译得到的`.py`文件可以看到以下`Python2.x`版本的源码：
+
+```python
+# uncompyle6 version 3.7.4
+# Python bytecode 2.7 (62211)
+# Decompiled from: Python 3.8.8 (default, Apr 13 2021, 15:08:03) [MSC v.1916 64 bit (AMD64)]
+# Embedded file name: unvm_me.py
+# Compiled at: 2016-12-21 05:44:01
+import md5
+md5s = [
+ 174282896860968005525213562254350376167, 137092044126081477479435678296496849608, 126300127609096051658061491018211963916, 314989972419727999226545215739316729360, 256525866025901597224592941642385934114, 115141138810151571209618282728408211053, 8705973470942652577929336993839061582, 256697681645515528548061291580728800189, 39818552652170274340851144295913091599, 65313561977812018046200997898904313350, 230909080238053318105407334248228870753, 196125799557195268866757688147870815374, 74874145132345503095307276614727915885]
+print 'Can you turn me back to python ? ...'
+flag = raw_input('well as you wish.. what is the flag: ')
+if len(flag) > 69:
+    print 'nice try'
+    exit()
+if len(flag) % 5 != 0:
+    print 'nice try'
+    exit()
+for i in range(0, len(flag), 5):
+    s = flag[i:i + 5]
+    if int('0x' + md5.new(s).hexdigest(), 16) != md5s[(i / 5)]:
+        print 'nice try'
+        exit()
+
+print 'Congratz now you have the flag'
+```
+
+这个程序是将传入的字符串分`5`个一组，使用`md5`函数加密后，将`16`进制转`10`进制，然后依次与`md5s`数组进行比较。
+
+所以这题的求解思路是：`md5s`数组中的数据从`10`进制转换回`16`进制，再使用`md5`解密网站 https://www.cmd5.com/ 进行解密。
+
+```
+831daa3c843ba8b087c895f0ed305ce7
+6722f7a07246c6af20662b855846c2c8
+5f04850fec81a27ab5fc98befa4eb40c
+ecf8dcac7503e63a6a3667c5fb94f610
+c0fd15ae2c3931bc1e140523ae934722
+569f606fd6da5d612f10cfb95c0bde6d
+068cb5a1cf54c078bf0e7e89584c1a4e
+c11e2cd82d1f9fbd7e4d6ee9581ff3bd
+1df4c637d625313720f45706a48ff20f
+3122ef3a001aaecdb8dd9d843c029e06
+adb778a0f729293e7e0b19b96a4c5a61
+938c747c6a051b3e163eb802a325148e
+38543c5e820dd9403b57beff6020596d
+```
+
+将以上数据依次解密后可以连在一起就能得到`flag`：`ALEXCTF{dv5d4s2vj8nk43s8d8l6m1n5l67ds9v41n52nv37j481h3d28n4b6v3k}`。
 
 ------
 
