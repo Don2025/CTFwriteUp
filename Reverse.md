@@ -1218,6 +1218,50 @@ print(flag) # unctf{b66_6b6_66b}
 
 ------
 
+### [easyRE1](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5592)
+
+将附件解压缩后得到两个文件：`easy-32`和`easy-64`。这都没必要`file`了，用`IDA Pro 32bit`打开文件`easy-32`后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s[256]; // [esp+1Ch] [ebp-10Ch] BYREF
+  unsigned int v5; // [esp+11Ch] [ebp-Ch]
+
+  v5 = __readgsdword(0x14u);
+  puts("What is the password?");
+  gets(s);
+  if ( !strcmp(s, "the password") )
+    puts("FLAG:db2f62a36a018bce28e46d976e3f9864");
+  else
+    puts("Wrong!!");
+  return 0;
+}
+```
+
+显然`flag`就是`db2f62a36a018bce28e46d976e3f9864`可惜提交不对，提交`flag{db2f62a36a018bce28e46d976e3f9864}`过啦。
+
+既然给了两个文件就再来看看`easy-64`吧，用`IDA Pro 64bit`打开文件`easy-64`后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s1[264]; // [rsp+10h] [rbp-110h] BYREF
+  unsigned __int64 v5; // [rsp+118h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  puts("What is the password?");
+  gets(s1);
+  if ( !strcmp(s1, "the password") )
+    puts("FLAG:db2f62a36a018bce28e46d976e3f9864");
+  else
+    puts("Wrong!!");
+  return 0;
+}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
