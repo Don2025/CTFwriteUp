@@ -1010,6 +1010,148 @@ adb778a0f729293e7e0b19b96a4c5a61
 
 ------
 
+### [流浪者](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5570)
+
+用 `file`查看`Mysterious.exe`，可以看到信息`./cm.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+{
+  return AfxWinMain(hInstance, hPrevInstance, lpCmdLine, nShowCmd);
+}
+```
+
+双击`AfxWinMain()`函数可以看到以下代码：
+
+```c
+// attributes: thunk
+int __stdcall AfxWinMain(HINSTANCE a1, HINSTANCE a2, char *a3, int a4)
+{
+  return __imp_?AfxWinMain@@YGHPAUHINSTANCE__@@0PADH@Z(a1, a2, a3, a4);
+}
+```
+
+无从下手，使用`shift+F12`查看`Strings window`可以看到特殊字符串`请输入pass!`，根据它能定位到`sub_401890()`函数，这个函数是对用户输入进行处理。注意到最后的`sub_4017F0()`函数。
+
+```c
+int __thiscall sub_401890(CWnd *this)
+{
+  CWnd *v1; // eax
+  int v2; // eax
+  struct CString *v4; // [esp-4h] [ebp-C4h]
+  int v5[26]; // [esp+4Ch] [ebp-74h] BYREF
+  int i; // [esp+B4h] [ebp-Ch]
+  char *Str; // [esp+B8h] [ebp-8h]
+  CWnd *v8; // [esp+BCh] [ebp-4h]
+
+  v8 = this;
+  v4 = (CWnd *)((char *)this + 100);
+  v1 = CWnd::GetDlgItem(this, 1002);
+  CWnd::GetWindowTextA(v1, v4);  // 读取用户输入并保存到v1
+  v2 = sub_401A30((char *)v8 + 100);
+  Str = CString::GetBuffer((CWnd *)((char *)v8 + 100), v2);
+  if ( !strlen(Str) )
+    return CWnd::MessageBoxA(v8, "请输入pass!", 0, 0);
+  for ( i = 0; Str[i]; ++i )
+  {
+    if ( Str[i] > 57 || Str[i] < 48 )
+    {
+      if ( Str[i] > 122 || Str[i] < 97 )
+      {
+        if ( Str[i] > 90 || Str[i] < 65 )
+          sub_4017B0();
+        else
+          v5[i] = Str[i] - 29;
+      }
+      else
+      {
+        v5[i] = Str[i] - 87;
+      }
+    }
+    else
+    {
+      v5[i] = Str[i] - 48;
+    }
+  }
+  return sub_4017F0(v5);
+}
+```
+
+双击`sub_4017F0()`函数查看源码：
+
+```c
+int __cdecl sub_4017F0(int a1)
+{
+  int result; // eax
+  char Str1[28]; // [esp+D8h] [ebp-24h] BYREF
+  int v3; // [esp+F4h] [ebp-8h]
+  int v4; // [esp+F8h] [ebp-4h]
+
+  v4 = 0;
+  v3 = 0;
+  while ( *(int *)(a1 + 4 * v4) < 62 && *(int *)(a1 + 4 * v4) >= 0 )
+  {
+    Str1[v4] = aAbcdefghiabcde[*(_DWORD *)(a1 + 4 * v4)]; 
+    //'abcdefghiABCDEFGHIJKLMNjklmn0123456789opqrstuvwxyzOPQRSTUVWXYZ'
+    ++v4;
+  }
+  Str1[v4] = 0;
+  if ( !strcmp(Str1, "KanXueCTF2019JustForhappy") )
+    result = sub_401770();
+  else
+    result = sub_4017B0();
+  return result;
+}
+```
+
+该函数能判断传入的参数是否与字符串`KanXueCTF2019JustForhappy`相等，如果相等的话执行`sub_401770()`函数，不相等的话执行`sub_4017B0()`函数。
+
+```c
+BOOL sub_401770()
+{
+  HANDLE hProcess; // [esp+4Ch] [ebp-4h]
+
+  MessageBoxA(0, "pass!", "恭喜!", 0);
+  hProcess = GetCurrentProcess();
+  return TerminateProcess(hProcess, 0);
+}
+
+BOOL sub_4017B0()
+{
+  HANDLE hProcess; // [esp+4Ch] [ebp-4h]
+
+  MessageBoxA(0, "加油!", "错了!", 0);
+  hProcess = GetCurrentProcess();
+  return TerminateProcess(hProcess, 0);
+}
+```
+
+编写`Python`代码逆推回去，即可得到`flag{j0rXI4bTeustBiIGHeCF70DDM}`。
+
+```python
+src = 'abcdefghiABCDEFGHIJKLMNjklmn0123456789opqrstuvwxyzOPQRSTUVWXYZ'
+dst = 'KanXueCTF2019JustForhappy'
+v5 = []
+for x in dst:
+    v5.append(src.index(x))
+# v5 = [19, 0, 27, 59, 44, 4, 11, 55, 14, 30, 28, 29, 37, 18, 44, 42, 43, 14, 38, 41, 7, 0, 39, 39, 48]
+
+flag = ''
+for x in v5:
+    t = chr(x+29)
+    if 'A' <= t <= 'Z':
+        flag += t
+    t = chr(x+87)
+    if 'a' <= t <= 'z':
+        flag += t
+    t = chr(x+48)
+    if '0' <= t <= '9':
+        flag += t
+print(f'flag{{{flag}}}') # flag{j0rXI4bTeustBiIGHeCF70DDM}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
