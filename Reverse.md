@@ -1152,6 +1152,72 @@ print(f'flag{{{flag}}}') # flag{j0rXI4bTeustBiIGHeCF70DDM}
 
 ------
 
+### [666](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5573)
+
+用 `file`查看`666`，可以看到信息`./666: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s[240]; // [rsp+0h] [rbp-1E0h] BYREF
+  char v5[240]; // [rsp+F0h] [rbp-F0h] BYREF
+
+  memset(s, 0, 0x1EuLL);
+  printf("Please Input Key: ");
+  __isoc99_scanf("%s", v5);
+  encode(v5, s);
+  if ( strlen(v5) == key )
+  {
+    if ( !strcmp(s, enflag) )
+      puts("You are Right");
+    else
+      puts("flag{This_1s_f4cker_flag}");
+  }
+  return 0;
+}
+```
+
+双击`encode()`函数可以看到以下源码：
+
+```c
+int __fastcall encode(const char *a1, __int64 a2)  // a1 = v5, a2 = s
+{
+  char v3[104]; // [rsp+10h] [rbp-70h]
+  int v4; // [rsp+78h] [rbp-8h]
+  int i; // [rsp+7Ch] [rbp-4h]
+
+  i = 0;
+  v4 = 0;
+  if ( strlen(a1) != key )
+    return puts("Your Length is Wrong");
+  for ( i = 0; i < key; i += 3 )
+  {
+    v3[i + 64] = key ^ (a1[i] + 6);
+    v3[i + 33] = (a1[i + 1] - 6) ^ key;
+    v3[i + 2] = a1[i + 2] ^ 6 ^ key;
+    *(_BYTE *)(a2 + i) = v3[i + 64];
+    *(_BYTE *)(a2 + i + 1LL) = v3[i + 33];
+    *(_BYTE *)(a2 + i + 2LL) = v3[i + 2];
+  }
+  return a2;  // s,且s=enflag
+}
+```
+
+编写`Python`代码逆推回去，即可得到`flag`:`unctf{b66_6b6_66b}`。
+
+```python
+enflag = 'izwhroz""w"v.K".Ni'
+key = len(enflag)
+flag = ''
+for i in range(0, key, 3):
+    flag += chr((key^ord(enflag[i]))-6)
+    flag += chr((key^ord(enflag[i+1]))+6)
+    flag += chr(key^ord(enflag[i+2])^6)
+print(flag) # unctf{b66_6b6_66b}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
