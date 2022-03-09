@@ -1413,7 +1413,548 @@ public class guess
 
 ------
 
-### BUUCTF
+### [BABYRE](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4662)
+
+用 `file`查看附件`BABYRE`，可以看到信息`./BABYRE: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s[24]; // [rsp+0h] [rbp-20h] BYREF
+  int v5; // [rsp+18h] [rbp-8h]
+  int i; // [rsp+1Ch] [rbp-4h]
+
+  for ( i = 0; i <= 181; ++i )
+    judge[i] ^= 0xCu;
+  printf("Please input flag:");
+  __isoc99_scanf("%20s", s);
+  v5 = strlen(s);
+  if ( v5 == 14 && (*(unsigned int (__fastcall **)(char *))judge)(s) )
+    puts("Right!");
+  else
+    puts("Wrong!");
+  return 0;
+}
+```
+
+双击`judge`查看不了`C`语言源码，只能跳转到`.data`数据区，审计主函数后发现原来是因为这个函数在内存中的数据被异或操作加密啦。
+
+```assembly
+.data:0000000000600B00                 public judge
+.data:0000000000600B00 ; char judge[182]
+.data:0000000000600B00 judge           db 59h                  ; CODE XREF: main+80↑p
+.data:0000000000600B00                                         ; DATA XREF: main+16↑r ...
+.data:0000000000600B01                 db  44h ; D
+.data:0000000000600B02                 db  85h
+.data:0000000000600B03                 db 0E9h
+.data:0000000000600B04                 db  44h ; D
+.data:0000000000600B05                 db  85h
+.data:0000000000600B06                 db  71h ; q
+.data:0000000000600B07                 db 0D4h
+.data:0000000000600B08                 db 0CAh
+.data:0000000000600B09                 db  49h ; I
+.data:0000000000600B0A                 db 0ECh
+.data:0000000000600B0B                 db  6Ah ; j
+.data:0000000000600B0C                 db 0CAh
+.data:0000000000600B0D                 db  49h ; I
+.data:0000000000600B0E                 db 0EDh
+.data:0000000000600B0F                 db  61h ; a
+.data:0000000000600B10                 db 0CAh
+.data:0000000000600B11                 db  49h ; I
+.data:0000000000600B12                 db 0EEh
+.data:0000000000600B13                 db  6Fh ; o
+.data:0000000000600B14                 db 0CAh
+.data:0000000000600B15                 db  49h ; I
+.data:0000000000600B16                 db 0EFh
+.data:0000000000600B17                 db  68h ; h
+.data:0000000000600B18                 db 0CAh
+.data:0000000000600B19                 db  49h ; I
+.data:0000000000600B1A                 db 0E8h
+.data:0000000000600B1B                 db  73h ; s
+.data:0000000000600B1C                 db 0CAh
+.data:0000000000600B1D                 db  49h ; I
+.data:0000000000600B1E                 db 0E9h
+.data:0000000000600B1F                 db  67h ; g
+.data:0000000000600B20                 db 0CAh
+.data:0000000000600B21                 db  49h ; I
+.data:0000000000600B22                 db 0EAh
+.data:0000000000600B23                 db  3Bh ; ;
+.data:0000000000600B24                 db 0CAh
+.data:0000000000600B25                 db  49h ; I
+.data:0000000000600B26                 db 0EBh
+.data:0000000000600B27                 db  68h ; h
+.data:0000000000600B28                 db 0CAh
+.data:0000000000600B29                 db  49h ; I
+.data:0000000000600B2A                 db 0E4h
+.data:0000000000600B2B                 db  37h ; 7
+.data:0000000000600B2C                 db 0CAh
+.data:0000000000600B2D                 db  49h ; I
+.data:0000000000600B2E                 db 0E5h
+.data:0000000000600B2F                 db  5Ah ; Z
+.data:0000000000600B30                 db 0CAh
+.data:0000000000600B31                 db  49h ; I
+.data:0000000000600B32                 db 0E6h
+.data:0000000000600B33                 db  6Ch ; l
+.data:0000000000600B34                 db 0CAh
+.data:0000000000600B35                 db  49h ; I
+.data:0000000000600B36                 db 0E7h
+.data:0000000000600B37                 db  37h ; 7
+.data:0000000000600B38                 db 0CAh
+.data:0000000000600B39                 db  49h ; I
+.data:0000000000600B3A                 db 0E0h
+.data:0000000000600B3B                 db  62h ; b
+.data:0000000000600B3C                 db 0CAh
+.data:0000000000600B3D                 db  49h ; I
+.data:0000000000600B3E                 db 0E1h
+.data:0000000000600B3F                 db  7Ch ; |
+.data:0000000000600B40                 db 0CBh
+.data:0000000000600B41                 db  49h ; I
+.data:0000000000600B42                 db 0F0h
+.data:0000000000600B43                 db  0Ch
+.data:0000000000600B44                 db  0Ch
+.data:0000000000600B45                 db  0Ch
+.data:0000000000600B46                 db  0Ch
+.data:0000000000600B47                 db 0E7h
+.data:0000000000600B48                 db  24h ; $
+.data:0000000000600B49                 db  87h
+.data:0000000000600B4A                 db  49h ; I
+.data:0000000000600B4B                 db 0F0h
+.data:0000000000600B4C                 db  44h ; D
+.data:0000000000600B4D                 db  6Fh ; o
+.data:0000000000600B4E                 db 0DCh
+.data:0000000000600B4F                 db  44h ; D
+.data:0000000000600B50                 db  87h
+.data:0000000000600B51                 db  49h ; I
+.data:0000000000600B52                 db 0D4h
+.data:0000000000600B53                 db  44h ; D
+.data:0000000000600B54                 db  0Dh
+.data:0000000000600B55                 db 0DCh
+.data:0000000000600B56                 db  87h
+.data:0000000000600B57                 db  59h ; Y
+.data:0000000000600B58                 db 0F0h
+.data:0000000000600B59                 db  44h ; D
+.data:0000000000600B5A                 db  6Fh ; o
+.data:0000000000600B5B                 db 0C6h
+.data:0000000000600B5C                 db  44h ; D
+.data:0000000000600B5D                 db  87h
+.data:0000000000600B5E                 db  59h ; Y
+.data:0000000000600B5F                 db 0D4h
+.data:0000000000600B60                 db  44h ; D
+.data:0000000000600B61                 db  0Dh
+.data:0000000000600B62                 db 0C6h
+.data:0000000000600B63                 db    3
+.data:0000000000600B64                 db 0BAh
+.data:0000000000600B65                 db  1Eh
+.data:0000000000600B66                 db  87h
+.data:0000000000600B67                 db  41h ; A
+.data:0000000000600B68                 db 0F0h
+.data:0000000000600B69                 db  3Dh ; =
+.data:0000000000600B6A                 db 0C6h
+.data:0000000000600B6B                 db  84h
+.data:0000000000600B6C                 db  1Ch
+.data:0000000000600B6D                 db  8Fh
+.data:0000000000600B6E                 db  49h ; I
+.data:0000000000600B6F                 db 0F0h
+.data:0000000000600B70                 db  0Dh
+.data:0000000000600B71                 db  8Fh
+.data:0000000000600B72                 db  71h ; q
+.data:0000000000600B73                 db 0F0h
+.data:0000000000600B74                 db    1
+.data:0000000000600B75                 db  72h ; r
+.data:0000000000600B76                 db 0DEh
+.data:0000000000600B77                 db 0CBh
+.data:0000000000600B78                 db  49h ; I
+.data:0000000000600B79                 db 0F0h
+.data:0000000000600B7A                 db  0Ch
+.data:0000000000600B7B                 db  0Ch
+.data:0000000000600B7C                 db  0Ch
+.data:0000000000600B7D                 db  0Ch
+.data:0000000000600B7E                 db 0E7h
+.data:0000000000600B7F                 db  25h ; %
+.data:0000000000600B80                 db  87h
+.data:0000000000600B81                 db  49h ; I
+.data:0000000000600B82                 db 0F0h
+.data:0000000000600B83                 db  44h ; D
+.data:0000000000600B84                 db  6Fh ; o
+.data:0000000000600B85                 db 0DCh
+.data:0000000000600B86                 db  44h ; D
+.data:0000000000600B87                 db  87h
+.data:0000000000600B88                 db  49h ; I
+.data:0000000000600B89                 db 0D4h
+.data:0000000000600B8A                 db  44h ; D
+.data:0000000000600B8B                 db  0Dh
+.data:0000000000600B8C                 db 0DCh
+.data:0000000000600B8D                 db    3
+.data:0000000000600B8E                 db 0BAh
+.data:0000000000600B8F                 db  1Ch
+.data:0000000000600B90                 db  87h
+.data:0000000000600B91                 db  49h ; I
+.data:0000000000600B92                 db 0F0h
+.data:0000000000600B93                 db  44h ; D
+.data:0000000000600B94                 db  94h
+.data:0000000000600B95                 db    3
+.data:0000000000600B96                 db 0BAh
+.data:0000000000600B97                 db  48h ; H
+.data:0000000000600B98                 db    9
+.data:0000000000600B99                 db 0ECh
+.data:0000000000600B9A                 db  34h ; 4
+.data:0000000000600B9B                 db 0CEh
+.data:0000000000600B9C                 db  78h ; x
+.data:0000000000600B9D                 db  0Bh
+.data:0000000000600B9E                 db 0B4h
+.data:0000000000600B9F                 db  0Ch
+.data:0000000000600BA0                 db  0Ch
+.data:0000000000600BA1                 db  0Ch
+.data:0000000000600BA2                 db  0Ch
+.data:0000000000600BA3                 db 0E7h
+.data:0000000000600BA4                 db    3
+.data:0000000000600BA5                 db  8Fh
+.data:0000000000600BA6                 db  49h ; I
+.data:0000000000600BA7                 db 0F0h
+.data:0000000000600BA8                 db  0Dh
+.data:0000000000600BA9                 db  8Fh
+.data:0000000000600BAA                 db  71h ; q
+.data:0000000000600BAB                 db 0F0h
+.data:0000000000600BAC                 db    1
+.data:0000000000600BAD                 db  72h ; r
+.data:0000000000600BAE                 db 0DDh
+.data:0000000000600BAF                 db 0B4h
+.data:0000000000600BB0                 db  0Dh
+.data:0000000000600BB1                 db  0Ch
+.data:0000000000600BB2                 db  0Ch
+.data:0000000000600BB3                 db  0Ch
+.data:0000000000600BB4                 db  51h ; Q
+.data:0000000000600BB5                 db 0CFh
+.data:0000000000600BB5 _data           ends
+```
+
+我们可以用`IDA Pro`中的`IDC`工具编写脚本对这段汇编语言数据进行解密，编写以下代码保存为`patchDecrypt.idc`。
+
+```c
+#include <idc.idc>
+// from 是起始地址
+// size 是偏移地址
+// key 是操作
+static decrypt(from, size, key) {
+auto i;
+  for (i = 0; i < size; i++) {
+    PatchByte(from + i, Byte(from + i) ^ key);
+  }
+}
+```
+
+在`IDA Pro`的菜单栏`File → Script File`导入脚本`patchDecrypt.idc`，在最下面的`Output window`中选择`IDC`输入以下命令：
+
+```c
+decrypt(0x600B00,182,0xC);
+```
+
+`IDA Pro`执行后，可以看到`0x600B00`到`0x600BB5`的`.data`数据发生了改变，具体数据如下：
+
+```assembly
+.data:0000000000600B00                 public judge
+.data:0000000000600B00 ; char judge[182]
+.data:0000000000600B00 judge           db 55h                  ; CODE XREF: main+80↑p
+.data:0000000000600B00                                         ; DATA XREF: main+16↑r ...
+.data:0000000000600B01                 db  48h ; H
+.data:0000000000600B02                 db  89h
+.data:0000000000600B03                 db 0E5h
+.data:0000000000600B04                 db  48h ; H
+.data:0000000000600B05                 db  89h
+.data:0000000000600B06                 db  7Dh ; }
+.data:0000000000600B07                 db 0D8h
+.data:0000000000600B08                 db 0C6h
+.data:0000000000600B09                 db  45h ; E
+.data:0000000000600B0A                 db 0E0h
+.data:0000000000600B0B                 db  66h ; f
+.data:0000000000600B0C                 db 0C6h
+.data:0000000000600B0D                 db  45h ; E
+.data:0000000000600B0E                 db 0E1h
+.data:0000000000600B0F                 db  6Dh ; m
+.data:0000000000600B10                 db 0C6h
+.data:0000000000600B11                 db  45h ; E
+.data:0000000000600B12                 db 0E2h
+.data:0000000000600B13                 db  63h ; c
+.data:0000000000600B14                 db 0C6h
+.data:0000000000600B15                 db  45h ; E
+.data:0000000000600B16                 db 0E3h
+.data:0000000000600B17                 db  64h ; d
+.data:0000000000600B18                 db 0C6h
+.data:0000000000600B19                 db  45h ; E
+.data:0000000000600B1A                 db 0E4h
+.data:0000000000600B1B                 db  7Fh ; 
+.data:0000000000600B1C                 db 0C6h
+.data:0000000000600B1D                 db  45h ; E
+.data:0000000000600B1E                 db 0E5h
+.data:0000000000600B1F                 db  6Bh ; k
+.data:0000000000600B20                 db 0C6h
+.data:0000000000600B21                 db  45h ; E
+.data:0000000000600B22                 db 0E6h
+.data:0000000000600B23                 db  37h ; 7
+.data:0000000000600B24                 db 0C6h
+.data:0000000000600B25                 db  45h ; E
+.data:0000000000600B26                 db 0E7h
+.data:0000000000600B27                 db  64h ; d
+.data:0000000000600B28                 db 0C6h
+.data:0000000000600B29                 db  45h ; E
+.data:0000000000600B2A                 db 0E8h
+.data:0000000000600B2B                 db  3Bh ; ;
+.data:0000000000600B2C                 db 0C6h
+.data:0000000000600B2D                 db  45h ; E
+.data:0000000000600B2E                 db 0E9h
+.data:0000000000600B2F                 db  56h ; V
+.data:0000000000600B30                 db 0C6h
+.data:0000000000600B31                 db  45h ; E
+.data:0000000000600B32                 db 0EAh
+.data:0000000000600B33                 db  60h ; `
+.data:0000000000600B34                 db 0C6h
+.data:0000000000600B35                 db  45h ; E
+.data:0000000000600B36                 db 0EBh
+.data:0000000000600B37                 db  3Bh ; ;
+.data:0000000000600B38                 db 0C6h
+.data:0000000000600B39                 db  45h ; E
+.data:0000000000600B3A                 db 0ECh
+.data:0000000000600B3B                 db  6Eh ; n
+.data:0000000000600B3C                 db 0C6h
+.data:0000000000600B3D                 db  45h ; E
+.data:0000000000600B3E                 db 0EDh
+.data:0000000000600B3F                 db  70h ; p
+.data:0000000000600B40                 db 0C7h
+.data:0000000000600B41                 db  45h ; E
+.data:0000000000600B42                 db 0FCh
+.data:0000000000600B43                 db    0
+.data:0000000000600B44                 db    0
+.data:0000000000600B45                 db    0
+.data:0000000000600B46                 db    0
+.data:0000000000600B47                 db 0EBh
+.data:0000000000600B48                 db  28h ; (
+.data:0000000000600B49                 db  8Bh
+.data:0000000000600B4A                 db  45h ; E
+.data:0000000000600B4B                 db 0FCh
+.data:0000000000600B4C                 db  48h ; H
+.data:0000000000600B4D                 db  63h ; c
+.data:0000000000600B4E                 db 0D0h
+.data:0000000000600B4F                 db  48h ; H
+.data:0000000000600B50                 db  8Bh
+.data:0000000000600B51                 db  45h ; E
+.data:0000000000600B52                 db 0D8h
+.data:0000000000600B53                 db  48h ; H
+.data:0000000000600B54                 db    1
+.data:0000000000600B55                 db 0D0h
+.data:0000000000600B56                 db  8Bh
+.data:0000000000600B57                 db  55h ; U
+.data:0000000000600B58                 db 0FCh
+.data:0000000000600B59                 db  48h ; H
+.data:0000000000600B5A                 db  63h ; c
+.data:0000000000600B5B                 db 0CAh
+.data:0000000000600B5C                 db  48h ; H
+.data:0000000000600B5D                 db  8Bh
+.data:0000000000600B5E                 db  55h ; U
+.data:0000000000600B5F                 db 0D8h
+.data:0000000000600B60                 db  48h ; H
+.data:0000000000600B61                 db    1
+.data:0000000000600B62                 db 0CAh
+.data:0000000000600B63                 db  0Fh
+.data:0000000000600B64                 db 0B6h
+.data:0000000000600B65                 db  12h
+.data:0000000000600B66                 db  8Bh
+.data:0000000000600B67                 db  4Dh ; M
+.data:0000000000600B68                 db 0FCh
+.data:0000000000600B69                 db  31h ; 1
+.data:0000000000600B6A                 db 0CAh
+.data:0000000000600B6B                 db  88h
+.data:0000000000600B6C                 db  10h
+.data:0000000000600B6D                 db  83h
+.data:0000000000600B6E                 db  45h ; E
+.data:0000000000600B6F                 db 0FCh
+.data:0000000000600B70                 db    1
+.data:0000000000600B71                 db  83h
+.data:0000000000600B72                 db  7Dh ; }
+.data:0000000000600B73                 db 0FCh
+.data:0000000000600B74                 db  0Dh
+.data:0000000000600B75                 db  7Eh ; ~
+.data:0000000000600B76                 db 0D2h
+.data:0000000000600B77                 db 0C7h
+.data:0000000000600B78                 db  45h ; E
+.data:0000000000600B79                 db 0FCh
+.data:0000000000600B7A                 db    0
+.data:0000000000600B7B                 db    0
+.data:0000000000600B7C                 db    0
+.data:0000000000600B7D                 db    0
+.data:0000000000600B7E                 db 0EBh
+.data:0000000000600B7F                 db  29h ; )
+.data:0000000000600B80                 db  8Bh
+.data:0000000000600B81                 db  45h ; E
+.data:0000000000600B82                 db 0FCh
+.data:0000000000600B83                 db  48h ; H
+.data:0000000000600B84                 db  63h ; c
+.data:0000000000600B85                 db 0D0h
+.data:0000000000600B86                 db  48h ; H
+.data:0000000000600B87                 db  8Bh
+.data:0000000000600B88                 db  45h ; E
+.data:0000000000600B89                 db 0D8h
+.data:0000000000600B8A                 db  48h ; H
+.data:0000000000600B8B                 db    1
+.data:0000000000600B8C                 db 0D0h
+.data:0000000000600B8D                 db  0Fh
+.data:0000000000600B8E                 db 0B6h
+.data:0000000000600B8F                 db  10h
+.data:0000000000600B90                 db  8Bh
+.data:0000000000600B91                 db  45h ; E
+.data:0000000000600B92                 db 0FCh
+.data:0000000000600B93                 db  48h ; H
+.data:0000000000600B94                 db  98h
+.data:0000000000600B95                 db  0Fh
+.data:0000000000600B96                 db 0B6h
+.data:0000000000600B97                 db  44h ; D
+.data:0000000000600B98                 db    5
+.data:0000000000600B99                 db 0E0h
+.data:0000000000600B9A                 db  38h ; 8
+.data:0000000000600B9B                 db 0C2h
+.data:0000000000600B9C                 db  74h ; t
+.data:0000000000600B9D                 db    7
+.data:0000000000600B9E                 db 0B8h
+.data:0000000000600B9F                 db    0
+.data:0000000000600BA0                 db    0
+.data:0000000000600BA1                 db    0
+.data:0000000000600BA2                 db    0
+.data:0000000000600BA3                 db 0EBh
+.data:0000000000600BA4                 db  0Fh
+.data:0000000000600BA5                 db  83h
+.data:0000000000600BA6                 db  45h ; E
+.data:0000000000600BA7                 db 0FCh
+.data:0000000000600BA8                 db    1
+.data:0000000000600BA9                 db  83h
+.data:0000000000600BAA                 db  7Dh ; }
+.data:0000000000600BAB                 db 0FCh
+.data:0000000000600BAC                 db  0Dh
+.data:0000000000600BAD                 db  7Eh ; ~
+.data:0000000000600BAE                 db 0D1h
+.data:0000000000600BAF                 db 0B8h
+.data:0000000000600BB0                 db    1
+.data:0000000000600BB1                 db    0
+.data:0000000000600BB2                 db    0
+.data:0000000000600BB3                 db    0
+.data:0000000000600BB4                 db  5Dh ; ]
+.data:0000000000600BB5                 db 0C3h
+.data:0000000000600BB5 _data           ends
+```
+
+鼠标选中`public judge`处，再按`C`生成新的汇编语言代码：
+
+```assembly
+.data:0000000000600B00 ; char judge[182]
+.data:0000000000600B00                 public judge
+.data:0000000000600B00 judge:                                  ; CODE XREF: main+80↑p
+.data:0000000000600B00                                         ; DATA XREF: main+16↑r ...
+.data:0000000000600B00                 push    rbp
+.data:0000000000600B01                 mov     rbp, rsp
+.data:0000000000600B04                 mov     [rbp-28h], rdi
+.data:0000000000600B08                 mov     byte ptr [rbp-20h], 66h ; 'f'
+.data:0000000000600B0C                 mov     byte ptr [rbp-1Fh], 6Dh ; 'm'
+.data:0000000000600B10                 mov     byte ptr [rbp-1Eh], 63h ; 'c'
+.data:0000000000600B14                 mov     byte ptr [rbp-1Dh], 64h ; 'd'
+.data:0000000000600B18                 mov     byte ptr [rbp-1Ch], 7Fh
+.data:0000000000600B1C                 mov     byte ptr [rbp-1Bh], 6Bh ; 'k'
+.data:0000000000600B20                 mov     byte ptr [rbp-1Ah], 37h ; '7'
+.data:0000000000600B24                 mov     byte ptr [rbp-19h], 64h ; 'd'
+.data:0000000000600B28                 mov     byte ptr [rbp-18h], 3Bh ; ';'
+.data:0000000000600B2C                 mov     byte ptr [rbp-17h], 56h ; 'V'
+.data:0000000000600B30                 mov     byte ptr [rbp-16h], 60h ; '`'
+.data:0000000000600B34                 mov     byte ptr [rbp-15h], 3Bh ; ';'
+.data:0000000000600B38                 mov     byte ptr [rbp-14h], 6Eh ; 'n'
+.data:0000000000600B3C                 mov     byte ptr [rbp-13h], 70h ; 'p'
+.data:0000000000600B40                 mov     dword ptr [rbp-4], 0
+.data:0000000000600B47                 jmp     short loc_600B71
+.data:0000000000600B49 ; ---------------------------------------------------------------------------
+.data:0000000000600B49
+.data:0000000000600B49 loc_600B49:                             ; CODE XREF: .data:0000000000600B75↓j
+.data:0000000000600B49                 mov     eax, [rbp-4]
+.data:0000000000600B4C                 movsxd  rdx, eax
+.data:0000000000600B4F                 mov     rax, [rbp-28h]
+.data:0000000000600B53                 add     rax, rdx
+.data:0000000000600B56                 mov     edx, [rbp-4]
+.data:0000000000600B59                 movsxd  rcx, edx
+.data:0000000000600B5C                 mov     rdx, [rbp-28h]
+.data:0000000000600B60                 add     rdx, rcx
+.data:0000000000600B63                 movzx   edx, byte ptr [rdx]
+.data:0000000000600B66                 mov     ecx, [rbp-4]
+.data:0000000000600B69                 xor     edx, ecx
+.data:0000000000600B6B                 mov     [rax], dl
+.data:0000000000600B6D                 add     dword ptr [rbp-4], 1
+.data:0000000000600B71
+.data:0000000000600B71 loc_600B71:                             ; CODE XREF: .data:0000000000600B47↑j
+.data:0000000000600B71                 cmp     dword ptr [rbp-4], 0Dh
+.data:0000000000600B75                 jle     short loc_600B49
+.data:0000000000600B77                 mov     dword ptr [rbp-4], 0
+.data:0000000000600B7E                 jmp     short loc_600BA9
+.data:0000000000600B80 ; ---------------------------------------------------------------------------
+.data:0000000000600B80
+.data:0000000000600B80 loc_600B80:                             ; CODE XREF: .data:0000000000600BAD↓j
+.data:0000000000600B80                 mov     eax, [rbp-4]
+.data:0000000000600B83                 movsxd  rdx, eax
+.data:0000000000600B86                 mov     rax, [rbp-28h]
+.data:0000000000600B8A                 add     rax, rdx
+.data:0000000000600B8D                 movzx   edx, byte ptr [rax]
+.data:0000000000600B90                 mov     eax, [rbp-4]
+.data:0000000000600B93                 cdqe
+.data:0000000000600B95                 movzx   eax, byte ptr [rbp+rax-20h]
+.data:0000000000600B9A                 cmp     dl, al
+.data:0000000000600B9C                 jz      short loc_600BA5
+.data:0000000000600B9E                 mov     eax, 0
+.data:0000000000600BA3                 jmp     short loc_600BB4
+.data:0000000000600BA5 ; ---------------------------------------------------------------------------
+.data:0000000000600BA5
+.data:0000000000600BA5 loc_600BA5:                             ; CODE XREF: .data:0000000000600B9C↑j
+.data:0000000000600BA5                 add     dword ptr [rbp-4], 1
+.data:0000000000600BA9
+.data:0000000000600BA9 loc_600BA9:                             ; CODE XREF: .data:0000000000600B7E↑j
+.data:0000000000600BA9                 cmp     dword ptr [rbp-4], 0Dh
+.data:0000000000600BAD                 jle     short loc_600B80
+.data:0000000000600BAF                 mov     eax, 1
+.data:0000000000600BB4
+.data:0000000000600BB4 loc_600BB4:                             ; CODE XREF: .data:0000000000600BA3↑j
+.data:0000000000600BB4                 pop     rbp
+.data:0000000000600BB5                 retn
+.data:0000000000600BB5 _data           ends
+```
+
+框选`0x600B00`到`0x600BB5`的`.data`数据，按`P`生成新的`judge`函数，在`Function window`点击`judge`函数，按`F5`反编译查看代码：
+
+```c
+__int64 __fastcall judge(__int64 a1)
+{
+  char v2[5]; // [rsp+8h] [rbp-20h] BYREF
+  char v3[9]; // [rsp+Dh] [rbp-1Bh] BYREF
+  int i; // [rsp+24h] [rbp-4h]
+
+  qmemcpy(v2, "fmcd", 4);
+  v2[4] = 127;
+  qmemcpy(v3, "k7d;V`;np", sizeof(v3));
+  for ( i = 0; i <= 13; ++i )
+    *(_BYTE *)(i + a1) ^= i;
+  for ( i = 0; i <= 13; ++i )
+  {
+    if ( *(_BYTE *)(i + a1) != v2[i] )
+      return 0LL;
+  }
+  return 1LL;
+}
+```
+
+了解代码逻辑后，编写`Python`代码即可得到`flag`，提交`flag{n1c3_j0b}`即可。
+
+```python
+s = 'fmcd' + chr(127) + 'k7d;V`;np'
+flag = ''
+for i in range(14):
+    flag += chr(ord(s[i])^i)
+print(flag) # flag{n1c3_j0b}
+```
+
+------
+
+## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
 
