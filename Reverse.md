@@ -126,6 +126,50 @@ print(flag) # nctf{d3c0mpil1n9_PyC}
 
 ------
 
+### [easyRE1](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5592)
+
+将附件解压缩后得到两个文件：`easy-32`和`easy-64`。这都没必要`file`了，用`IDA Pro 32bit`打开文件`easy-32`后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s[256]; // [esp+1Ch] [ebp-10Ch] BYREF
+  unsigned int v5; // [esp+11Ch] [ebp-Ch]
+
+  v5 = __readgsdword(0x14u);
+  puts("What is the password?");
+  gets(s);
+  if ( !strcmp(s, "the password") )
+    puts("FLAG:db2f62a36a018bce28e46d976e3f9864");
+  else
+    puts("Wrong!!");
+  return 0;
+}
+```
+
+显然`flag`就是`db2f62a36a018bce28e46d976e3f9864`可惜提交不对，提交`flag{db2f62a36a018bce28e46d976e3f9864}`过啦。
+
+既然给了两个文件就再来看看`easy-64`吧，用`IDA Pro 64bit`打开文件`easy-64`后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s1[264]; // [rsp+10h] [rbp-110h] BYREF
+  unsigned __int64 v5; // [rsp+118h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  puts("What is the password?");
+  gets(s1);
+  if ( !strcmp(s1, "the password") )
+    puts("FLAG:db2f62a36a018bce28e46d976e3f9864");
+  else
+    puts("Wrong!!");
+  return 0;
+}
+```
+
+------
+
 ### [open-source](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5076)
 
 这道题的附件是一个`.c`文件，直接查看源码：
@@ -184,15 +228,15 @@ Get your key: c0ffee
 
 题目描述中有说这是一个被加壳的二进制文件，在`Kali-Linux`中使用命令行`upx -d 文件名`进行脱壳。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/simple-unpack/1.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5077/1.png)
 
 `file ./simple-unpack`发现该文件是`64`位的，用`IDA Pro 64bit`以`ELF 64 for x86-64`形式打开文件后，按`F5`进行反编译可以看到以下源码：
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/simple-unpack/2.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5077/2.png)
 
 双击`flag`即可得到`flag{Upx_1s_n0t_a_d3liv3r_c0mp4ny}`。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/simple-unpack/3.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5077/3.png)
 
 如果题目没有提示，不知道需要脱壳的话，也可以直接用`file`查看`.exe`文件发现是`ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`以二进制文件形式打开附件给出的`.exe`文件后按`shift + F12`查看`Strings window`可以发现`flag`：`flag{Upx_1s_n0t_a_d3liv3r_c0mp4ny}`。
 
@@ -202,7 +246,7 @@ Get your key: c0ffee
 
 用`file`查看`.exe`文件发现是`ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开附件，按`F5`进行反编译可以看到以下源码：
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/logmein/1.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5078/1.png)
 
 分析代码逻辑，`v8`是加密后数据，`v7`相当于密钥，将`v8`逐个字符与`v7`中的字符逐个进行异或后，得到的字符串就是正确的密码。
 
@@ -232,7 +276,7 @@ Great job!
 
 ### [game](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5074)
 
-`file`查看文件可以看到：`./game.exe: PE32 executable (console) Intel 80386, for MS Windows`。使用`IDA Pro 32bit`打开附件，按`F5`进行反编译可以看到以下源码：
+`file`查看附件`game.exe`可以看到：`./game.exe: PE32 executable (console) Intel 80386, for MS Windows`。使用`IDA Pro 32bit`打开附件，按`F5`进行反编译可以看到以下源码：
 
 ```c
 // attributes: thunk
@@ -464,25 +508,25 @@ print(flag) # zsctf{T9is_tOpic_1s_v5ry_int7resting_b6t_others_are_n0t}
 
 ### [no-strings-attached](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5080)
 
-`file`查看文件可以看到以下信息：
+`file`查看附件`./no-strings-attached`可以看到以下信息：
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/1.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5080/1.png)
 
 使用`IDA Pro 32bit`打开附件，按`F5`进行反编译可以看到以下源码：
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/2.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5080/2.png)
 
 第一个函数用于区域设置；第二个获取时间，搞了个随机数种子，还输出了欢迎语；第三个函数里只输出了句话让用户输入，都没啥用。双击`authenticate()`函数可以看到调用`decrypt()`函数的这行代码很关键，用户输入要和`s2`进行字符串比较，显然`s2`就是`flag`。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/3.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5080/3.png)
 
 双击`decrypt()`函数可以看到源码如下：
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/4.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5080/4.png)
 
 查看汇编代码，发现`decrypt()` 函数执行结束后，会将一个结果放入内存中。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/5.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5080/5.png)
 
 这就需要用`gdb`进行动态调试，在`decrypt()`函数处设置断点，执行完该函数后再执行一步来读取`$eax`寄存器中的内容，即可得到`flag`。
 
@@ -496,7 +540,7 @@ x/sw $eax
 
 `break/b` 可以设置断点，`gdb`可以直接根据已知函数名来对该函数设置断点，也可通过`*指定地址`下断点。 `run/r`可以运行程序，`next/n`表示单步步过，`s` 表示单步步入（如果此行代码中有函数调用，则进入该函数），` x` 指令表示查看寄存器内容，参数`/s`表示用字符串形式显示，`/w`表示四字节宽，因此`/sw` 表示以四字节宽来显示字符串。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/no-strings-attached/6.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5080/6.png)
 
 本题的`flag`就是`9447{you_are_an_international_mystery}`。
 
@@ -504,7 +548,7 @@ x/sw $eax
 
 ### [csaw2013reversing2](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5081)
 
-用 `file`查看`csaw2013reversing2.exe`，可以看到信息`./csaw2013reversing2.exe: PE32 executable (console) Intel 80386, for MS Windows`。用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`csaw2013reversing2.exe`，可以看到信息`./csaw2013reversing2.exe: PE32 executable (console) Intel 80386, for MS Windows`。用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
 ```c
 int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
@@ -531,29 +575,29 @@ int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
 
 注意到 `MessageBoxA(0, lpMem + 1, "Flag", 2u);` 这行代码，这行代码在一个`if`代码块中，而这个`if`语句的判断条件默认不成立，直接跳转到后面代码中输出乱码。回到汇编语言代码，`loc_401096` 中有一个 `int3` 断点可以`Trap to Debugger`，`loc_4010B9`可以输出弹窗。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/1.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5081/1.png)
 
 所以解题思路就是让程序跳转到 `loc_401096` 进行解码， 将`int3` 改成 `nop(0x90)`，再跳转到 `loc_4010B9` 输出弹窗。而不是直接执行`loc_4010B9`输出含有乱码的弹窗。
 
-使用`ollydbg`打开`csaw2013reversing2.exe`，将`0040109A`这条`int 3`语句前的`je short csaw2013.00BF10B9`修改为`je short csaw2013.00BF1096`。![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/2.png)
+使用`ollydbg`打开`csaw2013reversing2.exe`，将`0040109A`这条`int 3`语句前的`je short csaw2013.00BF10B9`修改为`je short csaw2013.00BF1096`。![](https://paper.tanyaodan.com/ADWorld/reverse/5081/2.png)
 
 将`int3` 这个断点中断改成 `nop(0x90)`。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/3.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5081/3.png)
 
 再将后面的那条`je short csaw2013.00BF10EF`修改为`je short csaw2013.00BF10B9`。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/4.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5081/4.png)
 
 `run`执行程序即可输出包含`flag`的无码弹窗，从而得到`flag`：`flag{reversing_is_not_that_hard!}`。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/csaw2013reversing2/5.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5081/5.png)
 
 ------
 
 ### [getit](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5082)
 
-用 `file`查看`getit`，可以看到信息`./getit: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`getit`，可以看到信息`./getit: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -594,11 +638,11 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 在`IDA`中查看汇编代码，追踪`strlen`可以找到`for()`的判断条件位置，还要进行一步查找`fseek()`函数。根据汇编代码，可以确定`jnb loc_4008B5`就是`fseek()`函数，而`mov eax,[rbp+var_3C]`中每次移动的值应该就是`flag`中的一部分，继续审计汇编代码可以看到`mov rdx, [rbp+stream] `，所以`flag`最终应该会存放在寄存器`$rdx`中。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/getit/1.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5082/1.png)
 
 `vim ~/.gdbinit`然后取消`#source /home/tyd/ctf/gdb/pwndbg/gdbinit.py`前的`#`注释以启用`pwndbg`。接着使用`pwndbg`来动态调试程序，`b *0x400832`在地址`0x400832`处设置断点，`r/run`运行程序，可以直接看到每个寄存器中存储的数值信息，而`$rdx`寄存器中存放着`flag`：`SharifCTF{b70c59275fcfa8aebf2d5911223c6589}`。
 
-![](https://paper.tanyaodan.com/ADWorld/reverse/getit/2.png)
+![](https://paper.tanyaodan.com/ADWorld/reverse/5082/2.png)
 
 此外，这道题还可根据代码审计的结果编写`Python`代码，运行即可得到`flag`：`SharifCTF{b70c59275fcfa8aebf2d5911223c6589}`。
 
@@ -619,7 +663,7 @@ print(flag) # SharifCTF{b70c59275fcfa8aebf2d5911223c6589}
 
 ### [maze](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5084)
 
-用 `file`查看`maze`，可以看到信息`./maze: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：	
+用 `file`查看附件`maze`，可以看到信息`./maze: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：	
 
 ```c
 __int64 __fastcall main(int a1, char **a2, char **a3)
@@ -768,7 +812,7 @@ print(g)
 
 ### [srm-50](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4963)
 
-用 `file`查看`srm-50.exe`，可以看到信息`./srm-50.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`srm-50.exe`，可以看到信息`./srm-50.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
 ```c
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -860,7 +904,7 @@ INT_PTR __stdcall DialogFunc(HWND hDlg, UINT a2, WPARAM a3, LPARAM a4)
 
 ### [Mysterious](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5480)
 
-用 `file`查看`Mysterious.exe`，可以看到信息`./Mysterious.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`Mysterious.exe`，可以看到信息`./Mysterious.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
 ```c
 // attributes: thunk
@@ -1012,7 +1056,7 @@ adb778a0f729293e7e0b19b96a4c5a61
 
 ### [流浪者](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5570)
 
-用 `file`查看`Mysterious.exe`，可以看到信息`./cm.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`Mysterious.exe`，可以看到信息`./cm.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
 ```c
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -1154,7 +1198,7 @@ print(f'flag{{{flag}}}') # flag{j0rXI4bTeustBiIGHeCF70DDM}
 
 ### [666](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5573)
 
-用 `file`查看`666`，可以看到信息`./666: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`666`，可以看到信息`./666: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -1218,51 +1262,158 @@ print(flag) # unctf{b66_6b6_66b}
 
 ------
 
-### [easyRE1](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5592)
+### [Reversing-x64Elf-100](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4826)
 
-将附件解压缩后得到两个文件：`easy-32`和`easy-64`。这都没必要`file`了，用`IDA Pro 32bit`打开文件`easy-32`后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`Reversing-x64Elf-100.re`，可以看到`./Reversing-x64Elf-100.re: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
 ```c
-int __cdecl main(int argc, const char **argv, const char **envp)
+__int64 __fastcall main(int a1, char **a2, char **a3)
 {
-  char s[256]; // [esp+1Ch] [ebp-10Ch] BYREF
-  unsigned int v5; // [esp+11Ch] [ebp-Ch]
+  __int64 result; // rax
+  char s[264]; // [rsp+0h] [rbp-110h] BYREF
+  unsigned __int64 v5; // [rsp+108h] [rbp-8h]
 
-  v5 = __readgsdword(0x14u);
-  puts("What is the password?");
-  gets(s);
-  if ( !strcmp(s, "the password") )
-    puts("FLAG:db2f62a36a018bce28e46d976e3f9864");
+  v5 = __readfsqword(0x28u);
+  printf("Enter the password: ");
+  if ( !fgets(s, 255, stdin) )
+    return 0LL;
+  if ( (unsigned int)sub_4006FD(s) )
+  {
+    puts("Incorrect password!");
+    result = 1LL;
+  }
   else
-    puts("Wrong!!");
-  return 0;
+  {
+    puts("Nice!");
+    result = 0LL;
+  }
+  return result;
 }
 ```
 
-显然`flag`就是`db2f62a36a018bce28e46d976e3f9864`可惜提交不对，提交`flag{db2f62a36a018bce28e46d976e3f9864}`过啦。
-
-既然给了两个文件就再来看看`easy-64`吧，用`IDA Pro 64bit`打开文件`easy-64`后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+注意到字符串`"Incorrect password!"`，双击进入`sub_4006FD()`函数可以看到以下源代码：
 
 ```c
-int __cdecl main(int argc, const char **argv, const char **envp)
+__int64 __fastcall sub_4006FD(__int64 a1)
 {
-  char s1[264]; // [rsp+10h] [rbp-110h] BYREF
-  unsigned __int64 v5; // [rsp+118h] [rbp-8h]
+  int i; // [rsp+14h] [rbp-24h]
+  __int64 v3[4]; // [rsp+18h] [rbp-20h]
 
-  v5 = __readfsqword(0x28u);
-  puts("What is the password?");
-  gets(s1);
-  if ( !strcmp(s1, "the password") )
-    puts("FLAG:db2f62a36a018bce28e46d976e3f9864");
-  else
-    puts("Wrong!!");
-  return 0;
+  v3[0] = (__int64)"Dufhbmf";
+  v3[1] = (__int64)"pG`imos";
+  v3[2] = (__int64)"ewUglpt";
+  for ( i = 0; i <= 11; ++i )
+  {
+    if ( *(char *)(v3[i % 3] + 2 * (i / 3)) - *(char *)(i + a1) != 1 )
+      return 1LL;
+  }
+  return 0LL;
+}
+```
+
+根据代码逻辑，编写`Python`代码可以得到`flag`: `Code_Talkers`。
+
+```python
+s = ['Dufhbmf', 'pG`imos', 'ewUglpt']
+flag = ''
+for i in range(12):
+    flag += chr(ord(s[i%3][2*int(i/3)])-1)
+print(flag) # Code_Talkers
+```
+
+------
+
+### [Guess-the-Number](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4908)
+
+将附件`Guess-the-Number.jar`解压后可以得到`guess.class`，使用`Java`反编译工具`jd-gui`打开后可以看到以下源代码：
+
+```java
+import java.io.PrintStream;
+import java.math.BigInteger;
+
+public class guess
+{
+  static String XOR(String _str_one, String _str_two)
+  {
+    BigInteger i1 = new BigInteger(_str_one, 16);
+    BigInteger i2 = new BigInteger(_str_two, 16);
+    BigInteger res = i1.xor(i2);
+    String result = res.toString(16);
+    return result;
+  }
+  
+  public static void main(String[] args)
+  {
+    int guess_number = 0;
+    int my_num = 349763335;
+    int my_number = 1545686892;
+    int flag = 345736730;
+    if (args.length > 0)
+    {
+      try
+      {
+        guess_number = Integer.parseInt(args[0]);
+        if (my_number / 5 == guess_number)
+        {
+          String str_one = "4b64ca12ace755516c178f72d05d7061";
+          String str_two = "ecd44646cfe5994ebeb35bf922e25dba";
+          my_num += flag;
+          String answer = XOR(str_one, str_two);
+          
+          System.out.println("your flag is: " + answer);
+        }
+        else
+        {
+          System.err.println("wrong guess!");
+          System.exit(1);
+        }
+      }
+      catch (NumberFormatException e)
+      {
+        System.err.println("please enter an integer \nexample: java -jar guess 12");
+        System.exit(1);
+      }
+    }
+    else
+    {
+      System.err.println("wrong guess!");
+      int num = 1000000;
+      num++;
+      System.exit(1);
+    }
+  }
+}
+```
+
+代码审计完后，根据代码逻辑编写`guess.java`，`java guess.java`运行后即可得到`flag`: `a7b08c546302cc1fd2a4d48bf2bf2ddb`。
+
+```java
+import java.io.PrintStream;
+import java.math.BigInteger;
+
+public class guess
+{  
+  static String XOR(String _str_one, String _str_two)
+  {
+    BigInteger i1 = new BigInteger(_str_one, 16);
+    BigInteger i2 = new BigInteger(_str_two, 16);
+    BigInteger res = i1.xor(i2);
+    String result = res.toString(16);
+    return result;
+  }
+  public static void main(String[] args)
+  {
+    String str_one = "4b64ca12ace755516c178f72d05d7061";
+    String str_two = "ecd44646cfe5994ebeb35bf922e25dba";
+    String answer = XOR(str_one, str_two);
+    System.out.println("your flag is: " + answer);
+  }
 }
 ```
 
 ------
 
-## BUUCTF
+### BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
 
