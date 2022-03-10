@@ -1954,6 +1954,71 @@ print(flag) # flag{n1c3_j0b}
 
 ------
 
+### [EasyRE](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5446)
+
+用 `file`查看附件`EasyRE.exe`，可以看到信息`./EasyRE.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  unsigned int v3; // kr00_4
+  int v4; // edx
+  char *v5; // esi
+  char v6; // al
+  unsigned int i; // edx
+  int v8; // eax
+  char Arglist[16]; // [esp+2h] [ebp-24h] BYREF
+  __int64 v11; // [esp+12h] [ebp-14h] BYREF
+  int v12; // [esp+1Ah] [ebp-Ch]
+  __int16 v13; // [esp+1Eh] [ebp-8h]
+
+  sub_401020(Format, Arglist[0]);
+  v12 = 0;
+  v13 = 0;
+  *(_OWORD *)Arglist = 0i64;
+  v11 = 0i64;
+  sub_401050("%s", (char)Arglist);
+  v3 = strlen(Arglist);
+  if ( v3 >= 0x10 && v3 == 24 )
+  {
+    v4 = 0;
+    v5 = (char *)&v11 + 7;
+    do
+    {
+      v6 = *v5--;
+      byte_40336C[v4++] = v6;
+    }
+    while ( v4 < 24 );
+    for ( i = 0; i < 0x18; ++i )
+      byte_40336C[i] = (byte_40336C[i] + 1) ^ 6;
+    v8 = strcmp(byte_40336C, aXircjR2twsv3pt);
+    if ( v8 )
+      v8 = v8 < 0 ? -1 : 1;
+    if ( !v8 )
+    {
+      sub_401020("right\n", Arglist[0]);
+      system("pause");
+    }
+  }
+  return 0;
+}
+```
+
+注意到变量`aXircjR2twsv3pt`，双击发现是特殊字符串。根据代码逻辑编写`Python`代码，即可得到`flag{xNqU4otPq3ys9wkDsN}`。
+
+```python
+s = 'xIrCj~<r|2tWsv3PtI' 
+flag = ''
+for i in range(len(s)):
+    flag = chr((ord(s[i])^6)-1) + flag
+data = [0x7F, 0x7A, 0x6E, 0x64, 0x6B, 0x61]
+for i in range(len(data)):
+    flag = chr((data[i]^6)-1) + flag
+print(flag) # flag{xNqU4otPq3ys9wkDsN}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
