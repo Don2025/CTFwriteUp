@@ -2019,7 +2019,41 @@ print(flag) # flag{xNqU4otPq3ys9wkDsN}
 
 ------
 
-## BUUCTF
+### [re-for-50-plz-50](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4952)
+
+用 `file`查看附件`re-for-50-plz-50`，可以看到信息`./re-for-50-plz-50: ELF 32-bit LSB executable, MIPS`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  int i; // [sp+18h] [+18h]
+
+  for ( i = 0; i < 31; ++i )
+  {
+    if ( meow[i] != (char)(argv[1][i] ^ 0x37) )
+    {
+      print("NOOOOOOOOOOOOOOOOOO\n");
+      exit_funct();
+    }
+  }
+  puts("C0ngr4ssulations!! U did it.", argv, envp);
+  exit_funct();
+}
+```
+
+双击 `meow` 发现特殊字符串`cbtcqLUBChERV[[Nh@_X^D]X_YPV[CJ`。编写`Python`代码可以得到`TUCTF{but_really_whoisjohngalt}`。
+
+```python
+s = 'cbtcqLUBChERV[[Nh@_X^D]X_YPV[CJ'
+flag = ''
+for i in range(len(s)):
+    flag += chr(ord(s[i])^0x37) 
+print(flag)
+```
+
+------
+
+### BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
 
