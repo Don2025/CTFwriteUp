@@ -2200,6 +2200,131 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ------
 
+### [parallel-comparator-200](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4706)
+
+这道题附件是一个 ` .c` 文件，打开后源码如下：
+
+```c
+#include <stdlib.h>
+#include <stdio.h>
+#include <pthread.h>
+
+#define FLAG_LEN 20
+
+void * checking(void *arg) {
+    char *result = malloc(sizeof(char));
+    char *argument = (char *)arg;
+    *result = (argument[0]+argument[1]) ^ argument[2];
+    return result;
+}
+
+int highly_optimized_parallel_comparsion(char *user_string)
+{
+    int initialization_number;
+    int i;
+    char generated_string[FLAG_LEN + 1];
+    generated_string[FLAG_LEN] = '\0';
+
+    while ((initialization_number = random()) >= 64);
+    
+    int first_letter;
+    first_letter = (initialization_number % 26) + 97;
+
+    pthread_t thread[FLAG_LEN];
+    char differences[FLAG_LEN] = {0, 9, -9, -1, 13, -13, -4, -11, -9, -1, -7, 6, -13, 13, 3, 9, -13, -11, 6, -7};
+    char *arguments[20];
+    for (i = 0; i < FLAG_LEN; i++) {
+        arguments[i] = (char *)malloc(3*sizeof(char));
+        arguments[i][0] = first_letter;
+        arguments[i][1] = differences[i];
+        arguments[i][2] = user_string[i];
+
+        pthread_create((pthread_t*)(thread+i), NULL, checking, arguments[i]);
+    }
+
+    void *result;
+    int just_a_string[FLAG_LEN] = {115, 116, 114, 97, 110, 103, 101, 95, 115, 116, 114, 105, 110, 103, 95, 105, 116, 95, 105, 115};
+    for (i = 0; i < FLAG_LEN; i++) {
+        pthread_join(*(thread+i), &result);
+        generated_string[i] = *(char *)result + just_a_string[i];
+        free(result);
+        free(arguments[i]);
+    }
+
+    int is_ok = 1;
+    for (i = 0; i < FLAG_LEN; i++) {
+        if (generated_string[i] != just_a_string[i])
+            return 0;
+    }
+
+    return 1;
+}
+
+int main()
+{
+    char *user_string = (char *)calloc(FLAG_LEN+1, sizeof(char));
+    fgets(user_string, FLAG_LEN+1, stdin);
+    int is_ok = highly_optimized_parallel_comparsion(user_string);
+    if (is_ok)
+        printf("You win!\n");
+    else
+        printf("Wrong!\n");
+    return 0;
+}
+
+```
+
+注意到`highly_optimized_parallel_comparsion()`函数中有关键代码段，我们可以推断出`result = 0`。
+
+```c
+for (i = 0; i < FLAG_LEN; i++) {
+    pthread_join(*(thread+i), &result);
+    generated_string[i] = *(char *)result + just_a_string[i];
+    free(result);
+    free(arguments[i]);
+}
+```
+
+所以由`result = 0`又能推断出异或结果为`0`，即`argument[2] = argument[0]+argument[1]`。
+
+```c
+void * checking(void *arg) {
+    char *result = malloc(sizeof(char));
+    char *argument = (char *)arg;
+    *result = (argument[0]+argument[1]) ^ argument[2];
+    return result;
+}
+```
+
+而根据以下代码又能知道`user_string[i] = differences[i] + first_letter`，其中`first_letter = 97 + x; 0<=x<=25`。
+
+```c
+int first_letter;
+first_letter = (initialization_number % 26) + 97;
+char differences[FLAG_LEN] = {0, 9, -9, -1, 13, -13, -4, -11, -9, -1, -7, 6, -13, 13, 3, 9, -13, -11, 6, -7};
+char *arguments[20];
+for (i = 0; i < FLAG_LEN; i++) {
+    arguments[i] = (char *)malloc(3*sizeof(char));
+    arguments[i][0] = first_letter;
+    arguments[i][1] = differences[i];
+    arguments[i][2] = user_string[i];
+
+    pthread_create((pthread_t*)(thread+i), NULL, checking, arguments[i]);
+}
+```
+
+根据代码逻辑编写`Python`代码，运行后可以在结果中看到一行`lucky_hacker_you_are`，这就是`flag`。
+
+```python
+differences = [0, 9, -9, -1, 13, -13, -4, -11, -9, -1, -7, 6, -13, 13, 3, 9, -13, -11, 6, -7]
+for i in range(26):
+    first_letter = 97 + i
+    flag = ''.join([chr(first_letter+differences[i]) for i in range(len(differences))])
+    print(flag) # first_letter = 108, flag is lucky_hacker_you_are
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
