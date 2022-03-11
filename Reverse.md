@@ -2325,6 +2325,119 @@ for i in range(26):
 
 ------
 
+### [secret-galaxy-300](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4707)
+
+这题附件是一个压缩包，解压缩后可以得到三个文件：`task10_x86_secret-galaxy-300.exe`，`task10_x86_secret-galaxy-300`，`task10_x86_64_secret-galaxy-300`，那就随机挑选一个运行吧。`./task10_x86_64_secret-galaxy-300`运行结果如下：
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/4707/1.png)
+
+用`IDA Pro 64bit`打开文件`task10_x86_64_secret-galaxy-300`后，按`F5`反编译后，可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  fill_starbase((__int64)&starbase);
+  print_starbase(&starbase);
+  return 0;
+}
+```
+
+双击`fill_starbase()`函数可以看到以下源代码：
+
+```c
+void __fastcall fill_starbase(__int64 a1)
+{
+  int i; // [rsp+14h] [rbp-1Ch]
+  __int64 v2; // [rsp+18h] [rbp-18h]
+
+  v2 = 0LL;
+  for ( i = 0; i <= 4; ++i )
+  {
+    *(_QWORD *)(a1 + 40LL * i) = (&galaxy_name)[i];
+    *(_DWORD *)(40LL * i + a1 + 8) = random();
+    *(_DWORD *)(40LL * i + a1 + 12) = 0;
+    *(_QWORD *)(40LL * i + a1 + 16) = 0LL;
+    *(_QWORD *)(40LL * i + a1 + 24) = 40 * (i + 1LL) + a1;
+    *(_QWORD *)(a1 + 40LL * i + 32) = v2;
+    v2 = 40LL * i + a1;
+  }
+}
+```
+
+双击变量名`galaxy_name`跳转到汇编语言代码，发现`public galaxy_name`中除了`"DARK SECRET GALAXY"`外 其它的星球名都输出过。
+
+![](https://paper.tanyaodan.com/ADWorld/reverse/4707/2.png)
+
+盲猜`"DARK SECRET GALAXY"`不对劲，点击`DATA XREF: __libc_csu_gala+C↑r`的`↑`跳转到相应`.text`段，按`F5`反编译得到新函数：
+
+```c
+__int64 _libc_csu_gala()
+{
+  __int64 result; // rax
+
+  sc = off_601288;
+  *((_QWORD *)&sc + 2) = &byte_601384;
+  *((_DWORD *)&sc + 2) = 31337;
+  *((_DWORD *)&sc + 3) = 1;
+  byte_601384 = off_601268[8];
+  byte_601385 = off_601280[7];
+  byte_601386 = off_601270[4];
+  byte_601387 = off_601268[6];
+  byte_601388 = off_601268[1];
+  byte_601389 = off_601270[2];
+  byte_60138A = 95;
+  byte_60138B = off_601268[8];
+  byte_60138C = off_601268[3];
+  byte_60138D = off_601278[5];
+  byte_60138E = 95;
+  byte_60138F = off_601268[8];
+  byte_601390 = off_601268[3];
+  byte_601391 = off_601268[4];
+  byte_601392 = off_601280[6];
+  byte_601393 = off_601280[4];
+  byte_601394 = off_601268[2];
+  byte_601395 = 95;
+  byte_601396 = off_601280[6];
+  result = (unsigned __int8)off_601270[3];
+  byte_601397 = off_601270[3];
+  byte_601398 = 0;
+  return result;
+}
+```
+
+根据该函数的代码逻辑，编写`Python`代码即可得到`flag`，提交`aliens_are_around_us`即可。
+
+```python
+flag = ''
+off_601268 = 'Andromeda'
+off_601270 = 'Messier'
+off_601278 = 'Sombrero'
+off_601280 = 'Triangulum'
+flag += off_601268[8]
+flag += off_601280[7]
+flag += off_601270[4]
+flag += off_601268[6]
+flag += off_601268[1]
+flag += off_601270[2]
+flag += chr(95)
+flag += off_601268[8]
+flag += off_601268[3]
+flag += off_601278[5]
+flag += chr(95)
+flag += off_601268[8]
+flag += off_601268[3]
+flag += off_601268[4]
+flag += off_601280[6]
+flag += off_601280[4]
+flag += off_601268[2]
+flag += chr(95)
+flag += off_601280[6]
+flag += off_601270[3]
+print(flag)
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
