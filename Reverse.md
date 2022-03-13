@@ -3118,7 +3118,227 @@ print(flag)
 
 ------
 
-## BUUCTF
+### [simple-check-100](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4709)
+
+这题附件是一个压缩包，解压缩后可以得到三个文件：`task9_x86_simple-check-100.exe`，`task9_x86_simple-check-100`，`task9_x86_64_simple-check-100`，那就随机挑选一个吧。用`IDA Pro 64bit`打开文件`./task9_x86_64_simple-check-100`后，按`F5`反编译后，可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  void *v3; // rsp
+  const char **v5; // [rsp+0h] [rbp-60h] BYREF
+  int v6; // [rsp+Ch] [rbp-54h]
+  char v7[28]; // [rsp+1Ch] [rbp-44h] BYREF
+  __int64 v8; // [rsp+38h] [rbp-28h]
+  const char ***v9; // [rsp+40h] [rbp-20h]
+  unsigned __int64 v10; // [rsp+48h] [rbp-18h]
+
+  v6 = argc;
+  v5 = argv;
+  v10 = __readfsqword(0x28u);
+  v7[0] = 84;
+  v7[1] = -56;
+  v7[2] = 126;
+  v7[3] = -29;
+  v7[4] = 100;
+  v7[5] = -57;
+  v7[6] = 22;
+  v7[7] = -102;
+  v7[8] = -51;
+  v7[9] = 17;
+  v7[10] = 101;
+  v7[11] = 50;
+  v7[12] = 45;
+  v7[13] = -29;
+  v7[14] = -45;
+  v7[15] = 67;
+  v7[16] = -110;
+  v7[17] = -87;
+  v7[18] = -99;
+  v7[19] = -46;
+  v7[20] = -26;
+  v7[21] = 109;
+  v7[22] = 44;
+  v7[23] = -45;
+  v7[24] = -74;
+  v7[25] = -67;
+  v7[26] = -2;
+  v7[27] = 106;
+  v8 = 19LL;
+  v3 = alloca(32LL);
+  v9 = &v5;
+  printf("Key: ");
+  __isoc99_scanf("%s", v9);
+  if ( (unsigned int)check_key(v9) )
+    interesting_function(v7);
+  else
+    puts("Wrong");
+  return 0;
+}
+```
+
+双击`check_key()`函数，查看源代码：
+
+```c
+_BOOL8 __fastcall check_key(__int64 a1)
+{
+  int v2; // [rsp+8h] [rbp-10h]
+  int i; // [rsp+Ch] [rbp-Ch]
+
+  v2 = 0;
+  for ( i = 0; i <= 4; ++i )
+    v2 += *(_DWORD *)(4LL * i + a1);
+  return v2 == -559038737;
+}
+```
+
+双击`interesting_function()`函数，查看源代码：
+
+```c
+int __fastcall interesting_function(__int64 a1)
+{
+  int *v1; // rax
+  unsigned int v3; // [rsp+1Ch] [rbp-24h] BYREF
+  int i; // [rsp+20h] [rbp-20h]
+  int j; // [rsp+24h] [rbp-1Ch]
+  __int64 v6; // [rsp+28h] [rbp-18h]
+  int *v7; // [rsp+30h] [rbp-10h]
+  unsigned __int64 v8; // [rsp+38h] [rbp-8h]
+
+  v8 = __readfsqword(0x28u);
+  LODWORD(v1) = a1;
+  v6 = a1;
+  for ( i = 0; i <= 6; ++i )
+  {
+    v3 = *(_DWORD *)(4LL * i + v6) ^ 0xDEADBEEF;
+    v1 = (int *)&v3;
+    v7 = (int *)&v3;
+    for ( j = 3; j >= 0; --j )
+      LODWORD(v1) = putchar((char)(*((_BYTE *)v7 + j) ^ flag_data[4 * i + j]));
+  }
+  return (int)v1;
+}
+```
+
+用`pwndbg`进行动态调试，`b *0x4008e2`设置断点，修改`$eax`寄存器的值后按`c`继续运行可以得到`flag_is_you_know_cracking!!!`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/reverse/adworld/simple-check-100]
+└─$ gdb ./task9_x86_64_simple-check-100 -q
+pwndbg: loaded 198 commands. Type pwndbg [filter] for a list.
+pwndbg: created $rebase, $ida gdb functions (can be used with print/break)
+Reading symbols from ./task9_x86_64_simple-check-100...
+(No debugging symbols found in ./task9_x86_64_simple-check-100)
+pwndbg> b *0x4008e2
+Breakpoint 1 at 0x4008e2
+pwndbg> r
+Starting program: /home/tyd/ctf/reverse/adworld/simple-check-100/task9_x86_64_simple-check-100 
+Key: 123456
+
+Breakpoint 1, 0x00000000004008e2 in main ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA                                                                                                
+───────────────────────────────────────────────[ REGISTERS ]──────────────────────────────────────────────── 
+ RAX  0x0
+ RBX  0x7fffffffde70 —▸ 0x7fffffffdfc8 —▸ 0x7fffffffe2ff ◂— '/home/tyd/ctf/reverse/adworld/simple-check-100/task9_x86_64_simple-check-100'
+ RCX  0x0
+ RDX  0x10
+ RDI  0x7fffffffde50 ◂— 0x363534333231 /* '123456' */
+ RSI  0xa
+ R8   0x0
+ R9   0xffffffffffffff80
+ R10  0x7ffff7f603c0 (_nl_C_LC_CTYPE_class+256) ◂— 0x2000200020002
+ R11  0x246
+ R12  0x4005b0 (_start) ◂— xor    ebp, ebp
+ R13  0x0
+ R14  0x0
+ R15  0x0
+ RBP  0x7fffffffded0 —▸ 0x400920 (__libc_csu_init) ◂— push   r15
+ RSP  0x7fffffffde50 ◂— 0x363534333231 /* '123456' */
+ RIP  0x4008e2 (main+294) ◂— test   eax, eax
+───────────────────────────────────────────────[ DISASM ]───────────────────────────────────────────────────
+ ► 0x4008e2 <main+294>    test   eax, eax
+   0x4008e4 <main+296>    je     main+312                      <main+312>
+    ↓
+   0x4008f4 <main+312>    mov    edi, 0x4009f5
+   0x4008f9 <main+317>    call   puts@plt                      <puts@plt>
+ 
+   0x4008fe <main+322>    mov    eax, 0
+   0x400903 <main+327>    mov    rsp, rbx
+   0x400906 <main+330>    mov    rcx, qword ptr [rbp - 0x18]
+   0x40090a <main+334>    xor    rcx, qword ptr fs:[0x28]
+   0x400913 <main+343>    je     main+350                      <main+350>
+ 
+   0x400915 <main+345>    call   __stack_chk_fail@plt                      <__stack_chk_fail@plt>
+ 
+   0x40091a <main+350>    mov    rbx, qword ptr [rbp - 8]
+─────────────────────────────────────────────[ STACK ]──────────────────────────────────────────────────────
+00:0000│ rdi rsp 0x7fffffffde50 ◂— 0x363534333231 /* '123456' */
+01:0008│         0x7fffffffde58 ◂— 0x0
+... ↓            2 skipped
+04:0020│ rbx     0x7fffffffde70 —▸ 0x7fffffffdfc8 —▸ 0x7fffffffe2ff ◂— '/home/tyd/ctf/reverse/adworld/simple-check-100/task9_x86_64_simple-check-100'
+05:0028│         0x7fffffffde78 ◂— 0x100000000
+06:0030│         0x7fffffffde80 ◂— 0xf0b5ff
+07:0038│         0x7fffffffde88 ◂— 0xe37ec854000000c2
+───────────────────────────────────────────────[ BACKTRACE ]────────────────────────────────────────────────
+ ► f 0         0x4008e2 main+294
+   f 1   0x7ffff7e14d0a __libc_start_main+234
+────────────────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> set $rax = 1
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+───────────────────────────────────────────────[ REGISTERS ]──────────────────────────────────────────────── 
+*RAX  0x1
+ RBX  0x7fffffffde70 —▸ 0x7fffffffdfc8 —▸ 0x7fffffffe2ff ◂— '/home/tyd/ctf/reverse/adworld/simple-check-100/task9_x86_64_simple-check-100'
+ RCX  0x0
+ RDX  0x10
+ RDI  0x7fffffffde50 ◂— 0x363534333231 /* '123456' */
+ RSI  0xa
+ R8   0x0
+ R9   0xffffffffffffff80
+ R10  0x7ffff7f603c0 (_nl_C_LC_CTYPE_class+256) ◂— 0x2000200020002
+ R11  0x246
+ R12  0x4005b0 (_start) ◂— xor    ebp, ebp
+ R13  0x0
+ R14  0x0
+ R15  0x0
+ RBP  0x7fffffffded0 —▸ 0x400920 (__libc_csu_init) ◂— push   r15
+ RSP  0x7fffffffde50 ◂— 0x363534333231 /* '123456' */
+ RIP  0x4008e2 (main+294) ◂— test   eax, eax
+───────────────────────────────────────────────[ DISASM ]───────────────────────────────────────────────────
+ ► 0x4008e2 <main+294>    test   eax, eax
+   0x4008e4 <main+296>    je     main+312                      <main+312>
+ 
+   0x4008e6 <main+298>    lea    rax, [rbp - 0x44]
+   0x4008ea <main+302>    mov    rdi, rax
+   0x4008ed <main+305>    call   interesting_function                      <interesting_function>
+ 
+   0x4008f2 <main+310>    jmp    main+322                      <main+322>
+ 
+   0x4008f4 <main+312>    mov    edi, 0x4009f5
+   0x4008f9 <main+317>    call   puts@plt                      <puts@plt>
+ 
+   0x4008fe <main+322>    mov    eax, 0
+   0x400903 <main+327>    mov    rsp, rbx
+   0x400906 <main+330>    mov    rcx, qword ptr [rbp - 0x18]
+─────────────────────────────────────────────[ STACK ]──────────────────────────────────────────────────────
+00:0000│ rdi rsp 0x7fffffffde50 ◂— 0x363534333231 /* '123456' */
+01:0008│         0x7fffffffde58 ◂— 0x0
+... ↓            2 skipped
+04:0020│ rbx     0x7fffffffde70 —▸ 0x7fffffffdfc8 —▸ 0x7fffffffe2ff ◂— '/home/tyd/ctf/reverse/adworld/simple-check-100/task9_x86_64_simple-check-100'
+05:0028│         0x7fffffffde78 ◂— 0x100000000
+06:0030│         0x7fffffffde80 ◂— 0xf0b5ff
+07:0038│         0x7fffffffde88 ◂— 0xe37ec854000000c2
+───────────────────────────────────────────────[ BACKTRACE ]────────────────────────────────────────────────
+ ► f 0         0x4008e2 main+294
+   f 1   0x7ffff7e14d0a __libc_start_main+234
+────────────────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> c
+Continuing.
+flag_is_you_know_cracking!!![Inferior 1 (process 408560) exited normally]
+```
+
+------
+
+### BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
 
