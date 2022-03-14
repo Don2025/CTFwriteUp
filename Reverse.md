@@ -3338,7 +3338,47 @@ flag_is_you_know_cracking!!![Inferior 1 (process 408560) exited normally]
 
 ------
 
-### BUUCTF
+### [answer_to_everything](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5511)
+
+用 `file`查看附件`main.exe`，可以看到信息`./main.exe: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  unsigned int v4; // [rsp+Ch] [rbp-4h] BYREF
+
+  printf("Gimme: ");
+  __isoc99_scanf("%d", &v4);
+  not_the_flag(v4);
+  return 0;
+}
+```
+
+双击`not_the_flag()`函数查看详情：
+
+```c
+__int64 __fastcall not_the_flag(int a1)
+{
+  if ( a1 == 42 )
+    puts("Cipher from Bill \nSubmit without any tags\n#kdudpeh");
+  else
+    puts("YOUSUCK");
+  return 0LL;
+}
+```
+
+根据题目描述的`sha1`，编写`Python`代码对`kdudpeh`进行`sha1`加密，得到`flag{80ee2a3fe31da904c596d993f7f1de4827c1450a}`。
+
+```python
+from hashlib import sha1
+
+flag = sha1('kdudpeh'.encode('utf-8')).hexdigest()
+print(f'flag{{{flag}}}')
+```
+
+------
+
+## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
 
