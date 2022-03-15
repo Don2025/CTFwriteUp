@@ -3512,6 +3512,21 @@ KCTF{welc0me_t0_reverse_3ngineering}
 
 ------
 
+### [Baby Shark](https://ce.pwnthebox.com/challenges?keynote=84&id=1889)
+
+根据题目描述，使用`JD-GUI`打开`.jar`附件进行反编译，可以看到`Flag.class`中有`KCTF{this_is_not_the_flag}`，但是它是假的，真正的`flag`被`base64`加密后存放在`Strings.class`中。
+
+在`Strings.class`中可以看到`_0xflag = "S0NURns3SDE1X1dANV8zNDVZX1IxNkg3P30=";`，编写`Python`代码进行`base64`解码即可得到`flag`，提交`KCTF{7H15_W@5_345Y_R16H7?}`即可。
+
+```python
+from base64 import *
+
+flag = b64decode('S0NURns3SDE1X1dANV8zNDVZX1IxNkg3P30=').decode('utf-8')
+print(flag) # KCTF{7H15_W@5_345Y_R16H7?}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
