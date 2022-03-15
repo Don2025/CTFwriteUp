@@ -3527,6 +3527,77 @@ print(flag) # KCTF{7H15_W@5_345Y_R16H7?}
 
 ------
 
+### [Flag Checker](https://ce.pwnthebox.com/challenges?keynote=84&id=1890)
+
+用 `file`查看附件`flag_checker`，可以看到信息`./flag_checker: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char v4[512]; // [rsp+0h] [rbp-240h] BYREF
+  char v5[51]; // [rsp+200h] [rbp-40h] BYREF
+  char v6; // [rsp+233h] [rbp-Dh]
+  int v7; // [rsp+234h] [rbp-Ch]
+  int j; // [rsp+238h] [rbp-8h]
+  int i; // [rsp+23Ch] [rbp-4h]
+
+  strcpy(v5, "08'5[Z'Y:H3?X2K3V)?D2G3?H,N6?G$R(G]");
+  printf("Give me a flag : ");
+  __isoc99_scanf("%s", v4);
+  for ( i = 0; v4[i]; ++i )
+  {
+    if ( v4[i] <= 64 || v4[i] > 90 )   
+    {
+      if ( v4[i] <= 96 || v4[i] > 122 )   
+        v4[i] = v4[i];
+      else // a <= v4[i] <= z
+        v4[i] = -37 - v4[i];
+    }
+    else // A <= v4[i] <= Z
+    {
+      v4[i] = -101 - v4[i];
+    }
+  }
+  for ( j = 0; v4[j]; ++j )
+    v4[j] -= 32;
+  v7 = 0;
+  v6 = 0;
+  while ( v5[v7] )
+  {
+    if ( v5[v7] != v4[v7] )
+    {
+      v6 = 0;
+      break;
+    }
+    v6 = 1;
+    ++v7;
+  }
+  if ( v6 )
+    puts("You have entered the right flag.");
+  else
+    puts("Sorry ! Its wrong flag.");
+  return 0;
+}
+```
+
+根据`C`语言代码逻辑编写`Python`代码运行得到`flag`，提交`KCTF{aTbAsH_cIpHeR_wItH_sOmE_tWiSt}`即可。
+
+```python
+s = "08'5[Z'Y:H3?X2K3V)?D2G3?H,N6?G$R(G]"
+flag = ''
+for i in range(len(s)):
+    t = ord(s[i]) + 32
+    if 65 <= t <= 90:  # 'A'~'Z'
+        flag += chr(256-101-t)
+    elif 97 <= t <= 122:  # 'a'~'z'
+        flag += chr(256-37-t)
+    else:
+        flag += chr(t)
+print(flag) # KCTF{aTbAsH_cIpHeR_wItH_sOmE_tWiSt}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
