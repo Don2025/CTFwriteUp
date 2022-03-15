@@ -3527,6 +3527,50 @@ print(flag) # KCTF{7H15_W@5_345Y_R16H7?}
 
 ------
 
+### [The Encoder](https://ce.pwnthebox.com/challenges?keynote=84&id=1893)
+
+用 `file`查看附件`flag_checker`，可以看到信息`./the_encoder.out: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v3; // eax
+  char s[52]; // [rsp+0h] [rbp-40h] BYREF
+  int v6; // [rsp+34h] [rbp-Ch]
+  int v7; // [rsp+38h] [rbp-8h]
+  int i; // [rsp+3Ch] [rbp-4h]
+
+  v7 = 1337;
+  v6 = 0;
+  puts("Welcome to the encoder");
+  puts("Please give me a plain text of max 40 characters");
+  fgets(s, 40, _bss_start);
+  for ( i = 0; ; ++i )
+  {
+    v3 = countChar(s);
+    if ( i >= v3 )
+      break;
+    v6 = s[i];
+    printf("%d ", (unsigned int)(v6 + v7));
+  }
+  return 0;
+}
+```
+
+根据`C`语言代码逻辑和题目描述中给出的二进制码，编写`Python`代码运行得到`flag`，提交`KCTF{s1Mpl3_3Nc0D3r_1337}`即可。
+
+```python
+s = "1412 1404 1421 1407 1460 1452 1386 1414 1449 1445 1388 1432 1388 1415 1436 1385 1405 1388 1451 1432 1386 1388 1388 1392 1462"
+
+def convert2char(i):
+    return chr(int(i)-1337)
+
+flag = ''.join(list(map(convert2char, s.split())))
+print(flag) # KCTF{s1Mpl3_3Nc0D3r_1337}
+```
+
+------
+
 ### [Flag Checker](https://ce.pwnthebox.com/challenges?keynote=84&id=1890)
 
 用 `file`查看附件`flag_checker`，可以看到信息`./flag_checker: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
