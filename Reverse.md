@@ -3378,6 +3378,140 @@ print(f'flag{{{flag}}}')
 
 ------
 
+## PwnTheBox
+
+### [The Flag Vault](https://ce.pwnthebox.com/challenges?keynote=84&id=1894)
+
+用 `file`查看附件`The_Flag_Vault`，可以看到信息`./The_Flag_Vault: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  __int16 v4; // [rsp+6h] [rbp-6Ah] BYREF
+  __int16 v5; // [rsp+8h] [rbp-68h] BYREF
+  __int16 v6; // [rsp+Ah] [rbp-66h] BYREF
+  __int16 v7; // [rsp+Ch] [rbp-64h] BYREF
+  __int16 v8; // [rsp+Eh] [rbp-62h] BYREF
+  __int16 v9; // [rsp+10h] [rbp-60h] BYREF
+  __int16 v10; // [rsp+12h] [rbp-5Eh] BYREF
+  __int16 v11; // [rsp+14h] [rbp-5Ch] BYREF
+  __int16 v12; // [rsp+16h] [rbp-5Ah] BYREF
+  __int16 v13; // [rsp+18h] [rbp-58h] BYREF
+  __int16 v14; // [rsp+1Ah] [rbp-56h] BYREF
+  __int16 v15; // [rsp+1Ch] [rbp-54h] BYREF
+  __int16 v16; // [rsp+1Eh] [rbp-52h] BYREF
+  __int16 v17; // [rsp+20h] [rbp-50h] BYREF
+  __int16 v18; // [rsp+22h] [rbp-4Eh] BYREF
+  __int16 v19; // [rsp+24h] [rbp-4Ch] BYREF
+  __int16 v20; // [rsp+26h] [rbp-4Ah] BYREF
+  __int16 v21; // [rsp+28h] [rbp-48h] BYREF
+  __int16 v22; // [rsp+2Ah] [rbp-46h] BYREF
+  __int16 v23; // [rsp+2Ch] [rbp-44h] BYREF
+  __int16 v24; // [rsp+2Eh] [rbp-42h] BYREF
+  char s2[32]; // [rsp+30h] [rbp-40h] BYREF
+  char s1[24]; // [rsp+50h] [rbp-20h] BYREF
+  unsigned __int64 v27; // [rsp+68h] [rbp-8h]
+
+  v27 = __readfsqword(0x28u);
+  v4 = 75;
+  v5 = 125;
+  v6 = 119;
+  v7 = 99;
+  v8 = 48;
+  v9 = 84;
+  v10 = 70;
+  v11 = 67;
+  v12 = 95;
+  v13 = 109;
+  v14 = 116;
+  v15 = 114;
+  v16 = 118;
+  v17 = 115;
+  v18 = 123;
+  v19 = 110;
+  v20 = 51;
+  v21 = 101;
+  v22 = 103;
+  v23 = 108;
+  v24 = 105;
+  strcpy(s1, "abracadabrahahaha");
+  printf("\nHi there!\n\nPlease enter the password to unlock the flag vault: ");
+  __isoc99_scanf("%s", s2);
+  if ( !strcmp(s1, s2) )
+  {
+    puts("\nCongratulations! Here is your flag:\n");
+    printf(
+      "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n\n",
+      (const char *)&v4,
+      (const char *)&v11,
+      (const char *)&v9,
+      (const char *)&v10,
+      (const char *)&v18,
+      (const char *)&v6,
+      (const char *)&v21,
+      (const char *)&v23,
+      (const char *)&v7,
+      (const char *)&v8,
+      (const char *)&v13,
+      (const char *)&v21,
+      (const char *)&v12,
+      (const char *)&v14,
+      (const char *)&v8,
+      (const char *)&v12,
+      (const char *)&v15,
+      (const char *)&v21,
+      (const char *)&v16,
+      (const char *)&v21,
+      (const char *)&v15,
+      (const char *)&v17,
+      (const char *)&v21,
+      (const char *)&v12,
+      (const char *)&v20,
+      (const char *)&v19,
+      (const char *)&v22,
+      (const char *)&v24,
+      (const char *)&v19,
+      (const char *)&v21,
+      (const char *)&v21,
+      (const char *)&v15,
+      (const char *)&v24,
+      (const char *)&v19,
+      (const char *)&v22,
+      (const char *)&v5);
+  }
+  else
+  {
+    puts(
+      "\n"
+      "Sorry!\n"
+      "\n"
+      "You have entered a wrong password! \n"
+      "\n"
+      "Please try with a valid one!\n"
+      "\n"
+      "If you don't have the password, you can buy that here at https://knightsquad.org");
+  }
+  return 0;
+}
+```
+
+注意到当用户输入和字符串`abracadabrahahaha`相等时就会直接输出`flag`，提交`KCTF{welc0me_t0_reverse_3ngineering}`即可。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/reverse/pwnthebox]
+└─$ ./The_Flag_Vault
+
+Hi there!
+
+Please enter the password to unlock the flag vault: abracadabrahahaha
+
+Congratulations! Here is your flag:
+
+KCTF{welc0me_t0_reverse_3ngineering}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
