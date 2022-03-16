@@ -3793,6 +3793,40 @@ asm0:
 
 ------
 
+### [babyre](https://ce.pwnthebox.com/challenges?type=2&id=692)
+
+用 `file`查看附件`baby.exe`，可以看到信息`./baby.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，可以在汇编语言代码中看到以下信息：
+
+```assembly
+call    ___main
+mov     dword ptr [esp], offset Format ; "Hi~ this is a babyre"
+call    _printf
+mov     byte ptr [esp+2Fh], 66h ; 'f'
+mov     byte ptr [esp+2Eh], 6Ch ; 'l'
+mov     byte ptr [esp+2Dh], 61h ; 'a'
+mov     byte ptr [esp+2Ch], 67h ; 'g'
+mov     byte ptr [esp+2Bh], 7Bh ; '{'
+mov     byte ptr [esp+2Ah], 52h ; 'R'
+mov     byte ptr [esp+29h], 65h ; 'e'
+mov     byte ptr [esp+28h], 5Fh ; '_'
+mov     byte ptr [esp+27h], 31h ; '1'
+mov     byte ptr [esp+26h], 73h ; 's'
+mov     byte ptr [esp+25h], 5Fh ; '_'
+mov     byte ptr [esp+24h], 53h ; 'S'
+mov     byte ptr [esp+23h], 30h ; '0'
+mov     byte ptr [esp+22h], 5Fh ; '_'
+mov     byte ptr [esp+21h], 43h ; 'C'
+mov     byte ptr [esp+20h], 30h ; '0'
+mov     byte ptr [esp+1Fh], 4Fh ; 'O'
+mov     byte ptr [esp+1Eh], 4Ch ; 'L'
+mov     byte ptr [esp+1Dh], 7Dh ; '}'
+mov     eax, 0
+```
+
+提交`flag{Re_1s_S0_C0OL}`即可。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
