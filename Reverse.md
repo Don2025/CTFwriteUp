@@ -3827,6 +3827,41 @@ mov     eax, 0
 
 ------
 
+### [JustRE](https://ce.pwnthebox.com/challenges?type=2&id=1150)
+
+用 `file`查看附件`RE2.exe`，可以看到信息`./RE2.exe: MS-DOS executable PE32 executable (GUI) Intel 80386, for MS Windows, MZ for MS-DOS`，用`IDA Pro 32bit`打开文件后，按`F5`反编译后在`Functions window`中选择`DialogFunc`查看源码：
+
+```c
+INT_PTR __stdcall DialogFunc(HWND hWnd, UINT a2, WPARAM a3, LPARAM a4)
+{
+  CHAR String[100]; // [esp+0h] [ebp-64h] BYREF
+
+  if ( a2 != 272 )
+  {
+    if ( a2 != 273 )
+      return 0;
+    if ( (_WORD)a3 != 1 && (_WORD)a3 != 2 )
+    {
+      sprintf(String, Format, ++dword_4099F0);
+      if ( dword_4099F0 == 19999 )
+      {
+        sprintf(String, " BJD{%d%d2069a45792d233ac}", 19999, 0);
+        SetWindowTextA(hWnd, String);
+        return 0;
+      }
+      SetWindowTextA(hWnd, String);
+      return 0;
+    }
+    EndDialog(hWnd, (unsigned __int16)a3);
+  }
+  return 1;
+}
+```
+
+由`sprintf()`函数可以得到字符串`BJD{1999902069a45792d233ac}`，再根据题目描述，提交`flag{1999902069a45792d233ac}`即可。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
