@@ -3642,6 +3642,32 @@ print(flag) # KCTF{aTbAsH_cIpHeR_wItH_sOmE_tWiSt}
 
 ------
 
+### [Gifted](https://ce.pwnthebox.com/challenges?type=2&id=68)
+
+用 `file`查看附件`gifted`，可以看到信息`./gifted: ELF 32-bit LSB executable, Intel 80386`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+void __cdecl __noreturn main()
+{
+  char *s2; // [esp+Ch] [ebp-Ch]
+
+  printf("Enter the flag: ");
+  s2 = (char *)malloc(0x3E8u);
+  __isoc99_scanf("%s", s2);
+  if ( !strcmp("AlexCTF{Y0u_h4v3_45t0n15h1ng_futur3_1n_r3v3r5ing}", s2) )
+  {
+    puts("You got it right dude!");
+    exit(0);
+  }
+  puts("Try harder!");
+  exit(0);
+}
+```
+
+可以看到一串特殊的字符串，那就是本题的`flag`，提交`AlexCTF{Y0u_h4v3_45t0n15h1ng_futur3_1n_r3v3r5ing}`即可。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
