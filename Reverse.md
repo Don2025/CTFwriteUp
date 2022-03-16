@@ -3762,6 +3762,37 @@ print(flag) # ISCC{simple_pyc}
 
 ------
 
+### [assembly-0](https://ce.pwnthebox.com/challenges?type=2&id=510)
+
+这道题的附件 [intro_asm_rev.S](https://ce.pwnthebox.com/uploads/challenge/510/intro_asm_rev.S) 打开后汇编语言代码如下：
+
+```assembly
+.intel_syntax noprefix
+.bits 32
+	
+.global asm0
+
+asm0:
+	push	ebp    ;保存栈帧状态
+	mov	ebp,esp    ;将栈顶指针的值赋给栈底指针
+	mov	eax,DWORD PTR [ebp+0x8] ;表示双字指向数据位于ebp值加0x8处，即0xd8
+	mov	ebx,DWORD PTR [ebp+0xc] ;表示双字指向数据位于ebp值加0xc处，即0x7a
+	mov	eax,ebx  ;将ebx的值赋值给eax
+	mov	esp,ebp  ;将栈底指针的值赋给栈顶指针
+	pop	ebp	     ;至此栈帧已恢复
+	ret          ;返回父函数
+```
+
+`asm0(0xd8,0x7a)` 将调用汇编函数`asm0`，`intel`的入栈方式是从右至左入栈，`0x7a`高地址，`0xd8`低地址，栈是从高地址向低地址生长的。因此`(eax) = 0xd8`，`(ebx) = 0x7a`，当指令`mov eax,ebx`执行完后，`(eax) = 0x7a`，将栈底指针`ebp`赋值给栈顶指针`esp`进行惰性删除恢复，接着弹出`ebp`，此时`eax`是运算值保存的寄存器，因此返回值即`0x7a`，`flag`就是`flag{0x7a}`，提交即可。
+
+------
+
+### [EasyRe](https://ce.pwnthebox.com/challenges?type=2&id=610)
+
+用 `file`查看附件`EasyRe.exe`，可以看到信息`./EasyRe.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`shift+F12`查看`Strings window`可以看到`fc5e038d38a57032085441e7fe7010b0`，这一串特殊的字符串就是用于验证用户输入的，提交`flag{fc5e038d38a57032085441e7fe7010b0}`即可。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
