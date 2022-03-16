@@ -3380,6 +3380,12 @@ print(f'flag{{{flag}}}')
 
 ## PwnTheBox
 
+### [签到](https://ce.pwnthebox.com/challenges?type=2&id=86)
+
+用 `file`查看附件`qiandao.exe`，可以看到信息`./qiandao.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译看到主函数的`C`语言代码中有`flag{12ab82cd686a42850ab562ff2f9f2416}`，提交即可。
+
+------
+
 ### [The Flag Vault](https://ce.pwnthebox.com/challenges?keynote=84&id=1894)
 
 用 `file`查看附件`The_Flag_Vault`，可以看到信息`./The_Flag_Vault: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
@@ -3665,6 +3671,94 @@ void __cdecl __noreturn main()
 ```
 
 可以看到一串特殊的字符串，那就是本题的`flag`，提交`AlexCTF{Y0u_h4v3_45t0n15h1ng_futur3_1n_r3v3r5ing}`即可。
+
+------
+
+### [Re1](https://ce.pwnthebox.com/challenges?type=2&id=87)
+
+用 `file`查看附件`re1.exe`，可以看到信息`./re1.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，可以在汇编语言代码中看到以下信息：
+
+```c
+.text:00401469                 call    ___main
+.text:0040146E                 mov     dword ptr [esp], offset Format ; "Hi~ this is a babyre"
+.text:00401475                 call    _printf
+.text:0040147A                 mov     byte ptr [esp+2Fh], 66h ; 'f'
+.text:0040147F                 mov     byte ptr [esp+2Eh], 6Ch ; 'l'
+.text:00401484                 mov     byte ptr [esp+2Dh], 61h ; 'a'
+.text:00401489                 mov     byte ptr [esp+2Ch], 67h ; 'g'
+.text:0040148E                 mov     byte ptr [esp+2Bh], 7Bh ; '{'
+.text:00401493                 mov     byte ptr [esp+2Ah], 52h ; 'R'
+.text:00401498                 mov     byte ptr [esp+29h], 65h ; 'e'
+.text:0040149D                 mov     byte ptr [esp+28h], 5Fh ; '_'
+.text:004014A2                 mov     byte ptr [esp+27h], 31h ; '1'
+.text:004014A7                 mov     byte ptr [esp+26h], 73h ; 's'
+.text:004014AC                 mov     byte ptr [esp+25h], 5Fh ; '_'
+.text:004014B1                 mov     byte ptr [esp+24h], 53h ; 'S'
+.text:004014B6                 mov     byte ptr [esp+23h], 30h ; '0'
+.text:004014BB                 mov     byte ptr [esp+22h], 5Fh ; '_'
+.text:004014C0                 mov     byte ptr [esp+21h], 43h ; 'C'
+.text:004014C5                 mov     byte ptr [esp+20h], 30h ; '0'
+.text:004014CA                 mov     byte ptr [esp+1Fh], 4Fh ; 'O'
+.text:004014CF                 mov     byte ptr [esp+1Eh], 4Ch ; 'L'
+.text:004014D4                 mov     byte ptr [esp+1Dh], 7Dh ; '}'
+.text:004014D9                 mov     eax, 0
+```
+
+本题的`flag`直接写在`.text`段中了，提交`flag{Re_1s_S0_C0OL}`即可。
+
+------
+
+### [Baby_python](https://ce.pwnthebox.com/challenges?type=2&id=112)
+
+这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
+
+我们可以使用[**python-uncompyle6**](https://github.com/rocky/python-uncompyle6)来对`.pyc`文件进行反编译从而得到`.py`文件。
+
+```bash
+pip install uncompyle6
+uncompyle6 -o . pyc.pyc
+```
+
+反编译后得到的`.py`文件源代码信息如下：
+
+```python
+# uncompyle6 version 3.7.4
+# Python bytecode 2.7 (62211)
+# Decompiled from: Python 3.8.8 (default, Apr 13 2021, 15:08:03) [MSC v.1916 64 bit (AMD64)]
+# Embedded file name: flag.py
+# Compiled at: 2019-02-21 14:39:31
+import base64
+
+def encode(message):
+    s = ''
+    for i in message:
+        x = ord(i) ^ 32
+        x = x + 16
+        s += chr(x)
+
+    return base64.b64encode(s)
+
+
+correct = 'eYNzc2tjWV1gXFWPYGlTbQ=='
+flag = ''
+print 'Input flag:'
+flag = raw_input()
+if encode(flag) == correct:
+    print 'correct'
+else:
+    print 'wrong'
+```
+
+编写`Python`代码运行得到`flag`，提交`ISCC{simple_pyc}`即可。
+
+```python
+from base64 import *
+s = b64decode('eYNzc2tjWV1gXFWPYGlTbQ==')
+flag = ''
+for i in s:
+    flag += chr((i-16)^32)
+print(flag) # ISCC{simple_pyc}
+```
 
 ------
 
