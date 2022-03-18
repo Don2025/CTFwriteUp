@@ -3862,6 +3862,12 @@ INT_PTR __stdcall DialogFunc(HWND hWnd, UINT a2, WPARAM a3, LPARAM a4)
 
 ------
 
+### [Basics](https://ce.pwnthebox.com/challenges?type=2&id=1170)
+
+用 `file`查看附件`calc`，可以看到信息`./calc: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`shift+F12`查看`Strings window`可以看到`utflag{str1ngs_1s_y0ur_fr13nd}`，这一串特殊的字符串就是`flag`，但是直接提交不对，提交`flag{str1ngs_1s_y0ur_fr13nd}`即可。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
