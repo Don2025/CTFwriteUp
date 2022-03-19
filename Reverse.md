@@ -3868,6 +3868,157 @@ INT_PTR __stdcall DialogFunc(HWND hWnd, UINT a2, WPARAM a3, LPARAM a4)
 
 ------
 
+### [babymips](https://ce.pwnthebox.com/challenges?type=2&id=1169)
+
+用 `file`查看附件`babymips`，可以看到信息`./babymips: ELF 32-bit MSB executable, MIPS`，用`IDA Pro 32bit`打开文件后，按`F5`进行反编译可以看到主函数的源码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v3; // $v0
+  char v5[24]; // [sp+18h] [+18h] BYREF
+  char v6[24]; // [sp+30h] [+30h] BYREF
+  char v7[84]; // [sp+48h] [+48h] BYREF
+
+  std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(v5, argv, envp);
+  v3 = std::operator<<<std::char_traits<char>>(&std::cout, "enter the flag");
+  std::ostream::operator<<(v3, &std::endl<char,std::char_traits<char>>);
+  std::operator>><char>(&std::cin, v5);
+  memcpy(v7, &unk_4015F4, sizeof(v7));
+  std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char>>::basic_string(v6, v5);
+  sub_401164((int)v7, (int)v6);
+  std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char>>::~basic_string(v6);
+  std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char>>::~basic_string(v5);
+  return 0;
+}
+```
+
+双击`unk_4015F4`变量可以在`.rodata`段看到以下信息：
+
+```assembly
+.rodata:004015F4 unk_4015F4:     .byte 0x62  # b          # DATA XREF: main+AC↑o
+.rodata:004015F5                 .byte 0x6C  # l
+.rodata:004015F6                 .byte 0x7F  # 
+.rodata:004015F7                 .byte 0x76  # v
+.rodata:004015F8                 .byte 0x7A  # z
+.rodata:004015F9                 .byte 0x7B  # {
+.rodata:004015FA                 .byte 0x66  # f
+.rodata:004015FB                 .byte 0x73  # s
+.rodata:004015FC                 .byte 0x76  # v
+.rodata:004015FD                 .byte 0x50  # P
+.rodata:004015FE                 .byte 0x52  # R
+.rodata:004015FF                 .byte 0x7D  # }
+.rodata:00401600                 .byte 0x40  # @
+.rodata:00401601                 .byte 0x54  # T
+.rodata:00401602                 .byte 0x55  # U
+.rodata:00401603                 .byte 0x79  # y
+.rodata:00401604                 .byte 0x40  # @
+.rodata:00401605                 .byte 0x49  # I
+.rodata:00401606                 .byte 0x47  # G
+.rodata:00401607                 .byte 0x4D  # M
+.rodata:00401608                 .byte 0x74  # t
+.rodata:00401609                 .byte 0x19
+.rodata:0040160A                 .byte 0x7B  # {
+.rodata:0040160B                 .byte 0x6A  # j
+.rodata:0040160C                 .byte 0x42  # B
+.rodata:0040160D                 .byte  0xA
+.rodata:0040160E                 .byte 0x4F  # O
+.rodata:0040160F                 .byte 0x52  # R
+.rodata:00401610                 .byte 0x7D  # }
+.rodata:00401611                 .byte 0x69  # i
+.rodata:00401612                 .byte 0x4F  # O
+.rodata:00401613                 .byte 0x53  # S
+.rodata:00401614                 .byte  0xC
+.rodata:00401615                 .byte 0x64  # d
+.rodata:00401616                 .byte 0x10
+.rodata:00401617                 .byte  0xF
+.rodata:00401618                 .byte 0x1E
+.rodata:00401619                 .byte 0x4A  # J
+.rodata:0040161A                 .byte 0x67  # g
+.rodata:0040161B                 .byte    3
+.rodata:0040161C                 .byte 0x7C  # |
+.rodata:0040161D                 .byte 0x67  # g
+.rodata:0040161E                 .byte    2
+.rodata:0040161F                 .byte 0x6A  # j
+.rodata:00401620                 .byte 0x31  # 1
+.rodata:00401621                 .byte 0x67  # g
+.rodata:00401622                 .byte 0x61  # a
+.rodata:00401623                 .byte 0x37  # 7
+.rodata:00401624                 .byte 0x7A  # z
+.rodata:00401625                 .byte 0x62  # b
+.rodata:00401626                 .byte 0x2C  # ,
+.rodata:00401627                 .byte 0x2C  # ,
+.rodata:00401628                 .byte  0xF
+.rodata:00401629                 .byte 0x6E  # n
+.rodata:0040162A                 .byte 0x17
+.rodata:0040162B                 .byte    0
+.rodata:0040162C                 .byte 0x16
+.rodata:0040162D                 .byte  0xF
+.rodata:0040162E                 .byte 0x16
+.rodata:0040162F                 .byte  0xA
+.rodata:00401630                 .byte 0x6D  # m
+.rodata:00401631                 .byte 0x62  # b
+.rodata:00401632                 .byte 0x73  # s
+.rodata:00401633                 .byte 0x25  # %
+.rodata:00401634                 .byte 0x39  # 9
+.rodata:00401635                 .byte 0x76  # v
+.rodata:00401636                 .byte 0x2E  # .
+.rodata:00401637                 .byte 0x1C
+.rodata:00401638                 .byte 0x63  # c
+.rodata:00401639                 .byte 0x78  # x
+.rodata:0040163A                 .byte 0x2B  # +
+.rodata:0040163B                 .byte 0x74  # t
+.rodata:0040163C                 .byte 0x32  # 2
+.rodata:0040163D                 .byte 0x16
+.rodata:0040163E                 .byte 0x20
+.rodata:0040163F                 .byte 0x22  # "
+.rodata:00401640                 .byte 0x44  # D
+.rodata:00401641                 .byte 0x19
+```
+
+返回主函数双击`sub_401164()`函数可以看到以下源码：
+
+```assembly
+int __fastcall sub_401164(int a1, int a2)
+{
+  int v2; // $v0
+  int result; // $v0
+  int v4; // $v0
+  unsigned int i; // [sp+1Ch] [+1Ch]
+
+  if ( std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char>>::size(a2) != 0x4E )
+  {
+LABEL_2:
+    v2 = std::operator<<<std::char_traits<char>>(&std::cout, "incorrect");
+    result = std::ostream::operator<<(v2, &std::endl<char,std::char_traits<char>>);
+  }
+  else
+  {
+    for ( i = 0; i < std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char>>::size(a2); ++i )
+    {
+      if ( (*(char *)std::__cxx11::basic_string<char,std::char_traits<char>,std::allocator<char>>::operator[](a2, i) ^ (i + 23)) != *(char *)(a1 + i) )
+        goto LABEL_2;
+    }
+    v4 = std::operator<<<std::char_traits<char>>(&std::cout, "correct!");
+    result = std::ostream::operator<<(v4, &std::endl<char,std::char_traits<char>>);
+  }
+  return result;
+}
+```
+
+根据该函数的逻辑，编写`Python`代码即可得到`flag`，虽然这个`flag`看起来像极了假的。
+
+```python
+l = [0x62, 0x6C, 0x7F, 0x76, 0x7A, 0x7B, 0x66, 0x73, 0x76, 0x50, 0x52, 0x7D, 0x40, 0x54, 0x55, 0x79, 0x40, 0x49, 0x47, 0x4D, 0x74, 0x19, 0x7B, 0x6A, 0x42, 0x0A, 0x4F, 0x52, 0x7D, 0x69, 0x4F, 0x53, 0x0C, 0x64, 0x10, 0x0F, 0x1E, 0x4A, 0x67, 0x03, 0x7C, 0x67, 0x02, 0x6A, 0x31, 0x67, 0x61, 0x37, 0x7A, 0x62, 0x2C, 0x2C, 0x0F, 0x6E, 0x17, 0x00, 0x16, 0x0F, 0x16, 0x0A, 0x6D, 0x62, 0x73, 0x25, 0x39, 0x76, 0x2E, 0x1C, 0x63, 0x78, 0x2B, 0x74, 0x32, 0x16, 0x20, 0x22, 0x44, 0x19]
+flag = ''
+
+for i in range(len(l)):
+    flag += chr(l[i] ^ (23+i))
+print(flag) # utflag{mips_cpp_gang_5VDm:~`N]ze;\)5%vZ=C'C(r#$q=*efD"ZNY_GX>6&sn.wF8$v*mvA@'}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
