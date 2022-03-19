@@ -4019,6 +4019,12 @@ print(flag) # utflag{mips_cpp_gang_5VDm:~`N]ze;\)5%vZ=C'C(r#$q=*efD"ZNY_GX>6&sn.
 
 ------
 
+### [easy strcmp](https://ce.pwnthebox.com/challenges?type=2&id=1183)
+
+
+
+`flag{l3ts_m4k3_4_DETOUR_t0d4y}`。
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
