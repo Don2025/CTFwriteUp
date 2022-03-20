@@ -4068,6 +4068,44 @@ print(flag.replace("GWHT", "flag")) # flag{Just_Re_1s_Ha66y!}
 
 ------
 
+### [easy_python](https://ce.pwnthebox.com/challenges?type=2&id=111)
+
+这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
+
+我们可以使用[**python-uncompyle6**](https://github.com/rocky/python-uncompyle6)来对`.pyc`文件进行反编译从而得到`.py`文件。
+
+```bash
+pip install uncompyle6
+uncompyle6 -o . encode.pyc
+```
+
+打开反编译得到的`encode.py`文件可以看到以下`Python2.x`版本的源码：
+
+```python
+# uncompyle6 version 3.7.4
+# Python bytecode 3.6 (3379)
+# Decompiled from: Python 3.8.8 (default, Apr 13 2021, 15:08:03) [MSC v.1916 64 bit (AMD64)]
+# Embedded file name: /mnt/hgfs/D/python/python-work/testCTF/内蒙网信办/easypython.py
+# Compiled at: 2020-08-11 15:14:54
+# Size of source mod 2**32: 332 bytes
+import hashlib
+flag = 'flag{this_py_is_very_?}'
+print(flag)
+print("answer's length is 5!")
+answer = input('Please input answer:')
+hash = hashlib.md5()
+hash.update(answer.encode(encoding='utf8'))
+result = hash.hexdigest()
+if result == 'ecb7b00b736eda5dfb52db91f1cb297b':
+    print('Right!')
+else:
+    print('Error!')
+```
+
+`hashlib.md5()`是用于`md5`加密的，`hash.update(answer.encode(encoding='utf8'))`对用户输入的字符串`answer`进行了`md5`加密，而`hash.hexdigest()` 返回十六进制数据字符串值给字符串`result`。当`result`和`ecb7b00b736eda5dfb52db91f1cb297b`相等时，说明用户输入的字符串正确。使用`md5`在线工具解密后得到字符串`e4sy_`，因此本题`flag`是`flag{this_py_is_very_e4sy_}`。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
