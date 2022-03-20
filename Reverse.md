@@ -4019,11 +4019,54 @@ print(flag) # utflag{mips_cpp_gang_5VDm:~`N]ze;\)5%vZ=C'C(r#$q=*efD"ZNY_GX>6&sn.
 
 ------
 
-### [easy strcmp](https://ce.pwnthebox.com/challenges?type=2&id=1183)
+### [pyre](https://ce.pwnthebox.com/challenges?type=2&id=1154)
 
+这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
 
+我们可以使用[**python-uncompyle6**](https://github.com/rocky/python-uncompyle6)来对`.pyc`文件进行反编译从而得到`.py`文件。
 
-`flag{l3ts_m4k3_4_DETOUR_t0d4y}`。
+```bash
+pip install uncompyle6
+uncompyle6 -o . encode.pyc
+```
+
+打开反编译得到的`encode.py`文件可以看到以下`Python2.x`版本的源码：
+
+```python
+# uncompyle6 version 3.7.4
+# Python bytecode 2.7 (62211)
+# Decompiled from: Python 3.8.8 (default, Apr 13 2021, 15:08:03) [MSC v.1916 64 bit (AMD64)]
+# Embedded file name: encode.py
+# Compiled at: 2019-08-19 21:01:57
+print 'Welcome to Re World!'
+print 'Your input1 is your flag~'
+l = len(input1)
+for i in range(l):
+    num = ((input1[i] + i) % 128 + 128) % 128
+    code += num
+
+for i in range(l - 1):
+    code[i] = code[i] ^ code[(i + 1)]
+
+print code
+code = ['\x1f', '\x12', '\x1d', '(', '0', '4', '\x01', '\x06', '\x14', '4', ',', '\x1b', 'U', '?', 'o', '6', '*', ':', '\x01', 'D', ';', '%', '\x13']
+```
+
+根据以上代码逻辑，编写`Python`代码运行得到`GWHT{Just_Re_1s_Ha66y!}`，直接提交不对，提交`flag{Just_Re_1s_Ha66y!}`正确。
+
+```python
+code = ['\x1f', '\x12', '\x1d', '(', '0', '4', '\x01', '\x06', '\x14', '4', ',', '\x1b', 'U', '?', 'o', '6', '*', ':', '\x01', 'D', ';', '%', '\x13']
+flag = ''
+for i in range(len(code)-1, 0, -1):
+    code[i-1] = chr(ord(code[i]) ^ ord(code[i-1]))
+
+for i in range(len(code)):
+    flag += chr((ord(code[i])-i)%128)
+print(flag) # GWHT{Just_Re_1s_Ha66y!}
+print(flag.replace("GWHT", "flag")) # flag{Just_Re_1s_Ha66y!}
+```
+
+------
 
 ## BUUCTF
 
