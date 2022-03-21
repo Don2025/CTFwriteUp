@@ -4106,6 +4106,12 @@ else:
 
 ------
 
+### [Easy_apk](https://ce.pwnthebox.com/challenges?type=2&id=115)
+
+使用`Android Killer`打开附件解压缩后的文件`easyapk.apk`，`APK`源码反编译完成后可以在`MainActivity.smali`中看到特殊字符串`flag{a57d0c9964f0b16bd42fb7eec0468e37}`。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
