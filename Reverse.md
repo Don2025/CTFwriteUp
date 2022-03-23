@@ -4270,6 +4270,88 @@ print(flag) # FLAG{I_LOVE_FONZY}
 
 ------
 
+### [Base_re](https://ce.pwnthebox.com/challenges?type=2&id=105)
+
+用 `file`查看附件`base_re`，可以看到信息`./base_re: ELF 32-bit LSB pie executable, Intel 80386`，用`IDA Pro 32bit`打开文件后，按`Shift + F12`查看`Strings window`，发现关键字符串`you flag is %s\n`，双击可以跳转到以下汇编语言代码：
+
+```assembly
+.rodata:00002000 ; ===========================================================================
+.rodata:00002000
+.rodata:00002000 ; Segment type: Pure data
+.rodata:00002000 ; Segment permissions: Read
+.rodata:00002000 _rodata         segment dword public 'CONST' use32
+.rodata:00002000                 assume cs:_rodata
+.rodata:00002000                 ;org 2000h
+.rodata:00002000 unk_2000        db    3                 ; DATA XREF: LOAD:000000BC↑o
+.rodata:00002001                 db    0
+.rodata:00002002                 db    0
+.rodata:00002003                 db    0
+.rodata:00002004                 public _IO_stdin_used
+.rodata:00002004 _IO_stdin_used  db    1                 ; DATA XREF: LOAD:000002DC↑o
+.rodata:00002005                 db    0
+.rodata:00002006                 db    2
+.rodata:00002007                 db    0
+.rodata:00002008 aZmxhz3tintljnj db 'ZmxhZ3tiNTljNjdiZjE5NmE0NzU4MTkxZTQyZjc2NjcwY2ViYX0=',0
+.rodata:00002008                                         ; DATA XREF: .data:off_4034↓o
+.rodata:0000203D                 align 10h
+.rodata:00002040 aAbcdefghijklmn db 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',0
+.rodata:00002040                                         ; DATA XREF: sub_11F9+12↑o
+.rodata:00002081                 align 4
+.rodata:00002084 unk_2084        db  77h ; w             ; DATA XREF: sub_1404+7A↑o
+.rodata:00002085                 db  65h ; e
+.rodata:00002086                 db  6Ch ; l
+.rodata:00002087                 db  63h ; c
+.rodata:00002088                 db  6Fh ; o
+.rodata:00002089                 db  6Dh ; m
+.rodata:0000208A                 db  65h ; e
+.rodata:0000208B                 db 0E2h
+.rodata:0000208C                 db  80h
+.rodata:0000208D                 db  94h
+.rodata:0000208E                 db  58h ; X
+.rodata:0000208F                 db  69h ; i
+.rodata:00002090                 db  6Eh ; n
+.rodata:00002091                 db  6Ah ; j
+.rodata:00002092                 db  69h ; i
+.rodata:00002093                 db  61h ; a
+.rodata:00002094                 db  6Eh ; n
+.rodata:00002095                 db  67h ; g
+.rodata:00002096                 db  20h
+.rodata:00002097                 db  74h ; t
+.rodata:00002098                 db  72h ; r
+.rodata:00002099                 db  61h ; a
+.rodata:0000209A                 db  69h ; i
+.rodata:0000209B                 db  6Eh ; n
+.rodata:0000209C                 db  69h ; i
+.rodata:0000209D                 db  6Eh ; n
+.rodata:0000209E                 db  67h ; g
+.rodata:0000209F                 db 0EFh
+.rodata:000020A0                 db 0BCh
+.rodata:000020A1                 db  81h
+.rodata:000020A2                 db    0
+.rodata:000020A3 aPleasGiveMeYou db 'pleas give me you key:',0
+.rodata:000020A3                                         ; DATA XREF: sub_1404+8C↑o
+.rodata:000020BA aS              db '%s',0               ; DATA XREF: sub_1404+A2↑o
+.rodata:000020BD aYouKeyIsWrong  db 'you key is wrong!',0
+.rodata:000020BD                                         ; DATA XREF: sub_1404+C8↑o
+.rodata:000020BD                                         ; sub_1404+136↑o
+.rodata:000020CF aYouFlagIsS     db 'you flag is %s',0Ah,0
+.rodata:000020CF                                         ; DATA XREF: sub_1404+11A↑o
+.rodata:000020CF _rodata         ends
+```
+
+编写`Python`代码来对特殊字符串`ZmxhZ3tiNTljNjdiZjE5NmE0NzU4MTkxZTQyZjc2NjcwY2ViYX0=`进行`base64`解码：
+
+```python
+from base64 import *
+
+flag = b64decode('ZmxhZ3tiNTljNjdiZjE5NmE0NzU4MTkxZTQyZjc2NjcwY2ViYX0=').decode('utf-8')
+print(flag) # flag{b59c67bf196a4758191e42f76670ceba}
+```
+
+提交`flag{b59c67bf196a4758191e42f76670ceba}`即可。
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
