@@ -4112,6 +4112,164 @@ else:
 
 ------
 
+### [Baby_C#](https://ce.pwnthebox.com/challenges?type=2&id=113)
+
+用 `file`查看附件`rev3.exe`，可以看到信息`./rev3.exe: PE32 executable (GUI) Intel 80386 Mono/.Net assembly, for MS Windows`，用`dnSpy-net-win32`打开文件后，可以看到`FirstWPFAPP (1.0.0.0)`中的信息如下：
+
+```csharp
+// C:\Users\Don\Downloads\rev3.exe
+// FirstWPFApp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
+
+// 入口点: FirstWPFApp.App.Main
+// 时间戳: <未知> (F1861506)
+
+using System;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.Windows;
+
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: CompilationRelaxations(8)]
+[assembly: RuntimeCompatibility(WrapNonExceptionThrows = true)]
+[assembly: Debuggable(DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints)]
+[assembly: AssemblyTitle("FirstWPFApp")]
+[assembly: AssemblyDescription("")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyCompany("")]
+[assembly: AssemblyProduct("FirstWPFApp")]
+[assembly: AssemblyCopyright("Copyright ©  2018")]
+[assembly: AssemblyTrademark("")]
+[assembly: ComVisible(false)]
+[assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]
+[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: TargetFramework(".NETFramework,Version=v4.6.1", FrameworkDisplayName = ".NET Framework 4.6.1")]
+
+```
+
+在程序集资源管理器中查看`FirstWPFAPP`的`MainWindow.cs`可以看到以下源码：
+
+```csharp
+using System;
+using System.CodeDom.Compiler;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Markup;
+
+namespace FirstWPFApp
+{
+	// Token: 0x02000003 RID: 3
+	public class MainWindow : Window, IComponentConnector
+	{
+		// Token: 0x06000004 RID: 4 RVA: 0x0000207E File Offset: 0x0000027E
+		public MainWindow()
+		{
+			this.InitializeComponent();
+		}
+
+		// Token: 0x06000005 RID: 5 RVA: 0x0000209C File Offset: 0x0000029C
+		private void Button_Click(object sender, RoutedEventArgs e)
+		{
+			string value = new string(new char[]
+			{
+				this.Letters[5],
+				this.Letters[14],
+				this.Letters[13],
+				this.Letters[25],
+				this.Letters[24]
+			});
+			if (this.TextBox1.Text.Equals(value))
+			{
+				MessageBox.Show(new string(new char[]
+				{
+					this.Letters[5],
+					this.Letters[11],
+					this.Letters[0],
+					this.Letters[6],
+					this.Letters[26],
+					this.Letters[8],
+					this.Letters[28],
+					this.Letters[11],
+					this.Letters[14],
+					this.Letters[21],
+					this.Letters[4],
+					this.Letters[28],
+					this.Letters[5],
+					this.Letters[14],
+					this.Letters[13],
+					this.Letters[25],
+					this.Letters[24],
+					this.Letters[27]
+				}));
+			}
+		}
+
+		// Token: 0x06000006 RID: 6 RVA: 0x000021F4 File Offset: 0x000003F4
+		[DebuggerNonUserCode]
+		[GeneratedCode("PresentationBuildTasks", "4.0.0.0")]
+		public void InitializeComponent()
+		{
+			if (this._contentLoaded)
+			{
+				return;
+			}
+			this._contentLoaded = true;
+			Uri resourceLocator = new Uri("/FirstWPFApp;component/mainwindow.xaml", UriKind.Relative);
+			Application.LoadComponent(this, resourceLocator);
+		}
+
+		// Token: 0x06000007 RID: 7 RVA: 0x00002224 File Offset: 0x00000424
+		[DebuggerNonUserCode]
+		[GeneratedCode("PresentationBuildTasks", "4.0.0.0")]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		void IComponentConnector.Connect(int connectionId, object target)
+		{
+			if (connectionId == 1)
+			{
+				this.TextBox1 = (TextBox)target;
+				return;
+			}
+			if (connectionId != 2)
+			{
+				this._contentLoaded = true;
+				return;
+			}
+			this.Button1 = (Button)target;
+			this.Button1.Click += this.Button_Click;
+		}
+
+		// Token: 0x04000001 RID: 1
+		public char[] Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ{}_".ToCharArray();
+
+		// Token: 0x04000002 RID: 2
+		internal TextBox TextBox1;
+
+		// Token: 0x04000003 RID: 3
+		internal Button Button1;
+
+		// Token: 0x04000004 RID: 4
+		private bool _contentLoaded;
+	}
+}
+```
+
+根据`Button_Click()`函数中的代码逻辑，编写`Python`代码运行即可得到`FLAG{I_LOVE_FONZY}`，这就是本题需要提交的`flag`。
+
+```python
+Letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ{}_'
+l = [5, 11, 0, 6, 26, 8, 28, 11, 14, 21, 4, 28, 5, 14, 13, 25, 24, 27]
+flag = ''
+for i in l:
+    flag += Letters[i]
+print(flag) # FLAG{I_LOVE_FONZY}
+```
+
+------
+
 ## BUUCTF
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
