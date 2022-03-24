@@ -28,6 +28,33 @@ with Image.open(src) as img:
 
 ------
 
+### [二维码](https://buuoj.cn/challenges#%E4%BA%8C%E7%BB%B4%E7%A0%81)
+
+这题的附件是一个二维码，扫描后显示`secret is here`，并没有什么信息。用`WinHex`打开发现`4number.txt`，盲猜文件里含有`.txt`文件，使用命令行`foremost -i QR_code.png`或者`binwalk -e QR_code.png`可以分离出图片和压缩包，压缩包被加密啦。
+
+使用`fcrackzip`对压缩包进行爆破，根据`4number.txt`这一提示可知密码是4位数字。`fcrackzip`的一些参数如下：
+
+> -b 表示使用暴力破解的方式
+>
+> -c 'aA1'表示使用大小写字母和数字混合破解的方式
+>
+> -l 1-16 表示需要破解的密码长度为1~10位
+>
+> -u 表示只显示破解出来的密码，尝试错误的密码不被显示
+
+我们采用4位数字的暴力破解的方式可以得出压缩包密码是`7639`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/misc/buuctf]
+└─$ fcrackzip -b -c '1' -l 4 -u 1D7.zip
+
+PASSWORD FOUND!!!!: pw == 7639
+```
+
+解压缩后打开新的`4number.txt`文件得到`CTF{vjpw_wnoei}`，提交`flag{vjpw_wnoei}`即可。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
