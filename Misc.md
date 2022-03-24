@@ -55,6 +55,12 @@ PASSWORD FOUND!!!!: pw == 7639
 
 ------
 
+### [你竟然赶我走](https://buuoj.cn/challenges#%E4%BD%A0%E7%AB%9F%E7%84%B6%E8%B5%B6%E6%88%91%E8%B5%B0)
+
+这题附件是一个`.jpg`图片，使用`WinHex`打开文件后，在末尾可以看到相应的`ASCII`码信息`flag IS flag{stego_is_s0_bor1ing}`，提交`flag{stego_is_s0_bor1ing}`即可。也可以用`stegSolve`打开，然后`Analyse`→`File Format`在`Ascii`中发现`flag`。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
