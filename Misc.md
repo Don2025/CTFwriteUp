@@ -73,6 +73,12 @@ data:image/jpg;base64,iVBORw0KGgoAAAANSUhEUgAAAIUAAACFCAYAAAB12js8AAAAAXNSR0IArs
 
 ------
 
+### [大白](https://buuoj.cn/challenges#%E5%A4%A7%E7%99%BD)
+
+这题附件是`dabai.png`，用`tweakpng`打开图片会弹出提示框`Incorrect crc for IHDR chunk (is 6d7c7135, should be 8e14dfcf)`，双击`IHDR`的`CRC`，把图片的`Height`设置为和`Width`一样的`679`后保存，重新打开图片可以看到`flag{He1l0_d4_ba1}`。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
