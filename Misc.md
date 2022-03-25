@@ -100,6 +100,12 @@ print(flag) # flag{70354300a5100ba78068805661b93a5c}
 
 ------
 
+### [文件中的秘密](https://buuoj.cn/challenges#%E6%96%87%E4%BB%B6%E4%B8%AD%E7%9A%84%E7%A7%98%E5%AF%86)
+
+这题附件是一个`.jpeg`图片，右键→属性→详细信息，可以在备注看到`flag{870c5a72806115cb5439345d8b014396}`。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
