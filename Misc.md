@@ -79,6 +79,21 @@ data:image/jpg;base64,iVBORw0KGgoAAAANSUhEUgAAAIUAAACFCAYAAAB12js8AAAAAXNSR0IArs
 
 ------
 
+### [基础破解](https://buuoj.cn/challenges#%E5%9F%BA%E7%A1%80%E7%A0%B4%E8%A7%A3)
+
+这题附件是`.rar`压缩包，根据题目描述可知密码是四位数字，暴力破解后发现解压密码是`2563`，解压缩后打开`flag.txt`得到`base64`加密后的字符串，编写`Python`代码进行`base64`解码：
+
+```python
+from base64 import *
+
+flag = b64decode('ZmxhZ3s3MDM1NDMwMGE1MTAwYmE3ODA2ODgwNTY2MWI5M2E1Y30=').decode('utf-8')
+print(flag) # flag{70354300a5100ba78068805661b93a5c}
+```
+
+提交`flag{70354300a5100ba78068805661b93a5c}`即可。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
