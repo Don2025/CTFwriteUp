@@ -94,6 +94,12 @@ print(flag) # flag{70354300a5100ba78068805661b93a5c}
 
 ------
 
+### [乌镇峰会种图](https://buuoj.cn/challenges#%E4%B9%8C%E9%95%87%E5%B3%B0%E4%BC%9A%E7%A7%8D%E5%9B%BE)
+
+这题附件是一个`.jpg`图片，使用`WinHex`打开文件后，在末尾可以看到相应的`ASCII`码信息`flag IS flag{stego_is_s0_bor1ing}`，提交`flag{97314e7864a8f62627b26f3f998c37f1}`即可。也可以用`stegSolve`打开，然后`Analyse`→`File Format`在`Ascii`中发现`flag`。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
