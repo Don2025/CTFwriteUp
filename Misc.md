@@ -112,6 +112,12 @@ print(flag) # flag{70354300a5100ba78068805661b93a5c}
 
 ------
 
+### [LSB](https://buuoj.cn/challenges#LSB)
+
+这题的附件是`.png`，根据题目名称，用`StegSolve`打开图片，进行`Data Extract`，`Bit Order`设置`LSB first`，`Bit Planes`勾选`Red 0`，`Green 0`，`Blue 0`，点击`Save Bin`保存覆盖原文件，可以得到一张二维码，使用`QR Research`扫描二维码得到`cumtctf{1sb_i4_s0_Ea4y}`，提交`flag{1sb_i4_s0_Ea4y}`即可。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
