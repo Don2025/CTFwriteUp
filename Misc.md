@@ -106,6 +106,12 @@ print(flag) # flag{70354300a5100ba78068805661b93a5c}
 
 ------
 
+### [wireshark](https://buuoj.cn/challenges#wireshark)
+
+这题的附件是`.pcap`文件，用`wireshark`打开后，根据题目提示输入`http.request.method==POST`直接过滤出`POST`流量包，可以看到`password`，题目描述说管理员的密码就是答案，因此提交`flag{ffb7567a1d4f4abdffdb54e022f8facd}`即可。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
