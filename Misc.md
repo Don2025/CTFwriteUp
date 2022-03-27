@@ -118,6 +118,12 @@ print(flag) # flag{70354300a5100ba78068805661b93a5c}
 
 ------
 
+### [rar](https://buuoj.cn/challenges#rar)
+
+这题的附件是`.rar`，根据题目提示可知该`.rar`文件的密码是`4`位纯数字，使用`ARCHPR`对压缩包进行4位纯数字密码爆破可得解压密码为`8795`，解压缩后在`.txt`文件中可以看到`flag{1773c5da790bd3caff38e3decd180eb7}`，提交即可。
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
