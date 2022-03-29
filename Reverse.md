@@ -4432,3 +4432,48 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ------
 
+### [内涵的软件](https://buuoj.cn/challenges#%E5%86%85%E6%B6%B5%E7%9A%84%E8%BD%AF%E4%BB%B6)
+
+用 `file`查看附件`内涵的软件.exe`，可以看到信息`./内涵的软件.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main_0(int argc, const char **argv, const char **envp)
+{
+  int result; // eax
+  char v4[4]; // [esp+4Ch] [ebp-Ch] BYREF
+  const char *v5; // [esp+50h] [ebp-8h]
+  int v6; // [esp+54h] [ebp-4h]
+
+  v6 = 5;
+  v5 = "DBAPP{49d3c93df25caad81232130f3d2ebfad}";
+  while ( v6 >= 0 )
+  {
+    printf(aD, v6);
+    sub_40100A();
+    --v6;
+  }
+  printf(
+    "\n"
+    "\n"
+    "\n"
+    "这里本来应该是答案的,但是粗心的程序员忘记把变量写进来了,你要不逆向试试看:(Y/N)\n");
+  v4[0] = 1;
+  scanf("%c", v4);
+  if ( v4[0] == 89 )
+  {
+    printf(aOdIda);
+    result = sub_40100A();
+  }
+  else
+  {
+    if ( v4[0] == 78 )
+      printf(asc_425034);
+    else
+      printf("输入错误,没有提示.");
+    result = sub_40100A();
+  }
+  return result;
+}
+```
+
+好家伙，这题的`flag`就是`flag{49d3c93df25caad81232130f3d2ebfad}`。
