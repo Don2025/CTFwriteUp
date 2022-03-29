@@ -4378,6 +4378,60 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ------
 
+### [reverse1](https://buuoj.cn/challenges#reverse1)
+
+用`file`查看附件`reverse_1.exe`，可以看到信息`./reverse_1.exe: PE32+ executable (console) x86-64, for MS Windows`，用`IDA Pro 64bit`打开文件后，按`shift+F12`查看`Strings window`，发现特殊字符串`this is the right flag!\n`，双击跳转到以下汇编语言`.rdata`段：
+
+```assembly
+.rdata:0000000140019C90 aThisIsTheRight db 'this is the right flag!',0Ah,0
+.rdata:0000000140019C90                                         ; DATA XREF: sub_1400118C0:loc_140011996↑o
+```
+
+双击注释中的`sub_1400118C0`跳转到相应的汇编语言代码，按`F5`反编译可以看到该函数的`C`语言代码如下：
+
+```c
+__int64 sub_1400118C0()
+{
+  char *v0; // rdi
+  __int64 i; // rcx
+  size_t v2; // rax
+  size_t v3; // rax
+  char v5[36]; // [rsp+0h] [rbp-20h] BYREF
+  int j; // [rsp+24h] [rbp+4h]
+  char Str1[224]; // [rsp+48h] [rbp+28h] BYREF
+  unsigned __int64 v8; // [rsp+128h] [rbp+108h]
+
+  v0 = v5;
+  for ( i = 82i64; i; --i )
+  {
+    *(_DWORD *)v0 = -858993460;
+    v0 += 4;
+  }
+  for ( j = 0; ; ++j )
+  {
+    v8 = j;
+    v2 = j_strlen(Str2);
+    if ( v8 > v2 )
+      break;
+    if ( Str2[j] == 111 )  // 'o'
+      Str2[j] = 48;   // '0'
+  }
+  sub_1400111D1("input the flag:");
+  sub_14001128F("%20s", Str1);
+  v3 = j_strlen(Str2);
+  if ( !strncmp(Str1, Str2, v3) )
+    sub_1400111D1("this is the right flag!\n");
+  else
+    sub_1400111D1("wrong flag\n");
+  sub_14001113B(v5, &unk_140019D00);
+  return 0i64;
+}
+```
+
+当用户输入的字符串和字符串`Str2`相等时说明`flag`正确，双击`Str2`发现该字符串是`{hello_world}`，并且程序把该字符串中的小写字母`o`全部替换为数字`0`，提交`flag{hell0_w0rld}`即可。
+
+------
+
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
 
 用 `file`查看`reverse2.exe`发现是`64bit`的`X86`架构编译的`ELF`文件，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
@@ -4426,34 +4480,6 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 因此最终的`flag`为`flag{hack1ng_fo1_fun}`。
 
-### [新年快乐](https://buuoj.cn/challenges#%E6%96%B0%E5%B9%B4%E5%BF%AB%E4%B9%90)
-
-用 `file`查看附件`新年快乐.exe`，可以看到信息`./新年快乐.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d 新年快乐.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
-
-```c
-int __cdecl main(int argc, const char **argv, const char **envp)
-{
-  int result; // eax
-  char Str2[14]; // [esp+12h] [ebp-3Ah] BYREF
-  __int16 Str1; // [esp+20h] [ebp-2Ch] BYREF
-  _BYTE v6[30]; // [esp+22h] [ebp-2Ah] BYREF
-
-  __main();
-  strcpy(Str2, "HappyNewYear!");
-  Str1 = 0;
-  memset(v6, 0, sizeof(v6));
-  printf("please input the true flag:");
-  scanf("%s", &Str1);
-  if ( !strncmp((const char *)&Str1, Str2, strlen(Str2)) )
-    result = puts("this is true flag!");
-  else
-    result = puts("wrong!");
-  return result;
-}
-```
-
-当用户输入`HappyNewYear!`时程序会输出`this is true flag!`。根据题目描述，本题的`flag`就是`flag{HappyNewYear!}`，提交即可。
-
 ------
 
 ### [内涵的软件](https://buuoj.cn/challenges#%E5%86%85%E6%B6%B5%E7%9A%84%E8%BD%AF%E4%BB%B6)
@@ -4501,6 +4527,36 @@ int __cdecl main_0(int argc, const char **argv, const char **envp)
 ```
 
 好家伙，这题的`flag`就是`flag{49d3c93df25caad81232130f3d2ebfad}`。
+
+------
+
+### [新年快乐](https://buuoj.cn/challenges#%E6%96%B0%E5%B9%B4%E5%BF%AB%E4%B9%90)
+
+用 `file`查看附件`新年快乐.exe`，可以看到信息`./新年快乐.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d 新年快乐.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int result; // eax
+  char Str2[14]; // [esp+12h] [ebp-3Ah] BYREF
+  __int16 Str1; // [esp+20h] [ebp-2Ch] BYREF
+  _BYTE v6[30]; // [esp+22h] [ebp-2Ah] BYREF
+
+  __main();
+  strcpy(Str2, "HappyNewYear!");
+  Str1 = 0;
+  memset(v6, 0, sizeof(v6));
+  printf("please input the true flag:");
+  scanf("%s", &Str1);
+  if ( !strncmp((const char *)&Str1, Str2, strlen(Str2)) )
+    result = puts("this is true flag!");
+  else
+    result = puts("wrong!");
+  return result;
+}
+```
+
+当用户输入`HappyNewYear!`时程序会输出`this is true flag!`。根据题目描述，本题的`flag`就是`flag{HappyNewYear!}`，提交即可。
 
 ------
 
