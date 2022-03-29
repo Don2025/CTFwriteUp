@@ -4402,3 +4402,33 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 因此最终的`flag`为`flag{hack1ng_fo1_fun}`。
 
+### [新年快乐](https://buuoj.cn/challenges#%E6%96%B0%E5%B9%B4%E5%BF%AB%E4%B9%90)
+
+用 `file`查看附件`新年快乐.exe`，可以看到信息`./新年快乐.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d 新年快乐.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int result; // eax
+  char Str2[14]; // [esp+12h] [ebp-3Ah] BYREF
+  __int16 Str1; // [esp+20h] [ebp-2Ch] BYREF
+  _BYTE v6[30]; // [esp+22h] [ebp-2Ah] BYREF
+
+  __main();
+  strcpy(Str2, "HappyNewYear!");
+  Str1 = 0;
+  memset(v6, 0, sizeof(v6));
+  printf("please input the true flag:");
+  scanf("%s", &Str1);
+  if ( !strncmp((const char *)&Str1, Str2, strlen(Str2)) )
+    result = puts("this is true flag!");
+  else
+    result = puts("wrong!");
+  return result;
+}
+```
+
+当用户输入`HappyNewYear!`时程序会输出`this is true flag!`。根据题目描述，本题的`flag`就是`flag{HappyNewYear!}`，提交即可。
+
+------
+
