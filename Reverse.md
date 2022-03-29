@@ -4354,6 +4354,30 @@ print(flag) # flag{b59c67bf196a4758191e42f76670ceba}
 
 ## BUUCTF
 
+### [easyre](https://buuoj.cn/challenges#easyre)
+
+用`file`查看附件`easyre.exe`，可以看到信息`./easyre.exe: PE32+ executable (console) x86-64, for MS Windows`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int b; // [rsp+28h] [rbp-8h] BYREF
+  int a; // [rsp+2Ch] [rbp-4h] BYREF
+
+  _main();
+  scanf("%d%d", &a, &b);
+  if ( a == b )
+    printf("flag{this_Is_a_EaSyRe}");
+  else
+    printf("sorry,you can't get flag");
+  return 0;
+}
+```
+
+当用户输入两个相等的`int`型数值时，程序会给出本题的`flag`，提交`flag{this_Is_a_EaSyRe}`即可。
+
+------
+
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
 
 用 `file`查看`reverse2.exe`发现是`64bit`的`X86`架构编译的`ELF`文件，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
@@ -4477,3 +4501,6 @@ int __cdecl main_0(int argc, const char **argv, const char **envp)
 ```
 
 好家伙，这题的`flag`就是`flag{49d3c93df25caad81232130f3d2ebfad}`。
+
+------
+
