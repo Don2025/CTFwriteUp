@@ -4560,3 +4560,60 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ------
 
+### [xor](https://buuoj.cn/challenges#xor)
+
+用 `file`查看附件`xor`，可看到信息`./xor: Mach-O 64-bit x86_64 executable, flags:<NOUNDEFS|DYLDLINK|TWOLEVEL|PIE>`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [rsp+2Ch] [rbp-124h]
+  char __b[264]; // [rsp+40h] [rbp-110h] BYREF
+
+  memset(__b, 0, 0x100uLL);
+  printf("Input your flag:\n");
+  get_line(__b, 256LL);
+  if ( strlen(__b) != 33 )  // flag长度为33
+    goto LABEL_7;
+  for ( i = 1; i < 33; ++i )  // 异或操作
+    __b[i] ^= __b[i - 1];
+  if ( !strncmp(__b, global, 0x21uLL) )
+    printf("Success");
+  else
+LABEL_7:
+    printf("Failed");
+  return 0;
+}
+```
+
+双击`global`变量可以看到一串字符串，但是这串字符串并没有`33`个。
+
+```assembly
+__data:0000000100001050 _global         dq offset aFKWOXZUPFVMDGH
+__data:0000000100001050                                  ; DATA XREF: _main+10D↑r
+__data:0000000100001050 __data          ends             ; "f\nk\fw&O.@\x11x\rZ;U\x11p\x19F\x1Fv\"M"...
+```
+
+双击注释中的`"f\nk\fw&O.@\x11x\rZ;U\x11p\x19F\x1Fv\"M"...`可以精确定位到以下信息：
+
+```assembly
+__cstring:0000000100000F6E aFKWOXZUPFVMDGH db 'f',0Ah              ; DATA XREF: __data:_global↓o
+__cstring:0000000100000F6E                 db 'k',0Ch,'w&O.@',11h,'x',0Dh,'Z;U',11h,'p',19h,'F',1Fh,'v"M#D',0Eh,'g'
+__cstring:0000000100000F6E                 db 6,'h',0Fh,'G2O',0
+```
+
+根据程序逻辑，编写`Python`代码运行后得到`flag{QianQiuWanDai_YiTongJiangHu}`，提交即可。
+
+```python
+l = ['f',0xA,'k',0xC,'w','&','O','.','@',0x11,'x',0xD,'Z',';','U',0x11,'p',0x19,'F',0x1F,'v','"','M','#','D',0xE,'g',6,'h',0xF,'G','2','O']
+for i in range(1, len(l)):
+    if(isinstance(l[i], int)):
+        l[i] = chr(l[i])
+flag = 'f'
+for i in range(1, len(l)):
+    flag += chr(ord(l[i]) ^ ord(l[i-1]))
+print(flag) # flag{QianQiuWanDai_YiTongJiangHu}
+```
+
+------
+
