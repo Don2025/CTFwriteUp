@@ -4845,4 +4845,128 @@ LABEL_13:
 
 ------
 
+### [SimpleRev](https://buuoj.cn/challenges#SimpleRev)
+
+用 `file`查看附件`SimpleRev`，可看到信息`./SimpleRev: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  int v3; // eax
+  char v4; // [rsp+Fh] [rbp-1h]
+
+  while ( 1 )
+  {
+    while ( 1 )
+    {
+      printf("Welcome to CTF game!\nPlease input d/D to start or input q/Q to quit this program: ");
+      v4 = getchar();
+      if ( v4 != 100 && v4 != 68 )  // 'd' or 'D'
+        break;
+      Decry("Welcome to CTF game!\nPlease input d/D to start or input q/Q to quit this program: ", argv);
+    }
+    if ( v4 == 113 || v4 == 81 )   // 'q' or 'Q'
+      Exit("Welcome to CTF game!\nPlease input d/D to start or input q/Q to quit this program: ", argv);
+    puts("Input fault format!");
+    v3 = getchar();
+    putchar(v3);
+  }
+}
+```
+
+双击`Decry()`函数查看详情：
+
+```c
+unsigned __int64 Decry()
+{
+  char v1; // [rsp+Fh] [rbp-51h]
+  int v2; // [rsp+10h] [rbp-50h]
+  int v3; // [rsp+14h] [rbp-4Ch]
+  int i; // [rsp+18h] [rbp-48h]
+  int v5; // [rsp+1Ch] [rbp-44h]
+  char src[8]; // [rsp+20h] [rbp-40h] BYREF
+  __int64 v7; // [rsp+28h] [rbp-38h]
+  int v8; // [rsp+30h] [rbp-30h]
+  __int64 v9[2]; // [rsp+40h] [rbp-20h] BYREF
+  int v10; // [rsp+50h] [rbp-10h]
+  unsigned __int64 v11; // [rsp+58h] [rbp-8h]
+
+  v11 = __readfsqword(0x28u);
+  *(_QWORD *)src = 0x534C43444ELL;
+  v7 = 0LL;
+  v8 = 0;
+  v9[0] = 0x776F646168LL;
+  v9[1] = 0LL;
+  v10 = 0;
+  text = (char *)join(key3, v9);
+  strcpy(key, key1);
+  strcat(key, src);
+  v2 = 0;
+  v3 = 0;
+  getchar();
+  v5 = strlen(key);
+  for ( i = 0; i < v5; ++i )    // key = key.lower() 全部转小写
+  {
+    if ( key[v3 % v5] > 64 && key[v3 % v5] <= 90 )
+      key[i] = key[v3 % v5] + 32;
+    ++v3;
+  }
+  printf("Please input your flag:");
+  while ( 1 )
+  {
+    v1 = getchar();
+    if ( v1 == 10 )
+      break;
+    if ( v1 == 32 )
+    {
+      ++v2;
+    }
+    else
+    {
+      if ( v1 <= 96 || v1 > 122 )
+      {
+        if ( v1 > 64 && v1 <= 90 )   // 'A'-'Z'
+        {
+          str2[v2] = (v1 - 39 - key[v3 % v5] + 97) % 26 + 97;
+          ++v3;
+        }
+      }
+      else   // 'a'-'z'
+      {
+        str2[v2] = (v1 - 39 - key[v3 % v5] + 97) % 26 + 97;
+        ++v3;
+      }
+      if ( !(v3 % v5) )
+        putchar(32);
+      ++v2;
+    }
+  }
+  if ( !strcmp(text, str2) )
+    puts("Congratulation!\n");
+  else
+    puts("Try again!\n");
+  return __readfsqword(0x28u) ^ v11;
+}
+```
+
+因为`0x534C43444E`和`0x776F646168`是小端方式存储的十六进制数，所以转换成`ASCII`码字符串后需要将顺序再反过来，因此拼接后的`key`是`ADSFKNDCLS`，`text`是`killshadow`。然后`key`中的字符全被转换成了小写字母，根据程序逻辑编写`Python`代码，运行得到`flag`，提交`flag{KLDQCUDFZO}`即可。
+
+```python
+import binascii
+
+key = 'ADSFK'
+key += binascii.a2b_hex(hex(0x534C43444E)[2:])[::-1].decode('utf-8')
+text = 'kills'
+text += binascii.a2b_hex(hex(0x776F646168)[2:])[::-1].decode('utf-8')
+key = key.lower()
+flag = ''
+for i in range(len(text)):
+    for j in range(128):
+        if chr(j).isupper() and ord(text[i]) == (j-39-ord(key[i])+97)%26+97:
+            flag += chr(j)
+print(f"flag{{{flag}}}") # flag{KLDQCUDFZO}
+```
+
+------
+
 ### 
