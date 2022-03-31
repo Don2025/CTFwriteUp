@@ -5027,3 +5027,114 @@ print(f"flag{{{flag}}}") # flag{This_is_the_flag_!}
 
 ------
 
+### [[GXYCTF2019]luck_guy](https://buuoj.cn/challenges#[GXYCTF2019]luck_guy)
+
+用 `file`查看附件`luck_guy`，可看到信息`./luck_guy: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  unsigned int v4; // [rsp+14h] [rbp-Ch] BYREF
+  unsigned __int64 v5; // [rsp+18h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  welcome(argc, argv, envp);
+  puts("_________________");
+  puts("try to patch me and find flag");
+  v4 = 0;
+  puts("please input a lucky number");
+  __isoc99_scanf("%d", &v4);
+  patch_me(v4);
+  puts("OK,see you again");
+  return 0;
+}
+```
+
+双击`patch_me()`函数查看详情：
+
+```c
+int __fastcall patch_me(int a1)
+{
+  int result; // eax
+
+  if ( a1 % 2 == 1 )
+    result = puts("just finished");
+  else
+    result = get_flag();
+  return result;
+}
+```
+
+双击`get_flag()`函数查看详情：
+
+```c
+unsigned __int64 get_flag()
+{
+  unsigned int v0; // eax
+  int i; // [rsp+4h] [rbp-3Ch]
+  int j; // [rsp+8h] [rbp-38h]
+  __int64 s; // [rsp+10h] [rbp-30h] BYREF
+  char v5; // [rsp+18h] [rbp-28h]
+  unsigned __int64 v6; // [rsp+38h] [rbp-8h]
+
+  v6 = __readfsqword(0x28u);
+  v0 = time(0LL);          // 获取时间
+  srand(v0);               // 使用时间作为种子生成随机数字
+  for ( i = 0; i <= 4; ++i )
+  {
+    switch ( rand() % 200 )  //产生1-199间的随机数
+    {
+      case 1:
+        puts("OK, it's flag:");
+        memset(&s, 0, 0x28uLL);
+        strcat((char *)&s, f1);   // 'GXY{do_not_'
+        strcat((char *)&s, &f2);
+        printf("%s", (const char *)&s);
+        break;
+      case 2:
+        printf("Solar not like you");
+        break;
+      case 3:
+        printf("Solar want a girlfriend");
+        break;
+      case 4:
+        s = 0x7F666F6067756369LL;  // [0x69, 0x63, 0x75, 0x67, 0x60, 0x6F, 0x66, 0x7F]
+        v5 = 0;
+        strcat(&f2, (const char *)&s);
+        break;
+      case 5:                     // 奇数减2 偶数减1
+        for ( j = 0; j <= 7; ++j )
+        {
+          if ( j % 2 == 1 )
+            *(&f2 + j) -= 2;
+          else
+            --*(&f2 + j);
+        }
+        break;
+      default:
+        puts("emmm,you can't find flag 23333");
+        break;
+    }
+  }
+  return __readfsqword(0x28u) ^ v6;
+}
+```
+
+根据程序逻辑编写`Python`代码，运行得到`GXY{do_not_hate_me}`，提交`flag{do_not_hate_me}`即可。
+
+```python
+f1 = 'GXY{do_not_'
+f2 = [0x69, 0x63, 0x75, 0x67, 0x60, 0x6F, 0x66, 0x7F]
+flag = ''
+for i in range(len(f2)):
+    if i%2 == 1:
+        flag += chr(f2[i]-2)
+    else:
+        flag += chr(f2[i]-1)
+flag = f1 + flag
+print(flag) # GXY{do_not_hate_me}
+```
+
+------
+
+### 
