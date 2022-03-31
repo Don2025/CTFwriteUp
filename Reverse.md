@@ -4767,4 +4767,82 @@ print(flag) # flag{i_l0ve_you}
 
 ------
 
+### [不一样的flag](https://buuoj.cn/challenges#%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84flag)
+
+用 `file`查看附件`不一样的flag.exe`，可看到信息`./不一样的flag.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  char v3[29]; // [esp+17h] [ebp-35h] BYREF
+  int v4; // [esp+34h] [ebp-18h]
+  int v5; // [esp+38h] [ebp-14h] BYREF
+  int i; // [esp+3Ch] [ebp-10h]
+  _BYTE v7[12]; // [esp+40h] [ebp-Ch] BYREF
+
+  __main();
+  v4 = 0;
+  strcpy(v3, "*11110100001010000101111#");
+  while ( 1 )
+  {
+    puts("you can choose one action to execute");
+    puts("1 up");
+    puts("2 down");
+    puts("3 left");
+    printf("4 right\n:");
+    scanf("%d", &v5);
+    if ( v5 == 2 )
+    {
+      ++*(_DWORD *)&v3[25];
+    }
+    else if ( v5 > 2 )
+    {
+      if ( v5 == 3 )
+      {
+        --v4;
+      }
+      else
+      {
+        if ( v5 != 4 )
+LABEL_13:
+          exit(1);
+        ++v4;
+      }
+    }
+    else
+    {
+      if ( v5 != 1 )
+        goto LABEL_13;
+      --*(_DWORD *)&v3[25];
+    }
+    for ( i = 0; i <= 1; ++i )
+    {
+      if ( *(int *)&v3[4 * i + 25] < 0 || *(int *)&v3[4 * i + 25] > 4 )  // 所有取值都在0-4之间
+        exit(1);
+    }
+    if ( v7[5 * *(_DWORD *)&v3[25] - 41 + v4] == 49 )  // 1 结束程序
+      exit(1);
+    if ( v7[5 * *(_DWORD *)&v3[25] - 41 + v4] == 35 )  // # 走完迷宫
+    {
+      puts("\nok, the order you enter is the flag!");
+      exit(0);
+    }
+  }
+}
+```
+
+`v3`是一个长度为`26`的字符串，除去一个空字符，存储的数据为`*11110100001010000101111#`共`25`个字符，盲猜这是一个`5×5`的迷宫。根据程序逻辑可知`1`上移，`2`下移，`3`左移，`4`右移，在这个`5×5`的迷宫中，`*`表示起点，`1`代表墙壁，`0`代表可走的路，`#`表示终点。
+
+```
+*1111
+01000
+01010
+00010
+1111#
+```
+
+运行程序，当我们依次输入`222441144222`走完迷宫后，可以看到提示`ok, the order you enter is the flag!`，提交`flag{222441144222}`即可。
+
+------
+
 ### 
