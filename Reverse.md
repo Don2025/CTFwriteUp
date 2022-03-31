@@ -4617,3 +4617,9 @@ print(flag) # flag{QianQiuWanDai_YiTongJiangHu}
 
 ------
 
+### [helloword](https://buuoj.cn/challenges#helloword)
+
+这题的附件是一个`.apk`文件，用`Android Killer`进行反编译后，可以在`MainActivity.smali`中看到本题的`flag`，提交`flag{7631a988259a00816deda84afb29430a}`即可。
+
+------
+
