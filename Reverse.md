@@ -5593,3 +5593,118 @@ print(flag) # flag{c164675262033b4c49bdf7f9cda28a75}
 
 ------
 
+## 简单注册器
+
+这题的附件是一个`.apk`文件，用`ApkIDE`打开该文件进行`apk`源码反编译，接着用`jd-gui`打开`MainActivity.class`继续反编译可以看到以下`Java`源码：
+
+```java
+package com.example.flag;
+
+import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v7.app.ActionBarActivity;
+import android.text.Editable;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+
+public class MainActivity
+  extends ActionBarActivity
+{
+  protected void onCreate(final Bundle paramBundle)
+  {
+    super.onCreate(paramBundle);
+    setContentView(2130903063);
+    if (paramBundle == null) {
+      getSupportFragmentManager().beginTransaction().add(2131034172, new PlaceholderFragment()).commit();
+    }
+    Button localButton = (Button)findViewById(2131034175);
+    paramBundle = (TextView)findViewById(2131034174);
+    localButton.setOnClickListener(new View.OnClickListener()
+    {
+      public void onClick(View paramAnonymousView)
+      {
+        int i = 1;
+        paramAnonymousView = this.val$editview.getText().toString();
+        if ((paramAnonymousView.length() != 32) || (paramAnonymousView.charAt(31) != 'a') || (paramAnonymousView.charAt(1) != 'b') || (paramAnonymousView.charAt(0) + paramAnonymousView.charAt(2) - 48 != 56)) {
+          i = 0;
+        }
+        if (i == 1)
+        {
+          paramAnonymousView = "dd2940c04462b4dd7c450528835cca15".toCharArray();
+          paramAnonymousView[2] = ((char)(char)(paramAnonymousView[2] + paramAnonymousView[3] - 50));
+          paramAnonymousView[4] = ((char)(char)(paramAnonymousView[2] + paramAnonymousView[5] - 48));
+          paramAnonymousView[30] = ((char)(char)(paramAnonymousView[31] + paramAnonymousView[9] - 48));
+          paramAnonymousView[14] = ((char)(char)(paramAnonymousView[27] + paramAnonymousView[28] - 97));
+          i = 0;
+          if (i >= 16)
+          {
+            paramAnonymousView = String.valueOf(paramAnonymousView);
+            paramBundle.setText("flag{" + paramAnonymousView + "}");
+          }
+        }
+        for (;;)
+        {
+          return;
+          int j = paramAnonymousView[(31 - i)];
+          paramAnonymousView[(31 - i)] = ((char)paramAnonymousView[i]);
+          paramAnonymousView[i] = ((char)j);
+          i++;
+          break;
+          paramBundle.setText("输入注册码错误");
+        }
+      }
+    });
+  }
+  
+  public boolean onCreateOptionsMenu(Menu paramMenu)
+  {
+    getMenuInflater().inflate(2131492864, paramMenu);
+    return true;
+  }
+  
+  public boolean onOptionsItemSelected(MenuItem paramMenuItem)
+  {
+    if (paramMenuItem.getItemId() == 2131034176) {}
+    for (boolean bool = true;; bool = super.onOptionsItemSelected(paramMenuItem)) {
+      return bool;
+    }
+  }
+  
+  public static class PlaceholderFragment
+    extends Fragment
+  {
+    public View onCreateView(LayoutInflater paramLayoutInflater, ViewGroup paramViewGroup, Bundle paramBundle)
+    {
+      return paramLayoutInflater.inflate(2130903064, paramViewGroup, false);
+    }
+  }
+}
+```
+
+根据程序逻辑，编写`Python`代码运行得到`flag{59acc538825054c7de4b26440c0999dd}`，提交即可。
+
+```python
+s = list('dd2940c04462b4dd7c450528835cca15')
+s[2] = chr(ord(s[2])+ord(s[3])-50)
+s[4] = chr(ord(s[2])+ord(s[5])-48)
+s[30] = chr(ord(s[31])+ord(s[9])-48)
+s[14] = chr(ord(s[27])+ord(s[28])-97)
+for i in range(16):
+    s[31-i], s[i] = s[i], s[31-i]
+flag = 'flag{%s}'%''.join(s)
+print(flag) # flag{59acc538825054c7de4b26440c0999dd}
+```
+
+------
+
+
