@@ -5474,3 +5474,122 @@ INT_PTR __stdcall DialogFunc(HWND hWnd, UINT a2, WPARAM a3, LPARAM a4)
 
 ------
 
+### [findit](https://buuoj.cn/challenges#findit)
+
+这题的附件是`findit.apk`，使用`JEB`打开文件后进行反编译，在`Bytecode/Disassembly`中找到`.class public MainActivity`，然后右键→解析，得到`MainActivity/Source`，其中`Java`源码如下：
+
+```java
+package com.example.findit;
+
+import android.os.Bundle;
+import android.support.v7.app.ActionBarActivity;
+import android.view.MenuItem;
+import android.view.View$OnClickListener;
+import android.view.View;
+
+public class MainActivity extends ActionBarActivity {
+    public MainActivity() {
+        super();
+    }
+
+    protected void onCreate(Bundle arg8) {
+        super.onCreate(arg8);
+        this.setContentView(0x7F030018);
+        this.findViewById(0x7F05003D).setOnClickListener(new View$OnClickListener(new char[]{'T', 'h', 'i', 's', 'I', 's', 'T', 'h', 'e', 'F', 'l', 'a', 'g', 'H', 'o', 'm', 'e'}, this.findViewById(0x7F05003E), new char[]{'p', 'v', 'k', 'q', '{', 'm', '1', '6', '4', '6', '7', '5', '2', '6', '2', '0', '3', '3', 'l', '4', 'm', '4', '9', 'l', 'n', 'p', '7', 'p', '9', 'm', 'n', 'k', '2', '8', 'k', '7', '5', '}'}, this.findViewById(0x7F05003F)) {
+            public void onClick(View arg13) {
+                int v11 = 17;
+                int v10 = 0x7A;
+                int v9 = 90;
+                int v8 = 65;
+                int v7 = 97;
+                char[] v3 = new char[v11];
+                char[] v4 = new char[38];
+                int v0;
+                for(v0 = 0; v0 < v11; ++v0) {
+                    if(this.val$a[v0] >= 73 || this.val$a[v0] < v8) {
+                        if(this.val$a[v0] < 105 && this.val$a[v0] >= v7) {
+                        label_39:
+                            v3[v0] = ((char)(this.val$a[v0] + 18));
+                            goto label_44;
+                        }
+
+                        if(this.val$a[v0] >= v8 && this.val$a[v0] <= v9 || this.val$a[v0] >= v7 && this.val$a[v0] <= v10) {
+                            v3[v0] = ((char)(this.val$a[v0] - 8));
+                            goto label_44;
+                        }
+
+                        v3[v0] = this.val$a[v0];
+                    }
+                    else {
+                        goto label_39;
+                    }
+
+                label_44:
+                }
+
+                if(String.valueOf(v3).equals(this.val$edit.getText().toString())) {
+                    v0 = 0;
+                    goto label_18;
+                }
+                else {
+                    this.val$text.setText("答案错了肿么办。。。不给你又不好意思。。。哎呀好纠结啊~~~");
+                    return;
+                label_18:
+                    while(v0 < 38) {
+                        if(this.val$b[v0] < v8 || this.val$b[v0] > v9) {
+                            if(this.val$b[v0] >= v7 && this.val$b[v0] <= v10) {
+                            label_80:
+                                v4[v0] = ((char)(this.val$b[v0] + 16));
+                                if((v4[v0] <= v9 || v4[v0] >= v7) && v4[v0] < v10) {
+                                    goto label_95;
+                                }
+
+                                v4[v0] = ((char)(v4[v0] - 26));
+                                goto label_95;
+                            }
+
+                            v4[v0] = this.val$b[v0];
+                        }
+                        else {
+                            goto label_80;
+                        }
+
+                    label_95:
+                        ++v0;
+                    }
+
+                    this.val$text.setText(String.valueOf(v4));
+                }
+            }
+        });
+    }
+
+    public boolean onOptionsItemSelected(MenuItem arg3) {
+        boolean v1 = arg3.getItemId() == 0x7F050040 ? true : super.onOptionsItemSelected(arg3);
+        return v1;
+    }
+}
+```
+
+根据程序逻辑，编写`Python`代码运行得到`flag{c164675262033b4c49bdf7f9cda28a75}`，提交即可。
+
+```python
+s = 'pvkq{m164675262033l4m49lnp7p9mnk28k75}'
+flag = ''
+for i in range(1,27): # 凯撒密码
+    t = ''
+    for c in s:
+        if c.islower():
+            t += chr(ord('a') + ((ord(c) - ord('a')) + i) % 26)
+        elif c.isupper():
+            t += chr(ord('A') + ((ord(c) - ord('A')) + i) % 26)
+        else:
+            t += c
+    if "flag" in t:
+        flag = t
+        break
+print(flag) # flag{c164675262033b4c49bdf7f9cda28a75}
+```
+
+------
+
