@@ -5432,4 +5432,45 @@ if ( String[0] == v7[0] + 34
 
 ------
 
-### 
+### [[BJDCTF2020]JustRE](https://buuoj.cn/challenges#[BJDCTF2020]JustRE)
+
+用 `file`查看附件`attachment.exe`，可看到信息`./attachment.exe: MS-DOS executable PE32 executable (GUI) Intel 80386, for MS Windows, MZ for MS-DOS`，用`IDA Pro 32bit`打开文件后，按`shift+F12`查看`Strings window`发现特殊字符串`BJD{%d%d2069a45792d233ac}`，双击跳转到汇编代码：
+
+```assembly
+.data:00407030 aBjdDD2069a4579 db ' BJD{%d%d2069a45792d233ac}',0
+.data:00407030                                         ; DATA XREF: DialogFunc+5A↑o
+```
+
+双击`DialogFunc+5A↑o`跳转到`.text`段，按`F5`反编译可以看到`C`语言代码如下：
+
+```c
+INT_PTR __stdcall DialogFunc(HWND hWnd, UINT a2, WPARAM a3, LPARAM a4)
+{
+  CHAR String[100]; // [esp+0h] [ebp-64h] BYREF
+
+  if ( a2 != 272 )
+  {
+    if ( a2 != 273 )
+      return 0;
+    if ( (_WORD)a3 != 1 && (_WORD)a3 != 2 )
+    {
+      sprintf(String, Format, ++dword_4099F0);
+      if ( dword_4099F0 == 19999 )
+      {
+        sprintf(String, " BJD{%d%d2069a45792d233ac}", 19999, 0);
+        SetWindowTextA(hWnd, String);
+        return 0;
+      }
+      SetWindowTextA(hWnd, String);
+      return 0;
+    }
+    EndDialog(hWnd, (unsigned __int16)a3);
+  }
+  return 1;
+}
+```
+
+显然`flag`就是`BJD{1999902069a45792d233ac}`，根据题目描述提交`flag{1999902069a45792d233ac}`即可。
+
+------
+
