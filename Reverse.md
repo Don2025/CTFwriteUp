@@ -5137,4 +5137,299 @@ print(flag) # GXY{do_not_hate_me}
 
 ------
 
+### [刮开有奖](https://buuoj.cn/challenges#%E5%88%AE%E5%BC%80%E6%9C%89%E5%A5%96)
+
+用 `file`查看附件`刮开有奖.exe`，可看到信息`./刮开有奖.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+{
+  DialogBoxParamA(hInstance, (LPCSTR)0x67, 0, DialogFunc, 0);
+  return 0;
+}
+```
+
+双击`DialogFunc()`函数查看详情：
+
+```c
+INT_PTR __stdcall DialogFunc(HWND hDlg, UINT a2, WPARAM a3, LPARAM a4)
+{
+  const char *v4; // esi
+  const char *v5; // edi
+  int v7[2]; // [esp+8h] [ebp-20030h] BYREF
+  int v8; // [esp+10h] [ebp-20028h]
+  int v9; // [esp+14h] [ebp-20024h]
+  int v10; // [esp+18h] [ebp-20020h]
+  int v11; // [esp+1Ch] [ebp-2001Ch]
+  int v12; // [esp+20h] [ebp-20018h]
+  int v13; // [esp+24h] [ebp-20014h]
+  int v14; // [esp+28h] [ebp-20010h]
+  int v15; // [esp+2Ch] [ebp-2000Ch]
+  int v16; // [esp+30h] [ebp-20008h]
+  CHAR String[65536]; // [esp+34h] [ebp-20004h] BYREF
+  char v18[65536]; // [esp+10034h] [ebp-10004h] BYREF
+
+  if ( a2 == 272 )
+    return 1;
+  if ( a2 != 273 )
+    return 0;
+  if ( (_WORD)a3 == 1001 )
+  {
+    memset(String, 0, 0xFFFFu);
+    GetDlgItemTextA(hDlg, 1000, String, 0xFFFF); // 输入字符串
+    if ( strlen(String) == 8 )
+    {
+      v7[0] = 90;
+      v7[1] = 74;
+      v8 = 83;
+      v9 = 69;
+      v10 = 67;
+      v11 = 97;
+      v12 = 78;
+      v13 = 72;
+      v14 = 51;
+      v15 = 110;
+      v16 = 103;
+      sub_4010F0(v7, 0, 10);
+      memset(v18, 0, 0xFFFFu);
+      v18[0] = String[5];
+      v18[2] = String[7];
+      v18[1] = String[6];
+      v4 = (const char *)sub_401000(v18, strlen(v18));
+      memset(v18, 0, 0xFFFFu);
+      v18[1] = String[3];
+      v18[0] = String[2];
+      v18[2] = String[4];
+      v5 = (const char *)sub_401000(v18, strlen(v18));
+      if ( String[0] == v7[0] + 34
+        && String[1] == v10
+        && 4 * String[2] - 141 == 3 * v8
+        && String[3] / 4 == 2 * (v13 / 9)
+        && !strcmp(v4, "ak1w")
+        && !strcmp(v5, "V1Ax") )
+      {
+        MessageBoxA(hDlg, "U g3t 1T!", "@_@", 0);
+      }
+    }
+    return 0;
+  }
+  if ( (_WORD)a3 != 1 && (_WORD)a3 != 2 )
+    return 0;
+  EndDialog(hDlg, (unsigned __int16)a3);
+  return 1;
+}
+```
+
+双击`sub_4010F0()`函数查看详情：
+
+```c
+int __cdecl sub_4010F0(int a1, int a2, int a3)
+{
+  int result; // eax
+  int i; // esi
+  int v5; // ecx
+  int v6; // edx
+
+  result = a3;
+  for ( i = a2; i <= a3; a2 = i )
+  {
+    v5 = 4 * i;  // v5 = i;
+    v6 = *(_DWORD *)(4 * i + a1);  // v6 = a1[i];
+    if ( a2 < result && i < result )
+    {
+      do
+      {
+        if ( v6 > *(_DWORD *)(a1 + 4 * result) ) // v6 > a1[result]
+        {
+          if ( i >= result )
+            break;
+          ++i;
+          *(_DWORD *)(v5 + a1) = *(_DWORD *)(a1 + 4 * result);  // a1[v5] = a1[result]
+          if ( i >= result )
+            break;
+          while ( *(_DWORD *)(a1 + 4 * i) <= v6 )  // a1[i] <= v6
+          {
+            if ( ++i >= result )
+              goto LABEL_13;
+          }
+          if ( i >= result )
+            break;
+          v5 = 4 * i;  // v5 = i;
+          *(_DWORD *)(a1 + 4 * result) = *(_DWORD *)(4 * i + a1);  // a1[result] = a1[i];
+        }
+        --result;
+      }
+      while ( i < result );
+    }
+LABEL_13:
+    *(_DWORD *)(a1 + 4 * result) = v6; // a1[result] = v6;
+    sub_4010F0(a1, a2, i - 1);
+    result = a3;
+    ++i;
+  }
+  return result;
+}
+```
+
+编写`C++`代码运行得到该函数的返回值`3CEHJNSZagn`：
+
+```python
+#include <bits/stdc++.h>
+using namespace std;
+
+int __cdecl sub_4010F0(char* a1, int a2, int a3)
+{
+  int result; // eax
+  int i; // esi
+  int v5; // ecx
+  int v6; // edx
+
+  result = a3;
+  for ( i = a2; i <= a3; a2 = i )
+  {
+    v5 = i;  // v5 = 4 * i;
+    v6 = a1[i];  //v6 = *(_DWORD *)(4 * i + a1);
+    if ( a2 < result && i < result )
+    {
+      do
+      {
+        if (v6 > a1[result]) // v6 > *(_DWORD *)(a1 + 4 * result)
+        {
+          if ( i >= result )
+            break;
+          ++i;
+            a1[v5] = a1[result]; // *(_DWORD *)(v5 + a1) = *(_DWORD *)(a1 + 4 * result)
+          if ( i >= result )
+            break;
+          while (a1[i] <= v6)  // *(_DWORD *)(a1 + 4 * i) <= v6 
+          {
+            if ( ++i >= result )
+              goto LABEL_13;
+          }
+          if ( i >= result )
+            break;
+          v5 = i;  // v5 = 4 * i;
+          a1[result] = a1[i];   // *(_DWORD *)(a1 + 4 * result) = *(_DWORD *)(4 * i + a1)
+        }
+        --result;
+      }
+      while ( i < result );
+    }
+LABEL_13:
+    a1[result] = v6; // *(_DWORD *)(a1 + 4 * result) = v6;
+    sub_4010F0(a1, a2, i - 1);
+    result = a3;
+    ++i;
+  }
+  return result;
+}
+
+int main()
+{
+    char s[20] = {90, 74, 83, 69, 67, 97, 78, 72, 51, 110, 103};
+    cout << s << endl;  // ZJSECaNH3ng
+    sub_4010F0(s, 0, 10);
+    cout << s << endl;  // 3CEHJNSZagn
+}
+```
+
+回到`DialogFunc()`函数继续审计代码，双击`sub_401000()`函数查看详情：
+
+```c
+_BYTE *__cdecl sub_401000(int a1, int a2)
+{
+  int v2; // eax
+  int v3; // esi
+  size_t v4; // ebx
+  _BYTE *v5; // eax
+  _BYTE *v6; // edi
+  int v7; // eax
+  _BYTE *v8; // ebx
+  int v9; // edi
+  int v10; // edx
+  int v11; // edi
+  int v12; // eax
+  int i; // esi
+  _BYTE *result; // eax
+  _BYTE *v15; // [esp+Ch] [ebp-10h]
+  _BYTE *v16; // [esp+10h] [ebp-Ch]
+  int v17; // [esp+14h] [ebp-8h]
+  int v18; // [esp+18h] [ebp-4h]
+
+  v2 = a2 / 3;
+  v3 = 0;
+  if ( a2 % 3 > 0 )
+    ++v2;
+  v4 = 4 * v2 + 1;
+  v5 = malloc(v4);
+  v6 = v5;
+  v15 = v5;
+  if ( !v5 )
+    exit(0);
+  memset(v5, 0, v4);
+  v7 = a2;
+  v8 = v6;
+  v16 = v6;
+  if ( a2 > 0 )
+  {
+    while ( 1 )
+    {
+      v9 = 0;
+      v10 = 0;
+      v18 = 0;
+      do
+      {
+        if ( v3 >= v7 )
+          break;
+        ++v10;
+        v9 = *(unsigned __int8 *)(v3 + a1) | (v9 << 8);
+        ++v3;
+      }
+      while ( v10 < 3 );
+      v11 = v9 << (8 * (3 - v10));
+      v12 = 0;
+      v17 = v3;
+      for ( i = 18; i > -6; i -= 6 )
+      {
+        if ( v10 >= v12 )
+        {
+          *((_BYTE *)&v18 + v12) = (v11 >> i) & 0x3F;
+          v8 = v16;
+        }
+        else
+        {
+          *((_BYTE *)&v18 + v12) = 64;
+        }
+        *v8++ = byte_407830[*((char *)&v18 + v12++)];
+        v16 = v8;
+      }
+      v3 = v17;
+      if ( v17 >= a2 )
+        break;
+      v7 = a2;
+    }
+    v6 = v15;
+  }
+  result = v6;
+  *v8 = 0;
+  return result;
+}
+```
+
+由`byte_407830`变量存储的特殊字符串`ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=`来猜测`sub_401000()`函数的作用是进行`base64`加密。因此`ak1w`和`V1Ax`分别是`v4`和`v5`被`base64`加密后的字符串。`v7`变量`sub_4010F0()`处理后存储的字符串为`3CEHJNSZagn`，因此`String[0] = v7[0]+34 = ord('3')+34 = 'U'`，`String[1] = v10 = v7[4] = 'J'`，`String[2] = (3*v7[3]+141)/4 = 'W'`，`String[3] = 2*(v7[7]/9)*4 = 'P'`，经过`base64`解码后`v4 = 'jMp'`，`v5 = 'WP1'`，而`v4`为`String[5-7]`，`v5`为`String[2-4]` ，故`flag`为`UJWP1jMp`，提交`flag{UJWP1jMp}`即可。
+
+```c
+if ( String[0] == v7[0] + 34
+        && String[1] == v10
+        && 4 * String[2] - 141 == 3 * v8
+        && String[3] / 4 == 2 * (v13 / 9)
+        && !strcmp(v4, "ak1w")
+        && !strcmp(v5, "V1Ax") )
+      {
+        MessageBoxA(hDlg, "U g3t 1T!", "@_@", 0);
+      }
+```
+
+------
+
 ### 
