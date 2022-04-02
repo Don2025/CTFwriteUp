@@ -100,7 +100,7 @@ else:
     print 'wrong'
 ```
 
-要得到原始`flag`的话，函数内部的运算，`+`变`-`，异或运算的逆过程就是再做一次异或，`base64.b64encode()`改成`base64.b64decode()`。运行`Python`代码即可得到`nctf{d3c0mpil1n9_PyC}`。
+要得到原始`flag`的话，函数内部的运算，`+`变`-`，异或运算的逆过程就是再做一次异或，`base64.b64encode()`改成`base64.b64decode()`。编写`Python`代码运行得到`nctf{d3c0mpil1n9_PyC}`，提交即可。
 
 ```python
 import base64
@@ -5593,7 +5593,7 @@ print(flag) # flag{c164675262033b4c49bdf7f9cda28a75}
 
 ------
 
-## 简单注册器
+### [简单注册器](https://buuoj.cn/challenges#%E7%AE%80%E5%8D%95%E6%B3%A8%E5%86%8C%E5%99%A8)
 
 这题的附件是一个`.apk`文件，用`ApkIDE`打开该文件进行`apk`源码反编译，接着用`jd-gui`打开`MainActivity.class`继续反编译可以看到以下`Java`源码：
 
@@ -5707,4 +5707,50 @@ print(flag) # flag{59acc538825054c7de4b26440c0999dd}
 
 ------
 
+### [[GWCTF 2019]pyre](https://buuoj.cn/challenges#[GWCTF%202019]pyre)
+
+这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
+
+我们可以使用[**python-uncompyle6**](https://github.com/rocky/python-uncompyle6)来对`.pyc`文件进行反编译从而得到`.py`文件。
+
+```bash
+pip install uncompyle6
+uncompyle6 -o . attachment.pyc
+```
+
+打开反编译得到的`.py`文件可以看到以下`Python2.x`版本的源码：
+
+```python
+# uncompyle6 version 3.7.4
+# Python bytecode 2.7 (62211)
+# Decompiled from: Python 3.8.8 (default, Apr 13 2021, 15:08:03) [MSC v.1916 64 bit (AMD64)]
+# Embedded file name: encode.py
+# Compiled at: 2019-08-19 21:01:57
+print 'Welcome to Re World!'
+print 'Your input1 is your flag~'
+l = len(input1)
+for i in range(l):
+    num = ((input1[i] + i) % 128 + 128) % 128
+    code += num
+
+for i in range(l - 1):
+    code[i] = code[i] ^ code[(i + 1)]
+
+print code
+code = ['\x1f', '\x12', '\x1d', '(', '0', '4', '\x01', '\x06', '\x14', '4', ',', '\x1b', 'U', '?', 'o', '6', '*', ':', '\x01', 'D', ';', '%', '\x13']
+```
+
+`code[i]=code[i]^code[i+1]`，`i`的取值范围是`[0, l-1)`，`code[l-1]`并没有变，如果逆向的话，应该令`i`从`l-2`开始一直取到`0`，使得`code[i]=code[i]^code[i+1]`。而`num = ((input1[i] + i) % 128 + 128) % 128`可以简写为`num=(input1[i] + i)%128`，编写`Python`代码运行得到`GWHT{Just_Re_1s_Ha66y!}`，提交`flag{Just_Re_1s_Ha66y!}`即可。
+
+```python
+code = ['\x1f', '\x12', '\x1d', '(', '0', '4', '\x01', '\x06', '\x14', '4', ',', '\x1b', 'U', '?', 'o', '6', '*', ':', '\x01', 'D', ';', '%', '\x13']
+for i in range(len(code)-2, -1, -1):
+    code[i] = chr(ord(code[i])^ord(code[i+1]))
+flag = ''
+for i in range(len(code)):
+    flag += chr((ord(code[i])-i)%128)
+print(flag) # GWHT{Just_Re_1s_Ha66y!}
+```
+
+------
 
