@@ -5754,3 +5754,49 @@ print(flag) # GWHT{Just_Re_1s_Ha66y!}
 
 ------
 
+## [[ACTF新生赛2020]easyre](https://buuoj.cn/challenges#[ACTF%E6%96%B0%E7%94%9F%E8%B5%9B2020]easyre)
+
+用`file`查看附件`easyre.exe`，可以看到信息`./easyre.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d easyre.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  _BYTE v4[12]; // [esp+12h] [ebp-2Eh] BYREF
+  _DWORD v5[3]; // [esp+1Eh] [ebp-22h]
+  _BYTE v6[5]; // [esp+2Ah] [ebp-16h] BYREF
+  int v7; // [esp+2Fh] [ebp-11h]
+  int v8; // [esp+33h] [ebp-Dh]
+  int v9; // [esp+37h] [ebp-9h]
+  char v10; // [esp+3Bh] [ebp-5h]
+  int i; // [esp+3Ch] [ebp-4h]
+
+  __main();
+  qmemcpy(v4, "*F'\"N,\"(I?+@", sizeof(v4));
+  printf("Please input:");
+  scanf("%s", v6);
+  if ( v6[0] != 65 || v6[1] != 67 || v6[2] != 84 || v6[3] != 70 || v6[4] != 123 || v10 != 125 ) // flag由ACTF{}包裹
+    return 0;
+  v5[0] = v7;
+  v5[1] = v8;
+  v5[2] = v9;
+  for ( i = 0; i <= 11; ++i )
+  {
+    if ( v4[i] != _data_start__[*((char *)v5 + i) - 1] )
+      return 0;
+  }
+  printf("You are correct!");
+  return 0;
+}
+```
+
+根据程序逻辑编写`Python`代码，运行得到`flag{U9X_1S_W6@T?}`，提交即可。
+
+```python
+key = chr(0x7E)+'}|{zyxwvutsrqponmlkjihgfedcba`_^]\[ZYXWVUTSRQPONMLKJIHGFEDCBA@?>=<;:9876543210/.-,+*)('+chr(0x27)+'&%$# !"'
+encrypt = [42, 70, 39, 34, 78, 44, 34, 40, 73, 63, 43, 64]
+flag = ''.join([chr(key.find(chr(x))+1) for x in encrypt])
+print(f"flag{{{flag}}}") # flag{U9X_1S_W6@T?} 
+```
+
+------
+
