@@ -4352,6 +4352,62 @@ print(flag) # flag{b59c67bf196a4758191e42f76670ceba}
 
 ------
 
+### [Easy_upx](https://ce.pwnthebox.com/challenges?page=1&id=116)
+
+题目就叫`Easy_upx`，下载附件`upx.exe`后，先用命令行`upx -d upx.exe`进行脱壳，用`file`查看附件`upx.exe`，可以看到信息`upx.exe: PE32+ executable (console) x86-64, for MS Windows`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int result; // eax
+  char b[30]; // [rsp+20h] [rbp-50h] BYREF
+  char a[30]; // [rsp+40h] [rbp-30h] BYREF
+  int i; // [rsp+6Ch] [rbp-4h]
+
+  _main(argc, argv, envp);
+  *(_WORD *)a = 0;
+  *(_QWORD *)&a[2] = 0i64;
+  *(_QWORD *)&a[10] = 0i64;
+  *(_QWORD *)&a[18] = 0i64;
+  *(_DWORD *)&a[26] = 0;
+  *(_WORD *)b = 0;
+  *(_QWORD *)&b[2] = 0i64;
+  *(_QWORD *)&b[10] = 0i64;
+  *(_QWORD *)&b[18] = 0i64;
+  *(_DWORD *)&b[26] = 0;
+  printf("Please input flag:");
+  gets(a);
+  if ( strlen(a) > 0xF )
+  {
+    for ( i = 0; i <= 15; ++i )
+      b[i] = a[i] ^ (i + 5);
+    if ( !strcmp(b, "cjfor~c=~?|v &ti") )
+      printf("flag right");
+    else
+      printf("flag wrong");
+    result = 0;
+  }
+  else
+  {
+    printf("no");
+    result = 0;
+  }
+  return result;
+}
+```
+
+根据程序逻辑，编写`Python`代码即可得到`flag`，提交`flag{th1s1sf14g}`即可。
+
+```python
+s = "cjfor~c=~?|v &ti"
+flag = ''
+for i in range(len(s)):
+    flag += chr(ord(s[i])^(i+5))
+print(flag)
+```
+
+------
+
 ## BUUCTF
 
 ### [easyre](https://buuoj.cn/challenges#easyre)
