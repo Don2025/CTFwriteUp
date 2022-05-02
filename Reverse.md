@@ -4352,6 +4352,62 @@ print(flag) # flag{b59c67bf196a4758191e42f76670ceba}
 
 ------
 
+### [Easy_upx](https://ce.pwnthebox.com/challenges?page=1&id=116)
+
+题目就叫`Easy_upx`，下载附件`upx.exe`后，先用命令行`upx -d upx.exe`进行脱壳，用`file`查看附件`upx.exe`，可以看到信息`upx.exe: PE32+ executable (console) x86-64, for MS Windows`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int result; // eax
+  char b[30]; // [rsp+20h] [rbp-50h] BYREF
+  char a[30]; // [rsp+40h] [rbp-30h] BYREF
+  int i; // [rsp+6Ch] [rbp-4h]
+
+  _main(argc, argv, envp);
+  *(_WORD *)a = 0;
+  *(_QWORD *)&a[2] = 0i64;
+  *(_QWORD *)&a[10] = 0i64;
+  *(_QWORD *)&a[18] = 0i64;
+  *(_DWORD *)&a[26] = 0;
+  *(_WORD *)b = 0;
+  *(_QWORD *)&b[2] = 0i64;
+  *(_QWORD *)&b[10] = 0i64;
+  *(_QWORD *)&b[18] = 0i64;
+  *(_DWORD *)&b[26] = 0;
+  printf("Please input flag:");
+  gets(a);
+  if ( strlen(a) > 0xF )
+  {
+    for ( i = 0; i <= 15; ++i )
+      b[i] = a[i] ^ (i + 5);
+    if ( !strcmp(b, "cjfor~c=~?|v &ti") )
+      printf("flag right");
+    else
+      printf("flag wrong");
+    result = 0;
+  }
+  else
+  {
+    printf("no");
+    result = 0;
+  }
+  return result;
+}
+```
+
+根据程序逻辑，编写`Python`代码即可得到`flag`，提交`flag{th1s1sf14g}`即可。
+
+```python
+s = "cjfor~c=~?|v &ti"
+flag = ''
+for i in range(len(s)):
+    flag += chr(ord(s[i])^(i+5))
+print(flag)
+```
+
+------
+
 ## BUUCTF
 
 ### [easyre](https://buuoj.cn/challenges#easyre)
@@ -5753,4 +5809,475 @@ print(flag) # GWHT{Just_Re_1s_Ha66y!}
 ```
 
 ------
+
+### [[ACTF新生赛2020]easyre](https://buuoj.cn/challenges#[ACTF%E6%96%B0%E7%94%9F%E8%B5%9B2020]easyre)
+
+用`file`查看附件`easyre.exe`，可以看到信息`./easyre.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d easyre.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  _BYTE v4[12]; // [esp+12h] [ebp-2Eh] BYREF
+  _DWORD v5[3]; // [esp+1Eh] [ebp-22h]
+  _BYTE v6[5]; // [esp+2Ah] [ebp-16h] BYREF
+  int v7; // [esp+2Fh] [ebp-11h]
+  int v8; // [esp+33h] [ebp-Dh]
+  int v9; // [esp+37h] [ebp-9h]
+  char v10; // [esp+3Bh] [ebp-5h]
+  int i; // [esp+3Ch] [ebp-4h]
+
+  __main();
+  qmemcpy(v4, "*F'\"N,\"(I?+@", sizeof(v4));
+  printf("Please input:");
+  scanf("%s", v6);
+  if ( v6[0] != 65 || v6[1] != 67 || v6[2] != 84 || v6[3] != 70 || v6[4] != 123 || v10 != 125 ) // flag由ACTF{}包裹
+    return 0;
+  v5[0] = v7;
+  v5[1] = v8;
+  v5[2] = v9;
+  for ( i = 0; i <= 11; ++i )
+  {
+    if ( v4[i] != _data_start__[*((char *)v5 + i) - 1] )
+      return 0;
+  }
+  printf("You are correct!");
+  return 0;
+}
+```
+
+根据程序逻辑编写`Python`代码，运行得到`flag{U9X_1S_W6@T?}`，提交即可。
+
+```python
+key = chr(0x7E)+'}|{zyxwvutsrqponmlkjihgfedcba`_^]\[ZYXWVUTSRQPONMLKJIHGFEDCBA@?>=<;:9876543210/.-,+*)('+chr(0x27)+'&%$# !"'
+encrypt = [42, 70, 39, 34, 78, 44, 34, 40, 73, 63, 43, 64]
+flag = ''.join([chr(key.find(chr(x))+1) for x in encrypt])
+print(f"flag{{{flag}}}") # flag{U9X_1S_W6@T?} 
+```
+
+------
+
+### [CrackRTF](https://buuoj.cn/challenges#CrackRTF)
+
+`file`查看文件`./CrackRTF.exe`，可以看到信息 `./CrackRTF.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+// attributes: thunk
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  return main_0(argc, argv, envp);
+}
+```
+
+双击`main_0()`函数查看详情：
+
+```c
+int __cdecl main_0(int argc, const char **argv, const char **envp)
+{
+  DWORD v3; // eax
+  DWORD v4; // eax
+  char Str[260]; // [esp+4Ch] [ebp-310h] BYREF
+  int v7; // [esp+150h] [ebp-20Ch]
+  char String1[260]; // [esp+154h] [ebp-208h] BYREF
+  char Destination[260]; // [esp+258h] [ebp-104h] BYREF
+
+  memset(Destination, 0, sizeof(Destination));
+  memset(String1, 0, sizeof(String1));
+  v7 = 0;
+  printf("pls input the first passwd(1): ");
+  scanf("%s", Destination);
+  if ( strlen(Destination) != 6 )  // 输入6位数密码
+  {
+    printf("Must be 6 characters!\n");
+    ExitProcess(0);
+  }
+  v7 = atoi(Destination);
+  if ( v7 < 100000 )
+    ExitProcess(0);
+  strcat(Destination, "@DBApp");
+  v3 = strlen(Destination);
+  sub_40100A((BYTE *)Destination, v3, String1);
+  if ( !_strcmpi(String1, "6E32D0943418C2C33385BC35A1470250DD8923A9") )
+  {
+    printf("continue...\n\n");
+    printf("pls input the first passwd(2): ");
+    memset(Str, 0, sizeof(Str));
+    scanf("%s", Str);
+    if ( strlen(Str) != 6 )
+    {
+      printf("Must be 6 characters!\n");
+      ExitProcess(0);
+    }
+    strcat(Str, Destination);
+    memset(String1, 0, sizeof(String1));
+    v4 = strlen(Str);
+    sub_401019((BYTE *)Str, v4, String1);
+    if ( !_strcmpi("27019e688a4e62a649fd99cadaafdb4e", String1) )
+    {
+      if ( !(unsigned __int8)sub_40100F(Str) )
+      {
+        printf("Error!!\n");
+        ExitProcess(0);
+      }
+      printf("bye ~~\n");
+    }
+  }
+  return 0;
+}
+```
+
+用户第一次输入的密码和`@DBApp`拼接后传入`sub_40100A()`函数进行处理，双击`sub_40100A()`函数查看详情：
+
+```c
+// attributes: thunk
+int __cdecl sub_40100A(BYTE *pbData, DWORD dwDataLen, LPSTR lpString1)
+{
+  return sub_401230(pbData, dwDataLen, lpString1);
+}
+```
+
+函数返回值是`sub_401230()`函数，继续双击`sub_401230()`函数查看详情：
+
+```c
+int __cdecl sub_401230(BYTE *pbData, DWORD dwDataLen, LPSTR lpString1)
+{
+  int result; // eax
+  DWORD i; // [esp+4Ch] [ebp-28h]
+  CHAR String2[4]; // [esp+50h] [ebp-24h] BYREF
+  BYTE v6[20]; // [esp+54h] [ebp-20h] BYREF
+  DWORD pdwDataLen; // [esp+68h] [ebp-Ch] BYREF
+  HCRYPTHASH phHash; // [esp+6Ch] [ebp-8h] BYREF
+  HCRYPTPROV phProv; // [esp+70h] [ebp-4h] BYREF
+
+  if ( !CryptAcquireContextA(&phProv, 0, 0, 1u, 0xF0000000) )
+    return 0;
+  if ( CryptCreateHash(phProv, 0x8004u, 0, 0, &phHash) )
+  {
+    if ( CryptHashData(phHash, pbData, dwDataLen, 0) )
+    {
+      CryptGetHashParam(phHash, 2u, v6, &pdwDataLen, 0);
+      *lpString1 = 0;
+      for ( i = 0; i < pdwDataLen; ++i )
+      {
+        wsprintfA(String2, "%02X", v6[i]);
+        lstrcatA(lpString1, String2);
+      }
+      CryptDestroyHash(phHash);
+      CryptReleaseContext(phProv, 0);
+      result = 1;
+    }
+    else
+    {
+      CryptDestroyHash(phHash);
+      CryptReleaseContext(phProv, 0);
+      result = 0;
+    }
+  }
+  else
+  {
+    CryptReleaseContext(phProv, 0);
+    result = 0;
+  }
+  return result;
+}
+```
+
+经过`sub_401230()`函数处理后得到的字符串`"6E32D0943418C2C33385BC35A1470250DD8923A9"`是`40`位加密字符串，盲猜是`sha1`加密。由`atoi()`函数可知密码是`6`位纯数字，编写`Python`代码遍历所有`6`位数字进行爆破，得到第一个密码`123321@DBApp`。运行程序测试后发现第一个密码正确。
+
+```python
+import hashlib
+
+passwd = '@DBApp'
+for i in range(100000, 1000000):
+    s = str(i) + passwd
+    #s = str(i)+passwd
+    x = hashlib.sha1(s.encode())
+    t = x.hexdigest()
+    if "6e32d0943418c2c33385bc35a1470250dd8923a9" == t:
+        passwd = str(i) + passwd
+        break
+print(passwd) # 123321@DBApp
+```
+
+回到`main_0()`函数继续代码审计，用户第二次输入的密码和`123321@DBApp`进行拼接后传入`sub_401019()`函数进行处理，双击`sub_401019()`函数查看详情：
+
+```c
+// attributes: thunk
+int __cdecl sub_401019(BYTE *pbData, DWORD dwDataLen, LPSTR lpString1)
+{
+  return sub_401040(pbData, dwDataLen, lpString1);
+}
+```
+
+函数返回值是`sub_401019()`函数，继续双击`sub_401040()`函数查看详情：
+
+```c
+int __cdecl sub_401040(BYTE *pbData, DWORD dwDataLen, LPSTR lpString1)
+{
+  int result; // eax
+  DWORD i; // [esp+4Ch] [ebp-24h]
+  CHAR String2[4]; // [esp+50h] [ebp-20h] BYREF
+  BYTE v6[16]; // [esp+54h] [ebp-1Ch] BYREF
+  DWORD pdwDataLen; // [esp+64h] [ebp-Ch] BYREF
+  HCRYPTHASH phHash; // [esp+68h] [ebp-8h] BYREF
+  HCRYPTPROV phProv; // [esp+6Ch] [ebp-4h] BYREF
+
+  if ( !CryptAcquireContextA(&phProv, 0, 0, 1u, 0xF0000000) )
+    return 0;
+  if ( CryptCreateHash(phProv, 0x8003u, 0, 0, &phHash) )
+  {
+    if ( CryptHashData(phHash, pbData, dwDataLen, 0) )
+    {
+      CryptGetHashParam(phHash, 2u, v6, &pdwDataLen, 0);
+      *lpString1 = 0;
+      for ( i = 0; i < pdwDataLen; ++i )
+      {
+        wsprintfA(String2, "%02X", v6[i]);
+        lstrcatA(lpString1, String2);
+      }
+      CryptDestroyHash(phHash);
+      CryptReleaseContext(phProv, 0);
+      result = 1;
+    }
+    else
+    {
+      CryptDestroyHash(phHash);
+      CryptReleaseContext(phProv, 0);
+      result = 0;
+    }
+  }
+  else
+  {
+    CryptReleaseContext(phProv, 0);
+    result = 0;
+  }
+  return result;
+}
+```
+
+经过`sub_401040()`函数处理后得到的字符串`"27019e688a4e62a649fd99cadaafdb4e"`是`32`位加密字符串，盲猜是`md5`加密。使用https://cmd5.com/直接解密失败。此外，并没有依据知道第二次输入的密码是`6`位纯数字，很有可能是全字符，所以不能暴力破解，回到`main_0()`函数继续代码审计，双击`sub_40100F()`函数查看详情：
+
+```c
+// attributes: thunk
+int __cdecl sub_40100F(LPCSTR lpString)
+{
+  return sub_4014D0(lpString);
+}
+```
+
+函数返回值是`sub_40100F()`函数，继续双击`sub_4014D0()`函数查看详情：
+
+```c
+char __cdecl sub_4014D0(LPCSTR lpString)
+{
+  LPCVOID lpBuffer; // [esp+50h] [ebp-1Ch]
+  DWORD NumberOfBytesWritten; // [esp+58h] [ebp-14h] BYREF
+  DWORD nNumberOfBytesToWrite; // [esp+5Ch] [ebp-10h]
+  HGLOBAL hResData; // [esp+60h] [ebp-Ch]
+  HRSRC hResInfo; // [esp+64h] [ebp-8h]
+  HANDLE hFile; // [esp+68h] [ebp-4h]
+
+  hFile = 0;
+  hResData = 0;
+  nNumberOfBytesToWrite = 0;
+  NumberOfBytesWritten = 0;
+  hResInfo = FindResourceA(0, (LPCSTR)0x65, "AAA");
+  if ( !hResInfo )
+    return 0;
+  nNumberOfBytesToWrite = SizeofResource(0, hResInfo);
+  hResData = LoadResource(0, hResInfo);
+  if ( !hResData )
+    return 0;
+  lpBuffer = LockResource(hResData);
+  sub_401005(lpString, (int)lpBuffer, nNumberOfBytesToWrite);
+  hFile = CreateFileA("dbapp.rtf", 0x10000000u, 0, 0, 2u, 0x80u, 0);
+  if ( hFile == (HANDLE)-1 )
+    return 0;
+  if ( !WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, &NumberOfBytesWritten, 0) )
+    return 0;
+  CloseHandle(hFile);
+  return 1;
+}
+```
+
+该函数传入的参数和从`AAA`中取出的数据一致，经过`sub_401005()`函数处理后，生成了一个`dbapp.rtf`文件，这与题目名相应，双击`sub_401005()`函数查看详情：
+
+```c
+// attributes: thunk
+int __cdecl sub_401005(LPCSTR lpString, int a2, int a3)
+{
+  return sub_401420(lpString, a2, a3);
+}
+```
+
+函数返回值是`sub_401420()`函数，继续双击`sub_401420()`函数查看详情：
+
+```c
+unsigned int __cdecl sub_401420(LPCSTR lpString, int a2, int a3)
+{
+  unsigned int result; // eax
+  unsigned int i; // [esp+4Ch] [ebp-Ch]
+  unsigned int v5; // [esp+54h] [ebp-4h]
+
+  v5 = lstrlenA(lpString);
+  for ( i = 0; ; ++i )
+  {
+    result = i;
+    if ( i >= a3 )
+      break;
+    *(_BYTE *)(i + a2) ^= lpString[i % v5];
+  }
+  return result;
+}
+```
+
+该函数的作用是把从`AAA`中取出的数据和传入函数的参数（第二次输入的密码与`123321@DBApp`拼接后的字符串）进行异或操作。使用`Resource Hacker`查看`CrackRTF.exe`找到`AAA`查看发现以下信息：
+
+```
+05 7D 41 15 26 01 6D 53 5D 40 5B 6D 21 2A 31 28 
+13 00 19 18 00 57 1C 54 54 54 55 03 6E 55 25 22 
+2E 20 1E 17 4F 11 00 52 1C 54 54 54 5F 52 5C 56 
+26 21 70 71 45 42 05 7D 55 0E 2E 44 45 50 5F 48 
+6E 57 70 18 24 2C 1F 14 1B 53 5D 3D 26 40 43 43 
+05 6F 54 52 28 25 30 32 15 04 4F 12 07 41 1C 17 
+52 50 6F 14 51 54 1C 63 21 22 2C 57 1B 14 08 1C 
+3D 3D 3B 49 6F 19 6E 56 25 2A 27 33 11 04 11 53 
+13 2C 33 56 45 57 57 5A 46 11 75 6A 76 70 5E 41 
+4B 0F 02 54 71 05 0A 4F 6F 45 5B 54 37 2F 2B 2F 
+14 44 22 54 50 50 1C 40 50 40 57 6F 5E 50 2E 23 
+70 71 45 42 22 47 03 3D 26 43 03 02 13 75 5E 50 
+27 18 39 0F 40 2F 33 11 41 04 1F 76 43 57 56 6C 
+70 44 27 37 1E 3C 2C 00 1F 53 3E 6B 3D 3D 3B 32 
+```
+
+而经过`sub_401420()`函数异或后，生成了`.rtf`文件，我们只考虑前6位字符，`.rtf`文件的头部特征为`{\rtfl}`，对应十六进制码`7B 5C 72 74 66 31`。根据`sub_401420()`函数逻辑，编写`Python`代码，得到第二个密码`~!3a@0`。运行程序测试后发现第二个密码正确。
+
+```python
+a = [0x05, 0x7D, 0x41, 0x15, 0x26, 0x01]
+l = [0x7B, 0x5C, 0x72, 0x74, 0x66, 0x31]
+passwd = ''
+for i in range(6):
+    passwd += chr(a[i]^l[i])
+print(passwd) # ~!3a@0
+```
+
+使用`Everything`查找`dbapp.rtf`，发现该文件和`CrackRTF.exe`在同一目录下，打开得到`flag{N0_M0re_Free_Bugs}`，提交即可。
+
+------
+
+### [[WUSTCTF2020]level1](https://buuoj.cn/challenges#[WUSTCTF2020]level1)
+
+用 `file`查看附件`level1`，可看到信息`level1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [rsp+4h] [rbp-2Ch]
+  FILE *stream; // [rsp+8h] [rbp-28h]
+  char ptr[24]; // [rsp+10h] [rbp-20h] BYREF
+  unsigned __int64 v7; // [rsp+28h] [rbp-8h]
+
+  v7 = __readfsqword(0x28u);
+  stream = fopen("flag", "r");
+  fread(ptr, 1uLL, 0x14uLL, stream);
+  fclose(stream);
+  for ( i = 1; i <= 19; ++i )
+  {
+    if ( (i & 1) != 0 )
+      printf("%ld\n", (unsigned int)(ptr[i] << i));
+    else
+      printf("%ld\n", (unsigned int)(i * ptr[i]));
+  }
+  return 0;
+}
+```
+
+程序运行的输出结果被保存在了`output.txt`中，`output.txt`的内容如下：
+
+```
+198
+232
+816
+200
+1536
+300
+6144
+984
+51200
+570
+92160
+1200
+565248
+756
+1474560
+800
+6291456
+1782
+65536000
+```
+
+根据程序逻辑编写`Python`代码，运行得到`ctf2020{d9-dE6-20c}`，提交`flag{d9-dE6-20c}`即可。
+
+```python
+a = [198, 232, 816, 200, 1536, 300, 6144, 984, 51200, 570, 92160, 1200, 565248, 756, 1474560, 800, 6291456, 1782, 65536000]
+flag = ''
+for i in range(len(a)):
+    if (i+1)&1:
+        flag += chr(a[i]>>(i+1))
+    else:
+        flag += chr(a[i]//(i+1))
+print(flag) # ctf2020{d9-dE6-20c}
+```
+
+------
+
+### [[WUSTCTF2020]level2](https://buuoj.cn/challenges#[WUSTCTF2020]level2)
+
+`file`查看文件`level2`，可以看到信息`level2: ELF 32-bit LSB executable, Intel 80386, version 1 (GNU/Linux), statically linked, no section header`，使用命令行`upx -d level2`进行脱壳，再次`file`查看文件`level2`，可以看到信息`level2: ELF 32-bit LSB executable, Intel 80386, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.32`，用`IDA Pro 32bit`打开文件后，可以在`IDA View-A`窗口看到以下信息：
+
+```assembly
+; Attributes: bp-based frame fuzzy-sp
+
+; int __cdecl main(int argc, const char **argv, const char **envp)
+public main
+main proc near
+
+var_C= dword ptr -0Ch
+var_4= dword ptr -4
+argc= dword ptr  8
+argv= dword ptr  0Ch
+envp= dword ptr  10h
+
+; __unwind {
+lea     ecx, [esp+4]
+and     esp, 0FFFFFFF0h
+push    dword ptr [ecx-4]
+push    ebp
+mov     ebp, esp
+push    ecx
+sub     esp, 14h
+mov     [ebp+var_C], offset flag ; "wctf2020{Just_upx_-d}"
+sub     esp, 0Ch
+push    offset aWhereIsIt ; "where is it?"
+call    puts
+add     esp, 10h
+mov     eax, 0
+mov     ecx, [ebp+var_4]
+leave
+lea     esp, [ecx-4]
+retn
+; } // starts at 804887C
+main endp
+```
+
+
+
+按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  puts("where is it?");
+  return 0;
+}
+```
 
