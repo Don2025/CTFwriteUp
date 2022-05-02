@@ -6230,3 +6230,54 @@ print(flag) # ctf2020{d9-dE6-20c}
 
 ------
 
+### [[WUSTCTF2020]level2](https://buuoj.cn/challenges#[WUSTCTF2020]level2)
+
+`file`查看文件`level2`，可以看到信息`level2: ELF 32-bit LSB executable, Intel 80386, version 1 (GNU/Linux), statically linked, no section header`，使用命令行`upx -d level2`进行脱壳，再次`file`查看文件`level2`，可以看到信息`level2: ELF 32-bit LSB executable, Intel 80386, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.32`，用`IDA Pro 32bit`打开文件后，可以在`IDA View-A`窗口看到以下信息：
+
+```assembly
+; Attributes: bp-based frame fuzzy-sp
+
+; int __cdecl main(int argc, const char **argv, const char **envp)
+public main
+main proc near
+
+var_C= dword ptr -0Ch
+var_4= dword ptr -4
+argc= dword ptr  8
+argv= dword ptr  0Ch
+envp= dword ptr  10h
+
+; __unwind {
+lea     ecx, [esp+4]
+and     esp, 0FFFFFFF0h
+push    dword ptr [ecx-4]
+push    ebp
+mov     ebp, esp
+push    ecx
+sub     esp, 14h
+mov     [ebp+var_C], offset flag ; "wctf2020{Just_upx_-d}"
+sub     esp, 0Ch
+push    offset aWhereIsIt ; "where is it?"
+call    puts
+add     esp, 10h
+mov     eax, 0
+mov     ecx, [ebp+var_4]
+leave
+lea     esp, [ecx-4]
+retn
+; } // starts at 804887C
+main endp
+```
+
+
+
+按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  puts("where is it?");
+  return 0;
+}
+```
+
