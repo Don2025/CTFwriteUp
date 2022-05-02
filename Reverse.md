@@ -6164,3 +6164,69 @@ print(passwd) # ~!3a@0
 
 ------
 
+### [[WUSTCTF2020]level1](https://buuoj.cn/challenges#[WUSTCTF2020]level1)
+
+用 `file`查看附件`level1`，可看到信息`level1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [rsp+4h] [rbp-2Ch]
+  FILE *stream; // [rsp+8h] [rbp-28h]
+  char ptr[24]; // [rsp+10h] [rbp-20h] BYREF
+  unsigned __int64 v7; // [rsp+28h] [rbp-8h]
+
+  v7 = __readfsqword(0x28u);
+  stream = fopen("flag", "r");
+  fread(ptr, 1uLL, 0x14uLL, stream);
+  fclose(stream);
+  for ( i = 1; i <= 19; ++i )
+  {
+    if ( (i & 1) != 0 )
+      printf("%ld\n", (unsigned int)(ptr[i] << i));
+    else
+      printf("%ld\n", (unsigned int)(i * ptr[i]));
+  }
+  return 0;
+}
+```
+
+程序运行的输出结果被保存在了`output.txt`中，`output.txt`的内容如下：
+
+```
+198
+232
+816
+200
+1536
+300
+6144
+984
+51200
+570
+92160
+1200
+565248
+756
+1474560
+800
+6291456
+1782
+65536000
+```
+
+根据程序逻辑编写`Python`代码，运行得到`ctf2020{d9-dE6-20c}`，提交`flag{d9-dE6-20c}`即可。
+
+```python
+a = [198, 232, 816, 200, 1536, 300, 6144, 984, 51200, 570, 92160, 1200, 565248, 756, 1474560, 800, 6291456, 1782, 65536000]
+flag = ''
+for i in range(len(a)):
+    if (i+1)&1:
+        flag += chr(a[i]>>(i+1))
+    else:
+        flag += chr(a[i]//(i+1))
+print(flag) # ctf2020{d9-dE6-20c}
+```
+
+------
+
