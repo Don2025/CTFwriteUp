@@ -4408,6 +4408,182 @@ print(flag)
 
 ------
 
+### [Hacking For Vodka](https://ce.pwnthebox.com/challenges?type=2&id=1178)
+
+用 `file`查看附件`Hacking_For_Vodka.team`，可以看到信息`Hacking_For_Vodka.team: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0`。用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+void __fastcall __noreturn main(int a1, char **a2, char **a3)
+{
+  if ( ptrace(PTRACE_TRACEME, 0LL, 1LL, 0LL) < 0 )
+    sub_102E();
+  sub_12BF();
+  exit(0);
+}
+```
+
+第一个函数`sub_102E()`是检测到`gdb`这类调试工具调试时执行；第二个函数`sub_12BF()`是没有被调试的时候执行，显然要分析第二个函数。双击`sub_12BF()`函数查看详情。
+
+```c
+__int64 sub_12BF()
+{
+  return sub_C6D(0LL, 1LL, 1LL, 0LL);
+}
+```
+
+继续双击`sub_C6D()`函数查看详情。
+
+```c
+__int64 sub_C6D()
+{
+  char v1[56]; // [rsp+20h] [rbp-40h] BYREF
+  unsigned __int64 v2; // [rsp+58h] [rbp-8h]
+
+  v2 = __readfsqword(0x28u);
+  v1[0] = aWabcdefglhijkm[0];
+  v1[2] = aWabcdefglhijkm[21] ^ 2;
+  v1[3] = aWabcdefglhijkm[5] ^ 3;
+  v1[6] = aWabcdefglhijkm[28] ^ 6;
+  v1[13] = aWabcdefglhijkm[26] ^ 0xD;
+  v1[8] = aWabcdefglhijkm[9] ^ 8;
+  v1[5] = aWabcdefglhijkm[18] ^ 5;
+  v1[11] = aWabcdefglhijkm[12] ^ 0xB;
+  v1[1] = aWabcdefglhijkm[1] ^ 1;
+  v1[10] = aWabcdefglhijkm[15] ^ 0xA;
+  v1[9] = aWabcdefglhijkm[34] ^ 9;
+  v1[12] = aWabcdefglhijkm[35] ^ 0xC;
+  v1[47] = aWabcdefglhijkm[5] ^ 0x2F;
+  v1[16] = aWabcdefglhijkm[3] ^ 0x10;
+  v1[15] = aWabcdefglhijkm[34] ^ 0xF;
+  v1[4] = aWabcdefglhijkm[19] ^ 4;
+  v1[20] = aWabcdefglhijkm[7] ^ 0x14;
+  v1[23] = aWabcdefglhijkm[16] ^ 0x17;
+  v1[32] = aWabcdefglhijkm[1] ^ 0x20;
+  v1[24] = aWabcdefglhijkm[18] ^ 0x18;
+  v1[14] = aWabcdefglhijkm[9] ^ 0xE;
+  v1[18] = aWabcdefglhijkm[31] ^ 0x12;
+  v1[21] = aWabcdefglhijkm[26] ^ 0x15;
+  v1[31] = aWabcdefglhijkm[9] ^ 0x1F;
+  v1[22] = aWabcdefglhijkm[6] ^ 0x16;
+  v1[7] = aWabcdefglhijkm[21] ^ 7;
+  v1[34] = aWabcdefglhijkm[12] ^ 0x22;
+  v1[17] = aWabcdefglhijkm[12] ^ 0x11;
+  v1[19] = aWabcdefglhijkm[15] ^ 0x13;
+  v1[40] = aWabcdefglhijkm[18] ^ 0x28;
+  v1[26] = aWabcdefglhijkm[20] ^ 0x1A;
+  v1[33] = aWabcdefglhijkm[3] ^ 0x21;
+  v1[25] = aWabcdefglhijkm[26] ^ 0x19;
+  v1[29] = aWabcdefglhijkm[22] ^ 0x1D;
+  v1[27] = aWabcdefglhijkm[40] ^ 0x1B;
+  v1[42] = aWabcdefglhijkm[16] ^ 0x2A;
+  v1[37] = aWabcdefglhijkm[7] ^ 0x25;
+  v1[28] = aWabcdefglhijkm[11] ^ 0x1C;
+  v1[39] = aWabcdefglhijkm[16] ^ 0x27;
+  v1[35] = aWabcdefglhijkm[10] ^ 0x23;
+  v1[36] = aWabcdefglhijkm[15] ^ 0x24;
+  v1[48] = aWabcdefglhijkm[1] ^ 0x30;
+  v1[30] = aWabcdefglhijkm[26] ^ 0x1E;
+  v1[51] = 0;
+  v1[43] = aWabcdefglhijkm[11] ^ 0x2B;
+  v1[44] = aWabcdefglhijkm[22] ^ 0x2C;
+  v1[45] = aWabcdefglhijkm[30] ^ 0x2D;
+  v1[38] = aWabcdefglhijkm[6] ^ 0x26;
+  v1[50] = aWabcdefglhijkm[29] ^ 0x32;
+  v1[49] = aWabcdefglhijkm[13] ^ 0x31;
+  v1[41] = aWabcdefglhijkm[20] ^ 0x29;
+  v1[46] = aWabcdefglhijkm[21] ^ 0x2E;  // break at .text:0000000000000FF8  mov [rbp+var_12], al
+  sub_92A("wabcdefglhijkmqnoprvstuzxy_!{}.1234567890 ", v1, 51LL);
+  return 1LL;
+}
+```
+
+在`v1[46] = aWabcdefglhijkm[21] ^ 0x2E;`这行代码打断点后按下`Tab`键查看相应的汇编语言代码行，可以提取出数组`v1`，双击`sub_92A()`函数查看详情。
+
+```c
+unsigned __int64 __fastcall sub_92A(__int64 a1, __int64 a2, int a3)
+{
+  void *v3; // rsp
+  __int64 v5; // [rsp+0h] [rbp-80h] BYREF
+  int v6; // [rsp+Ch] [rbp-74h]
+  __int64 v7; // [rsp+10h] [rbp-70h]
+  const char *v8; // [rsp+18h] [rbp-68h]
+  int i; // [rsp+24h] [rbp-5Ch]
+  __int64 v10; // [rsp+28h] [rbp-58h]
+  char *s; // [rsp+30h] [rbp-50h]
+  char s1[2]; // [rsp+3Ch] [rbp-44h] BYREF
+  char s2[2]; // [rsp+3Eh] [rbp-42h] BYREF
+  char v14[16]; // [rsp+40h] [rbp-40h] BYREF
+  __int64 v15; // [rsp+50h] [rbp-30h]
+  __int64 v16; // [rsp+58h] [rbp-28h]
+  __int64 v17; // [rsp+60h] [rbp-20h]
+  unsigned __int64 v18; // [rsp+68h] [rbp-18h]
+
+  v7 = a2;
+  v6 = a3;
+  v18 = __readfsqword(0x28u);
+  v8 = "abcdefghijklmnopqrstuvwxyz_! ";
+  v10 = a3 + 1 - 1LL;
+  v3 = alloca(16 * ((a3 + 1 + 15LL) / 0x10uLL));
+  s = (char *)&v5;
+  v16 = 0LL;
+  v17 = 0LL;
+  strcpy(v14, "wooooooo");
+  strcpy(&v14[8], "wwoooooo");
+  v15 = (unsigned __int8)aAbcdefghijklmn[14];
+  *(_DWORD *)((char *)&v15 + 1) = (unsigned __int8)aAbcdefghijklmn[22];
+  WORD1(v15) = (unsigned __int8)aAbcdefghijklmn[28];
+  BYTE3(v15) = aAbcdefghijklmn[2];
+  BYTE4(v15) = aAbcdefghijklmn[14];
+  *(_WORD *)((char *)&v15 + 5) = (unsigned __int8)aAbcdefghijklmn[13];
+  BYTE6(v15) = aAbcdefghijklmn[6];
+  HIBYTE(v15) = aAbcdefghijklmn[17];
+  v16 = (unsigned __int8)aAbcdefghijklmn[0];
+  *(_DWORD *)((char *)&v16 + 1) = (unsigned __int8)aAbcdefghijklmn[19];
+  WORD1(v16) = (unsigned __int8)aAbcdefghijklmn[20];
+  BYTE3(v16) = aAbcdefghijklmn[11];
+  BYTE4(v16) = aAbcdefghijklmn[0];
+  *(_WORD *)((char *)&v16 + 5) = (unsigned __int8)aAbcdefghijklmn[19];
+  BYTE6(v16) = aAbcdefghijklmn[8];
+  HIBYTE(v16) = aAbcdefghijklmn[14];
+  v17 = (unsigned __int8)aAbcdefghijklmn[13];
+  *(_DWORD *)((char *)&v17 + 1) = (unsigned __int8)aAbcdefghijklmn[18];
+  WORD1(v17) = (unsigned __int8)aAbcdefghijklmn[27];
+  BYTE3(v17) = aAbcdefghijklmn[28];
+  BYTE4(v17) = aAbcdefghijklmn[23];
+  *(_WORD *)((char *)&v17 + 5) = (unsigned __int8)aAbcdefghijklmn[3];
+  printf("%s", "Input password: ");
+  fflush(stdout);
+  fgets(s, v6 + 1, stdin);
+  strtok(s, "\n");
+  for ( i = 0; i < v6; ++i )
+  {
+    s1[0] = s[i];
+    s1[1] = 0;
+    s2[0] = *(_BYTE *)(i + v7) ^ i;
+    s2[1] = 0;
+    if ( strcmp(s1, s2) )
+    {
+      puts("Sorry, incorrect password!");
+      exit(0);
+    }
+  }
+  puts(v14);
+  return __readfsqword(0x28u) ^ v18;
+}
+```
+
+`sub_92A()`函数主要是进行了一个异或操作，根据程序逻辑编写`Python`代码，运行得到`watevr{th4nk5_h4ck1ng_for_s0ju_hackingforsoju.team}`，提交`flag{th4nk5_h4ck1ng_for_s0ju_hackingforsoju.team}`即可。
+
+```python
+a = [0x77, 0x60, 0x76, 0x66, 0x72, 0x77, 0x7D, 0x73, 0x60, 0x3D, 0x64, 0x60, 0x39, 0x52, 0x66, 0x3B, 0x73, 0x7A, 0x23, 0x7D, 0x73, 0x4A, 0x70, 0x78, 0x6A, 0x46, 0x69, 0x2B, 0x76, 0x68, 0x41, 0x77, 0x41, 0x42, 0x49, 0x4A, 0x4A, 0x42, 0x40, 0x48, 0x5A, 0x5A, 0x45, 0x41, 0x59, 0x03, 0x5A, 0x4A, 0x51, 0x5C, 0x4F]
+flag = ''
+for i in range(len(a)):
+    flag += chr(a[i]^i)
+print(flag) # watevr{th4nk5_h4ck1ng_for_s0ju_hackingforsoju.team}
+```
+
+------
+
 ## BUUCTF
 
 ### [easyre](https://buuoj.cn/challenges#easyre)
@@ -6269,8 +6445,6 @@ retn
 main endp
 ```
 
-
-
 按`F5`反编译可以看到主函数的`C`语言代码如下：
 
 ```c
@@ -6280,4 +6454,10 @@ int __cdecl main(int argc, const char **argv, const char **envp)
   return 0;
 }
 ```
+
+显然`flag`就是`wctf2020{Just_upx_-d}`，提交`flag{Just_upx_-d}`即可。
+
+------
+
+
 
