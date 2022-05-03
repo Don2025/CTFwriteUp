@@ -156,3 +156,9 @@ for i in range(0, 256):
 
 ------
 
+## [文件](https://ce.pwnthebox.com/challenges?type=1&id=149)
+
+这题附件是`key.pcapng`，用`Wireshark`打开数据流量包，发现里面有`TCP`和`HTTP`两种协议，直接输入`http contains "flag"`筛选协议。进行`HTTP`流追踪可以看到`flag{This_is_a_f10g}`，提交即可。
+
+------
+
