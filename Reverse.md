@@ -4689,6 +4689,104 @@ int __stdcall sub_401090(HWND hWnd, int a2, int a3, int a4)
 
 ------
 
+### [小巧玲珑的 ELF](https://ce.pwnthebox.com/challenges?type=2&id=471)
+
+用`file`查看附件`tinyELF`，可以看到信息`tinyELF: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked, no section header`。用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+void __noreturn start()
+{
+  signed __int64 v0; // rax
+  signed __int64 v1; // rax
+  signed __int64 v2; // rax
+  signed __int64 v3; // rax
+  signed __int64 v4; // rax
+  char v5[48]; // [rsp+0h] [rbp-70h]
+  char buf[56]; // [rsp+30h] [rbp-40h] BYREF
+  int j; // [rsp+68h] [rbp-8h]
+  int i; // [rsp+6Ch] [rbp-4h]
+
+  v5[0] = 102;
+  v5[1] = 110;
+  v5[2] = 101;
+  v5[3] = 107;
+  v5[4] = -125;
+  v5[5] = 78;
+  v5[6] = 109;
+  v5[7] = 116;
+  v5[8] = -123;
+  v5[9] = 122;
+  v5[10] = 111;
+  v5[11] = 87;
+  v5[12] = -111;
+  v5[13] = 115;
+  v5[14] = -112;
+  v5[15] = 79;
+  v5[16] = -115;
+  v5[17] = 127;
+  v5[18] = 99;
+  v5[19] = 54;
+  v5[20] = 108;
+  v5[21] = 110;
+  v5[22] = -121;
+  v5[23] = 105;
+  v5[24] = -93;
+  v5[25] = 111;
+  v5[26] = 88;
+  v5[27] = 115;
+  v5[28] = 102;
+  v5[29] = 86;
+  v5[30] = -109;
+  v5[31] = -97;
+  v5[32] = 105;
+  v5[33] = 112;
+  v5[34] = 56;
+  v5[35] = 118;
+  v5[36] = 113;
+  v5[37] = 120;
+  v5[38] = 111;
+  v5[39] = 99;
+  v5[40] = -60;
+  v5[41] = -126;
+  v5[42] = -124;
+  v5[43] = -66;
+  v5[44] = -69;
+  v5[45] = -51;
+  v0 = sys_write(1u, "please in put flag:", 0x13uLL);
+  v1 = sys_read(0, buf, 0x2EuLL);
+  for ( i = 0; i <= 45; ++i )
+  {
+    buf[i] += 2 * i;
+    buf[i] ^= i;
+    buf[i] -= i;
+  }
+  for ( j = 0; j <= 45; ++j )
+  {
+    if ( buf[j] != v5[j] )
+      v2 = sys_exit(0);
+  }
+  v3 = sys_write(1u, "correct", 7uLL);
+  v4 = sys_exit(0);
+  JUMPOUT(0x4011D4LL);
+}
+```
+
+该程序初始化`char`型`v5`数组后往里面填充数据，把用户输入的字符存储到`buf`数组中并进行一系列加密运算，最后将`buf`变量和`v5`变量进行比较，如果两者相等则输出`"correct"`。根据程序逻辑编写`Python`代码，运行得到`flag{Linux_Syst3m_C4ll_is_4_f4scin4ting_t00ls}`，提交即可。
+
+```python
+a = [102, 110, 101, 107,-125, 78, 109, 116, -123, 122, 111, 87, -111, 115, -112, 79, -115, 127, 99, 54, 108, 110, -121, 105, -93, 111, 88, 115, 102, 86, -109, -97, 105, 112, 56, 118, 113, 120, 111, 99, -60, -126, -124, -66, -69, -51]
+flag = ''
+for i in range(len(a)):
+    a[i] = (a[i]+256)%256
+    a[i] += i
+    a[i] ^= i
+    a[i] -= 2*i
+    flag += chr(a[i])
+print(flag)
+```
+
+------
+
 ## BUUCTF
 
 ### [easyre](https://buuoj.cn/challenges#easyre)
