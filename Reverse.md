@@ -4112,6 +4112,21 @@ else:
 
 ------
 
+### [easy_vb](https://ce.pwnthebox.com/challenges?type=2&id=693)
+
+用 `file`查看附件`easy_vb.exe`，可以看到信息`./easy_vb.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，可以在汇编代码代码中看到`MCTF{_N3t_Rev_1s_E4ay_}`，提交即可。
+
+```assembly
+.text:00401A5C aMctfN3tRev1sE4:                        ; DATA XREF: sub_402310+99↓o
+.text:00401A5C                 text "UTF-16LE", 'MCTF{_N3t_Rev_1s_E4ay_}',0
+.text:00401A8C                 dd 14h
+.text:00401A90 aTryAgain:                              ; DATA XREF: sub_402310+163↓o
+.text:00401A90                 text "UTF-16LE", 'Try again!',0
+.text:00401AA6                 align 4
+```
+
+------
+
 ### [Baby_C#](https://ce.pwnthebox.com/challenges?type=2&id=113)
 
 用 `file`查看附件`rev3.exe`，可以看到信息`./rev3.exe: PE32 executable (GUI) Intel 80386 Mono/.Net assembly, for MS Windows`，用`dnSpy-net-win32`打开文件后，可以看到`FirstWPFAPP (1.0.0.0)`中的信息如下：
