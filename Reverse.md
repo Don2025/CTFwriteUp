@@ -4787,6 +4787,73 @@ print(flag)
 
 ------
 
+### [baby_reverse](https://ce.pwnthebox.com/challenges?type=2&id=691)
+
+用`file`查看附件`reverse`，可以看到信息
+
+`./reverse: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s[240]; // [rsp+0h] [rbp-1E0h] BYREF
+  char v5[240]; // [rsp+F0h] [rbp-F0h] BYREF
+
+  memset(s, 0, 0x1EuLL);
+  printf("Please Input Key: ");
+  __isoc99_scanf("%s", v5);
+  encode(v5, s);
+  if ( !strcmp(s, enflag) )
+    puts("You are Right");
+  return 0;
+}
+```
+
+双击`encode()`函数查看详情：
+
+```c
+int __fastcall encode(const char *a1, __int64 a2)
+{
+  char v3[100]; // [rsp+10h] [rbp-70h]
+  int v4; // [rsp+74h] [rbp-Ch]
+  int v5; // [rsp+78h] [rbp-8h]
+  int i; // [rsp+7Ch] [rbp-4h]
+
+  v5 = 18;
+  i = 0;
+  v4 = 0;
+  if ( strlen(a1) != 18 )   // flag字符串长度为18
+    return puts("Your Length is Wrong");
+  puts("flag{This_1s_f4cker_flag}");    // 虚假的flag
+  for ( i = 0; i < v5; i += 3 )
+  {
+    v3[i + 64] = v5 ^ (a1[i] + 6);
+    v3[i + 33] = (a1[i + 1] - 6) ^ v5;
+    v3[i + 2] = a1[i + 2] ^ 6 ^ v5;
+    *(_BYTE *)(a2 + i) = v3[i + 64];
+    *(_BYTE *)(a2 + i + 1LL) = v3[i + 33];
+    *(_BYTE *)(a2 + i + 2LL) = v3[i + 2];
+  }
+  return a2;
+}
+```
+
+根据`enflag`变量值和程序逻辑，编写`Python`代码，运行得到`flag{w0wtqly0uW1n}`，提交即可。
+
+```python
+s = [0x7E, 0x74, 0x75, 0x7F, 0x67, 0x63, 0x24, 0x63, 0x60, 0x65, 
+  0x74, 0x6D, 0x24, 0x7D, 0x43, 0x25, 0x7A, 0x69]
+n = 18
+flag = ''
+for i in range(0, 18, 3):
+    flag += chr((n^s[i])-6)
+    flag += chr((n^s[i+1])+6)
+    flag += chr((n^s[i+2]^6))
+print(flag) # flag{w0wtqly0uW1n}
+```
+
+------
+
 ## BUUCTF
 
 ### [easyre](https://buuoj.cn/challenges#easyre)
