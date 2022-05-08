@@ -4854,6 +4854,198 @@ print(flag) # flag{w0wtqly0uW1n}
 
 ------
 
+### [BaseRe](https://ce.pwnthebox.com/challenges?type=2&id=695)
+
+用`file`查看附件`re`，可以看到信息`./re: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+
+```c
+__int64 __fastcall main(int a1, char **a2, char **a3)
+{
+  unsigned int v3; // eax
+  char *haystack; // [rsp+8h] [rbp-A8h]
+  char needle[48]; // [rsp+10h] [rbp-A0h] BYREF
+  char s[104]; // [rsp+40h] [rbp-70h] BYREF
+  unsigned __int64 v8; // [rsp+A8h] [rbp-8h]
+
+  v8 = __readfsqword(0x28u);
+  strcpy(needle, "YmxGY3s3MnMnYjd3Y2X5XWM5YfpoXWQkNSMlMzMnYjl9");
+  puts("so,can you guess my password?");
+  puts("my password is the flag!");
+  gets(s, a2);
+  v3 = strlen(s);
+  haystack = (char *)sub_400735(s, v3);
+  if ( strstr(haystack, needle) )
+    puts("oh~no,you get my password!");
+  else
+    puts("too young too naive!\nyou play RE like cxk!");
+  return 0LL;
+}
+```
+
+双击`sub_400735()`函数查看详情，发现`off_602068`变量存储的字符串为`/abcdefghIJKLMNOPQRSTUVWXYZABCDEFGijklmnopqrstuvwxyz0123456789+=`，这是进行`base`加密使用到的自定义字母表，它是在`base64`加密的基础上进行修改的。
+
+```c
+unsigned __int8 *__fastcall sub_400735(__int64 a1, signed int a2)
+{
+  int v2; // eax
+  unsigned int v4; // [rsp+18h] [rbp-18h]
+  int v5; // [rsp+1Ch] [rbp-14h]
+  unsigned int i; // [rsp+1Ch] [rbp-14h]
+  int v7; // [rsp+20h] [rbp-10h]
+  unsigned int v8; // [rsp+24h] [rbp-Ch]
+  unsigned __int8 *s; // [rsp+28h] [rbp-8h]
+
+  v7 = a2 % 3;
+  if ( a2 % 3 )
+    v2 = 4 * (a2 / 3 + 1);
+  else
+    v2 = 4 * (a2 / 3);
+  v8 = v2;
+  s = (unsigned __int8 *)malloc((unsigned int)(v2 + 1));
+  memset(s, 0, v8 + 1);
+  v4 = 0;
+  v5 = 0;
+  while ( v4 < a2 )
+  {
+    if ( v4 + 2 >= a2 )
+    {
+      s[v5] = *(_BYTE *)(v4 + a1) >> 2;
+      if ( v7 == 1 )
+      {
+        s[v5 + 1] = (16 * (*(_BYTE *)(v4 + a1) & 3)) & 0x3F;
+        s[v5 + 2] = 64;
+        s[v5 + 3] = 64;
+      }
+      else if ( v7 == 2 )
+      {
+        s[v5 + 1] = (16 * (*(_BYTE *)(v4 + a1) & 3)) | (*(_BYTE *)(v4 + 1 + a1) >> 4);
+        s[v5 + 2] = (4 * (*(_BYTE *)(v4 + 1 + a1) & 0xF)) & 0x3F;
+        s[v5 + 3] = 64;
+        break;
+      }
+    }
+    s[v5] = *(_BYTE *)(v4 + a1) >> 2;
+    s[v5 + 1] = (16 * (*(_BYTE *)(v4 + a1) & 3)) | (*(_BYTE *)(v4 + 1 + a1) >> 4);
+    s[v5 + 2] = (4 * (*(_BYTE *)(v4 + 1 + a1) & 0xF)) | (*(_BYTE *)(v4 + 2 + a1) >> 6);
+    s[v5 + 3] = *(_BYTE *)(v4 + 2 + a1) & 0x3F;
+    v4 += 3;
+    v5 += 4;
+  }
+  for ( i = 0; i < v8; ++i )
+    s[i] = off_602068[s[i]];
+  return s;
+}
+```
+
+根据程序逻辑，编写`C++`代码，运行得到`flag{76sgf17gf9asydjhatd93e73gf9}`，提交即可。
+
+```cpp
+#include <stdio.h>
+#include <string.h>
+using namespace std;
+
+const char * base64char = "/abcdefghIJKLMNOPQRSTUVWXYZABCDEFGijklmnopqrstuvwxyz0123456789+";
+const char padding_char = '=';
+
+int base64_encode(const unsigned char * sourcedata, char * base64) {
+    int i=0, j=0;
+    unsigned char trans_index=0;   // 索引是8位，但是高两位都为0
+
+    const int datalength = strlen((const char*)sourcedata);
+
+    for (; i < datalength; i += 3) {    // 每三个一组，进行编码 要编码的数字的第一个
+    
+        trans_index = ((sourcedata[i] >> 2) & 0x3f);
+        base64[j++] = base64char[(int)trans_index];
+
+        // 第二个
+        trans_index = ((sourcedata[i] << 4) & 0x30);
+
+        if (i + 1 < datalength){
+            trans_index |= ((sourcedata[i + 1] >> 4) & 0x0f);
+            base64[j++] = base64char[(int)trans_index];
+        }else{
+            base64[j++] = base64char[(int)trans_index];
+            base64[j++] = padding_char;
+            base64[j++] = padding_char;
+            break;                              // 超出总长度，可以直接break
+        }
+
+        // 第三个
+        trans_index = ((sourcedata[i + 1] << 2) & 0x3c);
+        if (i + 2 < datalength) {                           // 有的话需要编码2个
+            trans_index |= ((sourcedata[i + 2] >> 6) & 0x03);
+            base64[j++] = base64char[(int)trans_index];
+ 
+            trans_index = sourcedata[i + 2] & 0x3f;
+            base64[j++] = base64char[(int)trans_index];
+        }else {
+            base64[j++] = base64char[(int)trans_index];
+            base64[j++] = padding_char;
+            break;
+        }
+    }
+
+    base64[j] = '\0'; 
+
+    return 0;
+}
+ 
+int num_strchr(const char *str, char c) {
+    const char *pindex = strchr(str, c);
+    if (NULL == pindex) {
+        return -1;
+    }
+    return pindex - str;
+}
+ 
+int base64_decode(const char * base64, unsigned char * dedata) {
+    int i = 0, j=0;
+    int trans[4] = {0,0,0,0};
+ 
+    for (;base64[i]!='\0';i+=4) { // 每四个一组，译码成三个字符
+ 
+        trans[0] = num_strchr(base64char, base64[i]);
+        trans[1] = num_strchr(base64char, base64[i+1]);
+
+        dedata[j++] = ((trans[0] << 2) & 0xfc) | ((trans[1]>>4) & 0x03);
+
+        if (base64[i+2] == '='){
+            continue;
+        }else{
+            trans[2] = num_strchr(base64char, base64[i + 2]);
+        }
+
+        dedata[j++] = ((trans[1] << 4) & 0xf0) | ((trans[2] >> 2) & 0x0f);
+
+        if (base64[i + 3] == '='){
+            continue;
+        }else{
+            trans[3] = num_strchr(base64char, base64[i + 3]);
+        }
+
+        dedata[j++] = ((trans[2] << 6) & 0xc0) | (trans[3] & 0x3f);
+    }
+    dedata[j] = '\0';
+    return 0;
+}
+
+int main() {
+    char base641[128]="YmxGY3s3MnMnYjd3Y2X5XWM5YfpoXWQkNSMlMzMnYjl9=";
+    printf("%s\n",base641);
+    char dedata[128];
+    int b=strlen(base641);
+    printf("%d\n",b);
+    base64_decode(base641, (unsigned char*)dedata);
+    int v3=0;
+    int v2=38;
+    printf("%s\n", dedata);
+    return 0;
+}
+```
+
+------
+
 ## BUUCTF
 
 ### [easyre](https://buuoj.cn/challenges#easyre)
