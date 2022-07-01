@@ -353,6 +353,35 @@ Notice: Undefined index: what in /var/www/html/index.php on line 8
 
 ------
 
+### [Post](https://ce.pwnthebox.com/challenges?type=5&id=661)
+
+打开靶机后可以看到以下内容：
+
+```php
+$what=$_POST['what'];
+echo $what;
+if($what=='flag')
+echo 'flag{****}';
+```
+
+通过`POST` 请求获取了一个名为`what`的参数 ，当满足`$what=='flag'`时即可输出`flag`。
+
+利用`HackBar`来构造`POST`请求，填入靶机`URL`后`Enable POST`，`enctype`默认为`application/x-www-form-urlencoded`，在`Body`处输入`what=flag`，点击`EXECUTE`即可得到`flag`，提交`PTB{ec5e177f-729b-4c5d-98e9-3cc1be6a8e11}`即可。
+
+此外，这题还可以使用`curl`来发送`POST`请求，`-d`参数用于发送`POST`请求的数据内容。
+
+```bash
+curl -d "what=flag" -X POST 靶机地址
+```
+
+使用`-d`参数后，`HTTP`请求会自动加上标头`Content-Type: application/x-www-form-urlencoded`，并自动将请求抓为`POST`方式，因此可以省略`-X POST`，直接写为：
+
+```bash
+curl -d "what=flag" 靶机地址
+```
+
+------
+
 ### [2048](https://ce.pwnthebox.com/challenges?type=5&id=206)
 
 打开靶机后查看源码发现`main2048.js`，查看详情发现有个`gamewin()`函数，在`Console`输入`gamewin()`后弹出提示框，提示框显示的`flag{2O48_1s_fun}`是假`flag`，真正的`flag`在`Console`的输出里，提交`HEBTUCTF{Aaenc0de_1s_FuN}`即可。
