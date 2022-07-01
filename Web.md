@@ -332,3 +332,8 @@ include($page);
 
 ------
 
+## PwnTheBox
+
+### [2048](https://ce.pwnthebox.com/challenges?type=5&id=206)
+
+打开靶机后查看源码发现`main2048.js`，查看详情发现有个`gamewin()`函数，在`Console`输入`gamewin()`后弹出提示框，提示框显示的`flag{2O48_1s_fun}`是假`flag`，真正的`flag`在`Console`的输出里，提交`HEBTUCTF{Aaenc0de_1s_FuN}`即可。
