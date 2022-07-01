@@ -334,6 +334,22 @@ include($page);
 
 ## PwnTheBox
 
+### [XSS](https://ce.pwnthebox.com/challenges?type=5&id=673)
+
+打开靶机后可以看到以下内容：
+
+```php
+if( array_key_exists( "name", $_GET ) && $_GET[ 'name' ] != NULL ) { echo '
+' . $_GET[ 'name' ] . '
+'; }
+```
+
+通过`GET` 请求获取了一个名为`name`的参数，并进行了输出。
+
+直接访问`?name=flag`可以得到`flag`，提交`PTB{2baa079c-0d7b-45a3-92bc-8dbac59b56cc}`即可。
+
+------
+
 ### [Get](https://ce.pwnthebox.com/challenges?type=5&id=657)
 
 打开靶机后可以看到以下内容：
@@ -347,7 +363,7 @@ echo 'flag{****}';
 Notice: Undefined index: what in /var/www/html/index.php on line 8
 ```
 
-通过`GET` 请求获取了一个名为`what`的参数 ，当满足`$what=='flag'`时即可输出`flag`。
+通过`GET` 请求获取了一个名为`what`的参数，当满足`$what=='flag'`时即可输出`flag`。
 
 直接访问 `?what=flag`可以得到`flag`，提交`PTB{58625de2-2456-401e-ac43-70bd9cdefb4b}`即可。
 
