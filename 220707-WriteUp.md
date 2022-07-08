@@ -370,7 +370,7 @@ ABBAB o
 <?php eval($_POST['fuck']); ?>
 ```
 
-## 流量包
+### 流量包
 
 追踪`HTTP`流可以得到：
 
@@ -391,7 +391,43 @@ print(flag.decode('utf-8')) # HEBTUCTF%7Bf1ag_1s_w3n_d4o%7D
 
 ------
 
-## re3-安卓
+### base？谁是多余的
+
+谁是多余的？我是多余的，50分的白给题都写不出来。
+
+```
+LJWXQ2C2GN2HGYRSHFZFQM3ENneed5RDCOLQMMYTS5LCGNJGMYTNKZWFURRZOBRGYOLNMJDUM3TGKE6T2===
+```
+
+`base62`解码后，不知道咋办啦，不是`16`进制的`ASCII`码字符串，也不是`base64`字符串。
+
+```
+1250817256001227640585440340463189743117571458423394069459336446138395188175406684183750268995218703423172621848137005336721600711692166847734715777024
+```
+
+**正解：**
+
+把小写字母`need`删除掉后，得到以下字符串：
+
+```
+LJWXQ2C2GN2HGYRSHFZFQM3EN5RDCOLQMMYTS5LCGNJGMYTNKZWFURRZOBRGYOLNMJDUM3TGKE6T2===
+```
+
+对以上字符串进行`base32`解码：
+
+```
+ZmxhZ3tsb29rX3dob19pc19ub3RfbmVlZF9pbl9mbGFnfQ==
+```
+
+接着再进行`base64`解码得到`flag`：
+
+```
+flag{look_who_is_not_need_in_flag}
+```
+
+------
+
+### re3-安卓
 
 用`Android-Killer`打开后不知道怎么对`.smali`下手，安卓逆向题刷得少了，我太菜了，得多练习。
 
