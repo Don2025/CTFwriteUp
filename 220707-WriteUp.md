@@ -344,12 +344,6 @@ ABBAB o
 
 ------
 
-##### re3-安卓
-
-用`Android-Killer`打开后不知道怎么对`.smali`下手，安卓逆向题刷得少了，我太菜了，得多练习。
-
-------
-
 ##### web02
 
 尝试多种`sql`注入求解未果，直接被猫猫警告蹲大牢。
@@ -397,5 +391,114 @@ print(flag.decode('utf-8')) # HEBTUCTF%7Bf1ag_1s_w3n_d4o%7D
 
 ------
 
+## re3-安卓
 
+用`Android-Killer`打开后不知道怎么对`.smali`下手，安卓逆向题刷得少了，我太菜了，得多练习。
 
+**正解：**
+
+用`JEB`打开后反编译，可以看到`MainActivity`中的`Java`代码如下：
+
+```java
+package com.example.flag;
+
+import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v7.app.ActionBarActivity;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View$OnClickListener;
+import android.view.View;
+import android.view.ViewGroup;
+
+public class MainActivity extends ActionBarActivity {
+    public class PlaceholderFragment extends Fragment {
+        public PlaceholderFragment() {
+            super();
+        }
+
+        public View onCreateView(LayoutInflater arg4, ViewGroup arg5, Bundle arg6) {
+            return arg4.inflate(0x7F030018, arg5, false);
+        }
+    }
+
+    public MainActivity() {
+        super();
+    }
+
+    protected void onCreate(Bundle arg7) {
+        super.onCreate(arg7);
+        this.setContentView(0x7F030017);
+        if(arg7 == null) {
+            this.getSupportFragmentManager().beginTransaction().add(0x7F05003C, new PlaceholderFragment()).commit();
+        }
+
+        this.findViewById(0x7F05003F).setOnClickListener(new View$OnClickListener(this.findViewById(0x7F05003D), this.findViewById(0x7F05003E)) {
+            public void onClick(View arg13) {
+                int v11 = 0x1F;
+                int v9 = 2;
+                int v2 = 1;
+                String v6 = this.val$editview.getText().toString();
+                if(v6.length() != 0x20 || v6.charAt(v11) != 97 || v6.charAt(1) != 98 || v6.charAt(0) + v6.charAt(v9) - 0x30 != 56) {
+                    v2 = 0;
+                }
+
+                if(v2 == 1) {
+                    char[] v5 = "dd2940c04462b4dd7c450528835cca15".toCharArray();
+                    v5[v9] = ((char)(v5[v9] + v5[3] - 50));
+                    v5[4] = ((char)(v5[v9] + v5[5] - 0x30));
+                    v5[30] = ((char)(v5[v11] + v5[9] - 0x30));
+                    v5[14] = ((char)(v5[27] + v5[28] - 97));
+                    int v4;
+                    for(v4 = 0; v4 < 16; ++v4) {
+                        char v0 = v5[0x1F - v4];
+                        v5[0x1F - v4] = v5[v4];
+                        v5[v4] = v0;
+                    }
+
+                    this.val$textview.setText("flag{" + String.valueOf(v5) + "}");
+                }
+                else {
+                    this.val$textview.setText("输入注册码错误");
+                }
+            }
+        });
+    }
+
+    public boolean onCreateOptionsMenu(Menu arg3) {
+        this.getMenuInflater().inflate(0x7F0C0000, arg3);
+        return 1;
+    }
+
+    public boolean onOptionsItemSelected(MenuItem arg3) {
+        boolean v1 = arg3.getItemId() == 0x7F050040 ? true : super.onOptionsItemSelected(arg3);
+        return v1;
+    }
+}
+```
+直接把代码中和`flag`相关的部分拿出来跑一下就可以得到`flag{59acc538825054c7de4b26440c0999dd}`。
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        int v11 = 0x1F;
+        int v9 = 2;
+        int v2 = 1;
+        char[] v5 = "dd2940c04462b4dd7c450528835cca15".toCharArray();
+        v5[v9] = ((char)(v5[v9] + v5[3] - 50));
+        v5[4] = ((char)(v5[v9] + v5[5] - 0x30));
+        v5[30] = ((char)(v5[v11] + v5[9] - 0x30));
+        v5[14] = ((char)(v5[27] + v5[28] - 97));
+        int v4;
+        for(v4 = 0; v4 < 16; ++v4) {
+            char v0 = v5[0x1F - v4];
+            v5[0x1F - v4] = v5[v4];
+            v5[v4] = v0;
+        }
+        System.out.println("flag{" + String.valueOf(v5) + "}");
+    }
+}
+```
+
+------
