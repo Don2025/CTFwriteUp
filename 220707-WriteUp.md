@@ -1,3 +1,23 @@
+### Reverse
+
+- #### [re1](#re1)
+
+- #### [re2](#re2)
+
+- #### [re3-安卓](#re3-安卓)
+
+### Crypto
+
+- #### [签到题](#签到题)
+
+- #### [base？谁是多余的](#base谁是多余的)
+
+- #### [VG](#VG)
+
+- #### [rsa](#rsa)
+
+
+
 ### 签到题
 
 上来先写密码签到题，打开`.txt`文件后可以看到以下字符串：
@@ -15,7 +35,7 @@ print(flag) # flag{welcome_to_ctf_enjoy_and_have_fun!}
 
 ------
 
-### re1.exe
+### re1
 
 接着写了逆向的签到题`re1.exe`，先用`file`查看文件，发现是`64`位的。
 
@@ -69,23 +89,17 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 }
 ```
 
-审计代码可以发现，用户输入的字符串和字符串`"aqlipcrwjcrkmp]{mw]imv]oc"`进行了异或运算，因为午休的时候刷`LeetCode`打开了`GoLand`，所以直接用`Go`进行异或运算得到`congratulation_you_got_me`，提交`flag{congratulation_you_got_me}`。
+审计代码可以发现，用户输入的字符串和字符串`"aqlipcrwjcrkmp]{mw]imv]oc"`进行了异或运算，编写`Python`代码进行异或运算得到`congratulation_you_got_me`，提交`flag{congratulation_you_got_me}`。
 
-```go
-package main
-
-import "fmt"
-
-func main() {
-	s := "aqlipcrwjcrkmp]{mw]imv]oc"
-	for i, ch := range s {
-		if i&1 == 0 {
-			fmt.Printf("%c", ch+2)
-		} else {
-			fmt.Printf("%c", ch-2)
-		}
-	}
-}
+```python
+s = 'aqlipcrwjcrkmp]{mw]imv]oc'
+flag = ''
+for i, x in enumerate(s):
+	if i & 1:
+		flag += chr(ord(x)-2)
+	else:
+		flag += chr(ord(x)+2)
+print(f'flag{{{flag}}}') # flag{congratulation_you_got_me}
 ```
 
 ------
@@ -142,7 +156,7 @@ flag{easy_union_sql!}
 
 ------
 
-### re2.exe
+### [re2.exe](#reverse2)
 
 逆向的第二题`re2.exe`，先用`file`查看文件，发现是`32`位的。直接用`IDA pro 32bit`打开`re2.exe`，按下`F5`对汇编语言进行反编译，可以看到`C`语言的代码如下：
 
@@ -212,6 +226,8 @@ LABEL_4:
 }
 ```
 
+##### 解法1：
+
 可以看到用户输入的字符串被进行一系列处理后做了对比，如果输入正确则输出`"Well done, you got it"`。一般这种题，直接`Angr`大法好，打开`Jupyter Notebook`连接服务器，动态符号执行就能解出`flag`：`flag{well_done_good!}`。
 
 ```python
@@ -228,6 +244,20 @@ print(state.posix.dumps(0)) # flag{well_done_good!}
 ```
 
 ![](https://paper.tanyaodan.com/img/angr_re2.png)
+
+##### 解法2：
+
+代码审计后根据程序逻辑编写`Python`代码：
+
+```python
+s = [114,96,103,103,90,90,101,100,91,85,88,96,96,85,18]
+flag = ''
+for i in range(0, 15, 5):
+	for x in s[i:i+5]:
+		flag += chr(x+i+5)
+
+print(f'flag{{{flag}}}') # flag{well_done_good!}
+```
 
 ------
 
@@ -283,20 +313,6 @@ print(flag) # flag{01d80670b01b654fe4831a3e81870734}
 
 这些题是写到一般没思路的题。
 
-##### base？谁是多余的
-
-谁是多余的？我是多余的，50分的白给题都写不出来。
-
-```
-LJWXQ2C2GN2HGYRSHFZFQM3ENneed5RDCOLQMMYTS5LCGNJGMYTNKZWFURRZOBRGYOLNMJDUM3TGKE6T2===
-```
-
-`base62`解码后，不知道咋办啦，不是`16`进制的`ASCII`码字符串，也不是`base64`字符串。
-
-```
-1250817256001227640585440340463189743117571458423394069459336446138395188175406684183750268995218703423172621848137005336721600711692166847734715777024
-```
-
 ##### 图片隐写
 
 `foremost -i`可以分理出`rabbit.txt`里面有这个字符串：
@@ -314,27 +330,6 @@ U2FsdGVkX1/xvgrmnK5HYx8vVZdl9cOGAXlXmuuZCCeOqxZFeX4exz7CcA==
 亮哥提示是`rabbit`加密，密钥在图片的详细信息里，寻找未果。
 
 ------
-
-##### VG
-
-```
-密文：cowahqeyxyxlgwrbtdaerokqggilsk
-秘钥：AAAABAAAAAAAABAABBBAABBAB
-```
-
-试了一手培根加密，根据`AAAABAAAAAAAABAABBBAABBAB`得到`bacpo`，这个应该是真密码吧，结果求解未果。
-
-```
-培根加密
-AAAAB b
-AAAAA a
-AAABA c
-ABBBA p
-ABBAB o
-
-真密钥：bacpo
-维多利亚密码：
-```
 
 ##### 压缩包
 
@@ -393,6 +388,8 @@ print(flag.decode('utf-8')) # HEBTUCTF%7Bf1ag_1s_w3n_d4o%7D
 
 ### base？谁是多余的
 
+**比赛时：**
+
 谁是多余的？我是多余的，50分的白给题都写不出来。
 
 ```
@@ -428,6 +425,8 @@ flag{look_who_is_not_need_in_flag}
 ------
 
 ### re3-安卓
+
+**比赛时：**
 
 用`Android-Killer`打开后不知道怎么对`.smali`下手，安卓逆向题刷得少了，我太菜了，得多练习。
 
@@ -538,3 +537,32 @@ public class Main {
 ```
 
 ------
+
+### [VG](#crypto3)
+
+**比赛时：**
+
+```
+密文：cowahqeyxyxlgwrbtdaerokqggilsk
+秘钥：AAAABAAAAAAAABAABBBAABBAB
+```
+
+试了一手培根加密，根据`AAAABAAAAAAAABAABBBAABBAB`得到`bacpo`，这个应该是真密钥吧，结果求解未果。
+
+```
+培根加密
+AAAAB b
+AAAAA a
+AAABA c
+ABBBA p
+ABBAB o
+
+真密钥：bacpo
+维多利亚密码：
+```
+
+------
+
+**正解：**
+
+培根加密有两种。
