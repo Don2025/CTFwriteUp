@@ -721,6 +721,47 @@ print(flag) # BITSCTF{h1d3_1n_pl41n_5173}
 
 ------
 
+## PwnTheBox
+
+### [BabyRSA](https://ce.pwnthebox.com/challenges?id=314)
+
+```python
+from Crypto.Util.number import *
+
+flag = bytes_to_long("n1book{*********}")
+
+p = getPrime(128)
+q = getPrime(128)
+n = p * q
+e = 65537
+
+cipher = pow(flag, e, n)
+print n, cipher
+
+# 69343391982073836527260787066436662760820725339907775857387709078502658633087 
+# 19914364722342610626569065936888842248099105322649309104924491672406432347316
+```
+
+直接对`n`进行大因素分解，得到`p`和`Q`，再求`m`。
+
+```python
+from Crypto.Util.number import *
+from factordb.factordb import FactorDB
+e = 65537
+
+n = 69343391982073836527260787066436662760820725339907775857387709078502658633087 
+c = 19914364722342610626569065936888842248099105322649309104924491672406432347316
+
+# f = FactorDB(n)
+# f.connect()
+# print((f.get_factor_list())) # 226134486267985710544345427491176087287, 306646691207889915109374013611076713401
+p, q = 226134486267985710544345427491176087287, 306646691207889915109374013611076713401
+m = pow(c, inverse(e, (p-1)*(q-1)), n)
+print(long_to_bytes(m))
+```
+
+------
+
 ## CTFShow
 
 ### crypto4
