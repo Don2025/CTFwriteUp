@@ -25,7 +25,7 @@ print(flag) # CrackMeJustForFun
 
 ### [Shuffle](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4942)
 
-用 `file`查看`maze`，可以看到信息`./Shuffle: ELF 32-bit LSB executable, Intel 80386`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看`maze`，可以看到信息`./Shuffle: ELF 32-bit LSB executable, Intel 80386`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -128,7 +128,7 @@ print(flag) # nctf{d3c0mpil1n9_PyC}
 
 ### [easyRE1](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5592)
 
-将附件解压缩后得到两个文件：`easy-32`和`easy-64`。这都没必要`file`了，用`IDA Pro 32bit`打开文件`easy-32`后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+将附件解压缩后得到两个文件：`easy-32`和`easy-64`。这都没必要`file`了，用`IDA Pro 32bit`打开文件`easy-32`后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -230,7 +230,7 @@ Get your key: c0ffee
 
 ![](https://paper.tanyaodan.com/ADWorld/reverse/5077/1.png)
 
-`file ./simple-unpack`发现该文件是`64`位的，用`IDA Pro 64bit`以`ELF 64 for x86-64`形式打开文件后，按`F5`进行反编译可以看到以下源码：
+`file ./simple-unpack`发现该文件是`64`位的，用`IDA Pro 64bit`以`ELF 64 for x86-64`形式打开文件后，按`F5`进行反编译可以看到以下伪`C`代码：
 
 ![](https://paper.tanyaodan.com/ADWorld/reverse/5077/2.png)
 
@@ -244,7 +244,7 @@ Get your key: c0ffee
 
 ### [logmein](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5078)
 
-用`file`查看`.exe`文件发现是`ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开附件，按`F5`进行反编译可以看到以下源码：
+用`file`查看`.exe`文件发现是`ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开附件，按`F5`进行反编译可以看到以下伪`C`代码：
 
 ![](https://paper.tanyaodan.com/ADWorld/reverse/5078/1.png)
 
@@ -286,7 +286,7 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 }
 ```
 
-双击`main_0()`函数，可以看到以下源码：
+双击`main_0()`函数，可以看到以下伪`C`代码：
 
 ```c
 int __cdecl main_0(int argc, const char **argv, const char **envp)
@@ -548,7 +548,7 @@ x/sw $eax
 
 ### [csaw2013reversing2](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5081)
 
-用 `file`查看附件`csaw2013reversing2.exe`，可以看到信息`./csaw2013reversing2.exe: PE32 executable (console) Intel 80386, for MS Windows`。用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`csaw2013reversing2.exe`，可以看到信息`./csaw2013reversing2.exe: PE32 executable (console) Intel 80386, for MS Windows`。用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
@@ -597,7 +597,7 @@ int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
 
 ### [getit](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5082)
 
-用 `file`查看附件`getit`，可以看到信息`./getit: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`getit`，可以看到信息`./getit: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -663,7 +663,7 @@ print(flag) # SharifCTF{b70c59275fcfa8aebf2d5911223c6589}
 
 ### [maze](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5084)
 
-用 `file`查看附件`maze`，可以看到信息`./maze: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：	
+用 `file`查看附件`maze`，可以看到信息`./maze: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：	
 
 ```c
 __int64 __fastcall main(int a1, char **a2, char **a3)
@@ -812,7 +812,7 @@ print(g)
 
 ### [srm-50](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4963)
 
-用 `file`查看附件`srm-50.exe`，可以看到信息`./srm-50.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`srm-50.exe`，可以看到信息`./srm-50.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -904,7 +904,7 @@ INT_PTR __stdcall DialogFunc(HWND hDlg, UINT a2, WPARAM a3, LPARAM a4)
 
 ### [Mysterious](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5480)
 
-用 `file`查看附件`Mysterious.exe`，可以看到信息`./Mysterious.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`Mysterious.exe`，可以看到信息`./Mysterious.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 // attributes: thunk
@@ -1056,7 +1056,7 @@ adb778a0f729293e7e0b19b96a4c5a61
 
 ### [流浪者](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5570)
 
-用 `file`查看附件`Mysterious.exe`，可以看到信息`./cm.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`Mysterious.exe`，可以看到信息`./cm.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -1198,7 +1198,7 @@ print(f'flag{{{flag}}}') # flag{j0rXI4bTeustBiIGHeCF70DDM}
 
 ### [666](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5573)
 
-用 `file`查看附件`666`，可以看到信息`./666: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`666`，可以看到信息`./666: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -1264,7 +1264,7 @@ print(flag) # unctf{b66_6b6_66b}
 
 ### [Reversing-x64Elf-100](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4826)
 
-用 `file`查看附件`Reversing-x64Elf-100.re`，可以看到`./Reversing-x64Elf-100.re: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`Reversing-x64Elf-100.re`，可以看到`./Reversing-x64Elf-100.re: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 __int64 __fastcall main(int a1, char **a2, char **a3)
@@ -1415,7 +1415,7 @@ public class guess
 
 ### [BABYRE](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4662)
 
-用 `file`查看附件`BABYRE`，可以看到信息`./BABYRE: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`BABYRE`，可以看到信息`./BABYRE: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -1956,7 +1956,7 @@ print(flag) # flag{n1c3_j0b}
 
 ### [EasyRE](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5446)
 
-用 `file`查看附件`EasyRE.exe`，可以看到信息`./EasyRE.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`EasyRE.exe`，可以看到信息`./EasyRE.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -5046,11 +5046,321 @@ int main() {
 
 ------
 
+### [love](https://ce.pwnthebox.com/challenges?type=2&id=694)
+
+
+
+### [power](https://ce.pwnthebox.com/challenges?type=2&id=612)
+
+用`file`查看文件`./power`，可以看到`./power: assembler source, ASCII text`，用`Sublime Text`打开可以看到下面一行有关键字`aes`，盲猜是`aes`加密。
+
+```assembly
+.global	_ZN3aes12KeyExpansionEPhPc
+```
+
+搜索`flag`进行代码审计，发现以下汇编代码：
+
+```assembly
+.LC2:
+	.ascii	"input flag:\000"
+	.align	2
+.LC3:
+	.ascii	"1030a9254d44937bed312da03d2db9adbec5762c2eca7b5853e"
+	.ascii	"489d2a140427b\000"
+	.align	2
+.LC4:
+	.ascii	"yeah, you get it!\000"
+	.align	2
+.LC5:
+	.ascii	"wrong!\000"
+	.align	2
+.LC1:
+	.ascii	"this_is_a_key!!!\000"
+	.text
+	.align	1
+	.global	main
+	.syntax unified
+	.thumb
+	.thumb_func
+	.fpu vfpv3-d16
+	.type	main, %function
+main:
+	.fnstart
+```
+
+密文是`1030a9254d44937bed312da03d2db9adbec5762c2eca7b5853e489d2a140427b`，密钥是`this_is_a_key!!!`，编写`Python`代码进行`AES`解密后可以得到`flag{y0u_found_the_aes_12113112}`。
+
+```python
+from Crypto.Cipher import AES
+
+def long_to_bytes(n):
+    l = []
+    x = 0
+    off = 0
+    while x != n:
+        b = (n >> off) & 0xFF
+        l.append( b )
+        x = x | (b << off)
+        off += 8
+    l.reverse()
+    return bytes(l)
+
+key = b'this_is_a_key!!!'
+enc = long_to_bytes(0x1030a9254d44937bed312da03d2db9adbec5762c2eca7b5853e489d2a140427b)
+aes = AES.new(key, AES.MODE_ECB)
+flag = aes.decrypt(enc)
+print(f'flag{{{flag}}}') # flag{y0u_found_the_aes_12113112}
+```
+
+------
+
+### [re3](https://ce.pwnthebox.com/challenges?type=2&id=1156)
+
+用`file`查看附件`re3`，可以看到以下信息：
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf]
+└─$ file ./re3           
+./re3: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=c3b276030138cc9e29a0244b296b8f005a487a77, stripped
+```
+
+用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
+
+```c
+void __fastcall __noreturn main(int a1, char **a2, char **a3)
+{
+  int i; // [rsp+8h] [rbp-48h]
+  char s[40]; // [rsp+20h] [rbp-30h] BYREF
+  unsigned __int64 v5; // [rsp+48h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  __isoc99_scanf("%39s", s);
+  if ( (unsigned int)strlen(s) != 32 )
+  {
+    puts("Wrong!");
+    exit(0);
+  }
+  mprotect(&dword_400000, 0xF000uLL, 7);
+  for ( i = 0; i <= 223; ++i )
+    *((_BYTE *)sub_402219 + i) ^= 0x99u;
+  sub_40207B(&unk_603170);
+  sub_402219(s);
+}
+```
+
+`int mprotect(void *addr, size_t len, int prot);`函数可以修改一段指定内存区域的保护属性，其中第一个参数`addr`是待修改保护属性区域的起始地址，必须是一个内存页的起始地址，即必须是页大小（一般是`4KB = 4096 Bytes`）的整数倍；第二个参数`len`是被修改保护属性区域的长度；第三个参数表示`mprotect()`函数能把从起始地址`addr`开始的、长度为`len`的内存区域的保护属性修改为`prot`指定的值。
+
+在该程序中`mprotect(&dword_400000, 0xF000uLL, 7);`就是指：把从`dword_400000`这个起始地址开始的长度大小为`0xF000`的内存区域的保护属性修改为`7`，`7`意味该内存段可读可写可执行。
+
+双击`sub_402219`函数后，发现无法查看该函数的源码。
+
+```c
+void __noreturn sub_402219()
+{
+  JUMPOUT(0x40221ALL);
+}
+```
+
+在汇编代码中查找到了`sub_402219`函数的数据如下：
+
+```assembly
+.text:0000000000402219 sub_402219      endp
+.text:0000000000402219
+.text:0000000000402219 ; ---------------------------------------------------------------------------
+.text:000000000040221A                 dw 10D1h, 0D17Ch, 7518h
+.text:0000000000402220                 dq 812410D199999969h, 0BC9D12D1FD666666h, 61DC10D1999999B1h
+.text:0000000000402220                 dq 6666A91C14D159A8h, 10D199F9A8E92766h, 12D1666671BA715Eh
+.text:0000000000402220                 dq 1C14D1666666810Ch, 0D14F10D1666666A9h, 0D166666E9E715E10h
+.text:0000000000402220                 dq 14D1666666811C12h, 6666A91C14D189C9h, 715E10D14F10D166h
+.text:0000000000402220                 dq 66B11C5E66666F73h, 1C5E999999986666h, 99999999666666B5h
+.text:0000000000402220                 dq 666666B51C12A372h, 66811C12D149FAD1h, 892F964998D16666h
+.text:0000000000402220                 dq 1D1666666B51C12h, 0A199F9A939192F96h, 6666B11C5E93ED5Bh
+.text:0000000000402220                 dq 0B51C1A9999999966h, 66B5241A98666666h, 0B11C1224E7866666h
+.text:0000000000402220                 dq 0FD61D412D1666666h, 999999B1BC95AAD1h, 5066667AC0719CEDh
+.text:0000000000402220                 dq 801F0F5Ah
+.text:0000000000402300
+.text:0000000000402300 ; =============== S U B R O U T I N E =======================================
+```
+
+需要注意的是以上数据是经过异或处理后的数据，所以我们需要对其进行还原，选中以上数据后，按下`shift`+`F12`调用编译器执行`idc`脚本进行异或操作。
+
+```c
+#include <idc.idc>
+
+static main()
+{
+    auto addr = 0x402219;
+    auto i = 0;
+    for(i=0;i<=223;i++)
+    {
+        PatchByte(addr+i,Byte(addr+i)^0x99);
+    }
+}
+```
+
+`idc`脚本执行完后，可以看到`sub_402219`函数的原始数据如下：
+
+```assembly
+.text:0000000000402219 sub_402219      endp
+.text:0000000000402219
+.text:0000000000402219 ; ---------------------------------------------------------------------------
+.text:000000000040221A                 dw 8948h, 48E5h, 0EC81h
+.text:0000000000402220                 dq 18BD8948000000F0h, 25048B4864FFFFFFh, 0F845894800000028h
+.text:0000000000402220                 dq 0FFFF30858D48C031h, 894800603170BEFFh, 8B48FFFFE823E8C7h
+.text:0000000000402220                 dq 858D48FFFFFF1895h, 48D68948FFFFFF30h, 48FFFFF707E8C789h
+.text:0000000000402220                 dq 8D48FFFFFF18858Bh, 0FFFF30858D481050h, 0E8C78948D68948FFh
+.text:0000000000402220                 dq 0FF2885C7FFFFF6EAh, 85C700000001FFFFh, 0FFFFFF2Ch, 0FFFFFF2C858B3AEBh
+.text:0000000000402220                 dq 0FF18858B48D06348h, 10B60FD00148FFFFh, 9848FFFFFF2C858Bh
+.text:0000000000402220                 dq 38006030A080B60Fh, 0FFFF2885C70A74C2h, 2C858300000000FFh
+.text:0000000000402220                 dq 0FF2CBD8301FFFFFFh, 28858BBD7E1FFFFFh, 64F84D8B48FFFFFFh
+.text:0000000000402220                 dq 28250C3348h, 0C9FFFFE359E80574h, 801F0FC3h
+.text:0000000000402300
+.text:0000000000402300 ; =============== S U B R O U T I N E =======================================
+```
+
+全选以上数据，按下`C`键，可以将数据转化为代码：
+
+```assembly
+.text:0000000000402219 sub_402219      endp
+.text:0000000000402219
+.text:000000000040221A                 mov     rbp, rsp
+.text:000000000040221D                 sub     rsp, 0F0h
+.text:0000000000402224                 mov     [rbp-0E8h], rdi
+.text:000000000040222B                 mov     rax, fs:28h
+.text:0000000000402234                 mov     [rbp-8], rax
+.text:0000000000402238                 xor     eax, eax
+.text:000000000040223A                 lea     rax, [rbp-0D0h]
+.text:0000000000402241                 mov     esi, offset unk_603170
+.text:0000000000402246                 mov     rdi, rax
+.text:0000000000402249                 call    sub_400A71
+.text:000000000040224E                 mov     rdx, [rbp-0E8h]
+.text:0000000000402255                 lea     rax, [rbp-0D0h]
+.text:000000000040225C                 mov     rsi, rdx
+.text:000000000040225F                 mov     rdi, rax
+.text:0000000000402262                 call    sub_40196E
+.text:0000000000402267                 mov     rax, [rbp-0E8h]
+.text:000000000040226E                 lea     rdx, [rax+10h]
+.text:0000000000402272                 lea     rax, [rbp-0D0h]
+.text:0000000000402279                 mov     rsi, rdx
+.text:000000000040227C                 mov     rdi, rax
+.text:000000000040227F                 call    sub_40196E
+.text:0000000000402284                 mov     dword ptr [rbp-0D8h], 1
+.text:000000000040228E                 mov     dword ptr [rbp-0D4h], 0
+.text:0000000000402298                 jmp     short loc_4022D4
+.text:000000000040229A ; ---------------------------------------------------------------------------
+.text:000000000040229A
+```
+
+选中以上代码，按下`P`键将这段代码声名为函数，再按下`F5`键进行反汇编，此时能看到`sub_402219`函数的源码如下：
+
+```c
+void __noreturn sub_402219()
+{
+  sub_40221A();
+}
+```
+
+双击`sub_40221A()`函数可以看到以下源码：
+
+```c
+__int64 __fastcall sub_40221A(__int64 a1)
+{
+  unsigned int v2; // [rsp+18h] [rbp-D8h]
+  int i; // [rsp+1Ch] [rbp-D4h]
+  char v4[200]; // [rsp+20h] [rbp-D0h] BYREF
+  unsigned __int64 v5; // [rsp+E8h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  sub_400A71(v4, &unk_603170);
+  sub_40196E(v4, a1);
+  sub_40196E(v4, a1 + 16);
+  v2 = 1;
+  for ( i = 0; i <= 31; ++i )
+  {
+    if ( *(_BYTE *)(i + a1) != byte_6030A0[i] )
+      v2 = 0;
+  }
+  return v2;
+}
+```
+
+返回主函数，查看`sub_40207B()`函数的源码如下：
+
+```c
+unsigned __int64 __fastcall sub_40207B(__int64 a1)
+{
+  char v2[16]; // [rsp+10h] [rbp-50h] BYREF
+  __int64 v3; // [rsp+20h] [rbp-40h] BYREF
+  __int64 v4; // [rsp+30h] [rbp-30h] BYREF
+  __int64 v5; // [rsp+40h] [rbp-20h] BYREF
+  unsigned __int64 v6; // [rsp+58h] [rbp-8h]
+
+  v6 = __readfsqword(0x28u);
+  sub_401CF9(&unk_603120, 0x40uLL, (__int64)v2);  // MD5
+  sub_401CF9(&unk_603100, 0x14uLL, (__int64)&v3);
+  sub_401CF9(&unk_6030C0, 0x35uLL, (__int64)&v4);
+  sub_401CF9(dword_4025C0, 0x100uLL, (__int64)&v5);
+  sub_401CF9(v2, 0x40uLL, a1);  // MD5
+  return __readfsqword(0x28u) ^ v6;
+}
+```
+
+在插件`Findcrypt`的帮助下可以发现`sub_401CF9`函数是`MD5`加密函数。
+
+动态调试得到`unk_603170`：
+
+```python
+import hashlib
+s1 = b'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+s2 = b'\x00\x00\x00\x00\x96\x30\x07\x77\x2C\x61\x0E\xEE\xBA\x51\x09\x99\x19\xC4\x6D\x07'
+s3 = b'\x03\x05\x07\x0B\x0D\x11\x13\x17\x1D\x1F\x25\x29\x2B\x2F\x35\x3B\x3D\x43\x47\x49\x4F\x53\x59\x61\x65\x67\x6B\x6D\x71\x7F\x83\x89\x8B\x95\x97\x9D\xA3\xA7\xAD\xB3\xB5\xBF\xC1\xC5\xC7\xD3\xDF\xE3\xE5\xE9\xEF\xF1\xFB'
+s4 = b'\x78\xA4\x6A\xD7\x56\xB7\xC7\xE8\xDB\x70\x20\x24\xEE\xCE\xBD\xC1\xAF\x0F\x7C\xF5\x2A\xC6\x87\x47\x13\x46\x30\xA8\x01\x95\x46\xFD\xD8\x98\x80\x69\xAF\xF7\x44\x8B\xB1\x5B\xFF\xFF\xBE\xD7\x5C\x89\x22\x11\x90\x6B\x93\x71\x98\xFD\x8E\x43\x79\xA6\x21\x08\xB4\x49\x62\x25\x1E\xF6\x40\xB3\x40\xC0\x51\x5A\x5E\x26\xAA\xC7\xB6\xE9\x5D\x10\x2F\xD6\x53\x14\x44\x02\x81\xE6\xA1\xD8\xC8\xFB\xD3\xE7\xE6\xCD\xE1\x21\xD6\x07\x37\xC3\x87\x0D\xD5\xF4\xED\x14\x5A\x45\x05\xE9\xE3\xA9\xF8\xA3\xEF\xFC\xD9\x02\x6F\x67\x8A\x4C\x2A\x8D\x42\x39\xFA\xFF\x81\xF6\x71\x87\x22\x61\x9D\x6D\x0C\x38\xE5\xFD\x44\xEA\xBE\xA4\xA9\xCF\xDE\x4B\x60\x4B\xBB\xF6\x70\xBC\xBF\xBE\xC6\x7E\x9B\x28\xFA\x27\xA1\xEA\x85\x30\xEF\xD4\x05\x1D\x88\x04\x39\xD0\xD4\xD9\xE5\x99\xDB\xE6\xF8\x7C\xA2\x1F\x65\x56\xAC\xC4\x44\x22\x29\xF4\x97\xFF\x2A\x43\xA7\x23\x94\xAB\x39\xA0\x93\xFC\xC3\x59\x5B\x65\x92\xCC\x0C\x8F\x7D\xF4\xEF\xFF\xD1\x5D\x84\x85\x4F\x7E\xA8\x6F\xE0\xE6\x2C\xFE\x14\x43\x01\xA3\xA1\x11\x08\x4E\x82\x7E\x53\xF7\x35\xF2\x3A\xBD\xBB\xD2\xD7\x2A\x91\xD3\x86\xEB'
+s =''
+a = [s1,s2,s3,s4]
+for i in a:
+    md5 = hashlib.md5()
+    md5.update(i)
+    s += md5.hexdigest()
+#得到s后转化为二进制
+s = b'\x78\x45\xf7\xea\xde\x89\x33\x8a\xda\xbf\xef\x89\xbd\x6e\x9a\x5b\xe8\x4f\xed\xef\x50\x67\xcf\x85\xf5\xe4\x7f\x4f\x4b\x59\x47\xa3\xc8\x38\xba\xe0\x2e\x07\xae\x0c\x27\x6d\xfb\x2e\x53\x30\x04\xc8\x7a\xc5\xfb\xac\x91\x1f\x3b\x36\x78\x41\xf8\xdc\xec\xc9\xdb\x46'
+md5 = hashlib.md5()
+md5.update(s)
+print(md5.hexdigest()) #cb8d493521b47a4cc1ae7e62229266ce
+```
+
+`sub_40221A()`函数中的`sub_400A71()`函数是`AES`算法的密钥拓展，`sub_40196E`函数是通过密钥`AES`加密。
+
+```python
+from Crypto.Cipher import AES
+from Crypto.Util.number import *
+
+def long_to_bytes(n):
+    l = []
+    x = 0
+    off = 0
+    while x != n:
+        b = (n >> off) & 0xFF
+        l.append( b )
+        x = x | (b << off)
+        off += 8
+    l.reverse()
+    return bytes(l)
+
+key = long_to_bytes(0xcb8d493521b47a4cc1ae7e62229266ce)
+text = long_to_bytes(0xbc0aadc0147c5ecce0b140bc9c51d52b46b2b9434de5324bad7fb4b39cdb4b5b)
+aes = AES.new(key, mode=AES.MODE_ECB)
+cipher_text = aes.decrypt(text)
+flag = b2a_hex(cipher_text)
+print(flag) # flag{924a9ab2163d390410d0a1f670}
+```
+
+------
+
 ## BUUCTF
 
 ### [easyre](https://buuoj.cn/challenges#easyre)
 
-用`file`查看附件`easyre.exe`，可以看到信息`./easyre.exe: PE32+ executable (console) x86-64, for MS Windows`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用`file`查看附件`easyre.exe`，可以看到信息`./easyre.exe: PE32+ executable (console) x86-64, for MS Windows`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -5128,7 +5438,7 @@ __int64 sub_1400118C0()
 
 ### [reverse2](https://buuoj.cn/challenges#reverse2)
 
-用 `file`查看`reverse2.exe`发现是`64bit`的`X86`架构编译的`ELF`文件，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看`reverse2.exe`发现是`64bit`的`X86`架构编译的`ELF`文件，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -5178,7 +5488,7 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ### [内涵的软件](https://buuoj.cn/challenges#%E5%86%85%E6%B6%B5%E7%9A%84%E8%BD%AF%E4%BB%B6)
 
-用 `file`查看附件`内涵的软件.exe`，可以看到信息`./内涵的软件.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`内涵的软件.exe`，可以看到信息`./内涵的软件.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main_0(int argc, const char **argv, const char **envp)
@@ -5226,7 +5536,7 @@ int __cdecl main_0(int argc, const char **argv, const char **envp)
 
 ### [新年快乐](https://buuoj.cn/challenges#%E6%96%B0%E5%B9%B4%E5%BF%AB%E4%B9%90)
 
-用 `file`查看附件`新年快乐.exe`，可以看到信息`./新年快乐.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d 新年快乐.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`新年快乐.exe`，可以看到信息`./新年快乐.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d 新年快乐.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -5256,7 +5566,7 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ### [xor](https://buuoj.cn/challenges#xor)
 
-用 `file`查看附件`xor`，可看到信息`./xor: Mach-O 64-bit x86_64 executable, flags:<NOUNDEFS|DYLDLINK|TWOLEVEL|PIE>`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`xor`，可看到信息`./xor: Mach-O 64-bit x86_64 executable, flags:<NOUNDEFS|DYLDLINK|TWOLEVEL|PIE>`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -5319,7 +5629,7 @@ print(flag) # flag{QianQiuWanDai_YiTongJiangHu}
 
 ### [reverse3](https://buuoj.cn/challenges#reverse3)
 
-用 `file`查看附件`reverse_3.exe`，可看到信息`./reverse_3.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`reverse_3.exe`，可看到信息`./reverse_3.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 // attributes: thunk
@@ -5463,7 +5773,7 @@ print(flag) # flag{i_l0ve_you}
 
 ### [不一样的flag](https://buuoj.cn/challenges#%E4%B8%8D%E4%B8%80%E6%A0%B7%E7%9A%84flag)
 
-用 `file`查看附件`不一样的flag.exe`，可看到信息`./不一样的flag.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`不一样的flag.exe`，可看到信息`./不一样的flag.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
@@ -5541,7 +5851,7 @@ LABEL_13:
 
 ### [SimpleRev](https://buuoj.cn/challenges#SimpleRev)
 
-用 `file`查看附件`SimpleRev`，可看到信息`./SimpleRev: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`SimpleRev`，可看到信息`./SimpleRev: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
@@ -5723,7 +6033,7 @@ print(f"flag{{{flag}}}") # flag{This_is_the_flag_!}
 
 ### [[GXYCTF2019]luck_guy](https://buuoj.cn/challenges#[GXYCTF2019]luck_guy)
 
-用 `file`查看附件`luck_guy`，可看到信息`./luck_guy: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`luck_guy`，可看到信息`./luck_guy: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -5833,7 +6143,7 @@ print(flag) # GXY{do_not_hate_me}
 
 ### [刮开有奖](https://buuoj.cn/challenges#%E5%88%AE%E5%BC%80%E6%9C%89%E5%A5%96)
 
-用 `file`查看附件`刮开有奖.exe`，可看到信息`./刮开有奖.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`刮开有奖.exe`，可看到信息`./刮开有奖.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
@@ -6450,7 +6760,7 @@ print(flag) # GWHT{Just_Re_1s_Ha66y!}
 
 ### [[ACTF新生赛2020]easyre](https://buuoj.cn/challenges#[ACTF%E6%96%B0%E7%94%9F%E8%B5%9B2020]easyre)
 
-用`file`查看附件`easyre.exe`，可以看到信息`./easyre.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d easyre.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用`file`查看附件`easyre.exe`，可以看到信息`./easyre.exe: PE32 executable (console) Intel 80386, for MS Windows, UPX compressed`，使用命令行`upx -d easyre.exe`进行脱壳，接着用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -6496,7 +6806,7 @@ print(f"flag{{{flag}}}") # flag{U9X_1S_W6@T?}
 
 ### [CrackRTF](https://buuoj.cn/challenges#CrackRTF)
 
-`file`查看文件`./CrackRTF.exe`，可以看到信息 `./CrackRTF.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+`file`查看文件`./CrackRTF.exe`，可以看到信息 `./CrackRTF.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 // attributes: thunk
@@ -6804,7 +7114,7 @@ print(passwd) # ~!3a@0
 
 ### [[WUSTCTF2020]level1](https://buuoj.cn/challenges#[WUSTCTF2020]level1)
 
-用 `file`查看附件`level1`，可看到信息`level1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
+用 `file`查看附件`level1`，可看到信息`level1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -6907,7 +7217,7 @@ retn
 main endp
 ```
 
-按`F5`反编译可以看到主函数的`C`语言代码如下：
+按`F5`反编译可以看到主函数的伪`C`代码如下：
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -6920,6 +7230,4 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 显然`flag`就是`wctf2020{Just_upx_-d}`，提交`flag{Just_upx_-d}`即可。
 
 ------
-
-
 
