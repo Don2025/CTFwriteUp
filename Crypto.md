@@ -2,7 +2,7 @@
 
 ## ADWorld
 
-### [base64](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5109)
+### base64
 
 打开`.txt`文件可以看到一行密文`Y3liZXJwZWFjZXtXZWxjb21lX3RvX25ld19Xb3JsZCF9`，编写`Python`代码进行`base64`解码即可得到`cyberpeace{Welcome_to_new_World!}`。
 
@@ -15,7 +15,7 @@ print(flag) # cyberpeace{Welcome_to_new_World!}
 
 ------
 
-### [Caesar](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5110)
+### Caesar
 
 打开`.txt`文件可以看到一行密文`oknqdbqmoq{kag_tmhq_xqmdzqp_omqemd_qzodkbfuaz}`，盲猜凯撒密码，编写`Python`代码进行解码即可得到`cyberpeace{you_have_learned_caesar_encryption}`。
 
@@ -39,7 +39,7 @@ print(flag) # cyberpeace{you_have_learned_caesar_encryption}
 
 ------
 
-### [Morse](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5111)
+### Morse
 
 打开`.txt`文件可以看到一行密文`11 111 010 000 0 1010 111 100 0 00 000 000 111 00 10 1 0 010 0 000 1 00 10 110`，盲猜`0.1-`，编写`Python`代码进行`Morse`解码即可得到`cyberpeace{you_have_learned_caesar_encryption}`。这里写了一个`morse`电码解码模板，输入密文、点、划、分割符即可得到明文。
 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
 ------
 
-### [幂数加密](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5120)
+### 幂数加密
 
 打开`.txt`文件可以看到一行密文`8842101220480224404014224202480122`。`01248`密码又称为云影密码，使用`0`，`1`，`2`，`4`，`8 `四个数字，其中`0`用来表示间隔，其他数字相加可以得到一个数字，再用`A->Z`来表示`1->26`。编写`Python`代码进行`01248`密码解码即可得到`cyberpeace{WELLDONE}`。
 
@@ -100,7 +100,7 @@ print(flag) # cyberpeace{WELLDONE}
 
 ------
 
-### [Railfence](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5112)
+### Railfence
 
 打开`.txt`文件可以看到一行密文`ccehgyaefnpeoobe{lcirg}epriec_ora_g`。这题是一个`w`型的栅栏密码，编写`Python`代码即可得到`cyberpeace{railfence_cipher_gogogo}`。
 
@@ -210,7 +210,7 @@ if __name__ == '__main__':
 
 ------
 
-### [不仅仅是Morse](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5117)
+### 不仅仅是Morse
 
 打开`.txt`文件可以看到以下信息：
 
@@ -282,7 +282,7 @@ if __name__ == '__main__':
 
 ------
 
-### [混合编码](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5118)
+### 混合编码
 
 打开`.txt`文件可以看到以下信息：
 
@@ -328,7 +328,7 @@ print(flag) # cyberpeace{welcometoattackanddefenceworld}
 
 ------
 
-### [easy_RSA](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5114)
+### easy_RSA
 
 打开`.txt`文件可以看到以下内容：
 
@@ -348,7 +348,7 @@ print(flag)  # cyberpeace{125631357777427553}
 
 ------
 
-### [easychallenge](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5119)
+### easychallenge
 
 这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
 
@@ -429,7 +429,7 @@ print(flag) # cyberpeace{interestinghhhhh}
 
 ------
 
-### [转轮机加密](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5113)
+### 转轮机加密
 
 打开`.txt`文件后，提取有用的信息，编写`Python`代码即可得到`flag`：`fireinthehole`。
 
@@ -464,7 +464,7 @@ print(flag)
 
 ------
 
-### [Normal_RSA](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=0&id=5115)
+### Normal_RSA
 
 附件给出了`flag.enc`和`pubkey.pem`两个文件。用`Kali Linux`打开终端输入`openssl`。输入以下代码查看信息：
 
@@ -496,7 +496,7 @@ python rsatool.py -f PEM -o private.pem -p 2751278603513489281732851743815811522
 
 ------
 
-### [Broadcast](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=5522)
+### Broadcast
 
 这题的附件给出了一系列的文件：
 
@@ -536,7 +536,7 @@ for i in range(4):
 
 ------
 
-### 	 [cr3-what-is-this-encryption](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=5029)
+### 	 cr3-what-is-this-encryption
 
 题目描述给出了以下信息：
 
@@ -564,7 +564,7 @@ print(flag) # ALEXCTF{RS4_I5_E55ENT1AL_T0_D0_BY_H4ND}
 
 ------
 
-### [flag_in_your_hand1](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=4869)
+### flag_in_your_hand1
 
 这题的附件给出了两个文件：`script-min.js`和`index.html`，代码审计时发现关键代码段：
 
@@ -601,7 +601,7 @@ print(flag)
 
 ------
 
-### [flag_in_your_hand](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=4626)
+### flag_in_your_hand
 
 这题的附件给出了两个文件：`script-min.js`和`index.html`，代码审计时发现关键代码段：
 
@@ -638,7 +638,7 @@ print(flag)
 
 ------
 
-### [告诉你个秘密](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=4929)
+### 告诉你个秘密
 
 打开`.txt`文件可以看到以下信息：
 
@@ -663,7 +663,7 @@ s = base64.b64decode(s).decode('utf-8')
 
 ------
 
-### [你猜猜](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=4930)
+### 你猜猜
 
 打开`.txt`文件可以看到以下信息：
 
@@ -679,7 +679,7 @@ s = base64.b64decode(s).decode('utf-8')
 
 ------
 
-### [工业协议分析2](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=5525)
+### 工业协议分析2
 
 用`wireshark`打开`.pcapng`文件，发现存在大量`UDP`流量包，大部分`UDP`流量包的长度相同，只有一些长度的`UDP`流量包仅出现过一次，猜测它们可能有异常。
 
@@ -694,7 +694,7 @@ print(flag) # flag{7FoM2StkhePz}
 
 ------
 
-### [sherlock](https://adworld.xctf.org.cn/task/answer?type=crypto&number=5&grade=1&id=5526)
+### sherlock
 
 打开`.txt`文件后发现文件中的字符有一些莫名奇妙的大写字符，观察后发现所有的大写字符都是字母`Z`，`E`，`R`，`O`，`N`，`E`组成的。
 
@@ -722,6 +722,211 @@ print(flag) # BITSCTF{h1d3_1n_pl41n_5173}
 ------
 
 ## PwnTheBox
+
+### [维吉尼亚密码](https://ce.pwnthebox.com/challenges?type=3&id=682)
+
+题目名字叫维吉尼亚密码，但是题目描述只给出了以下字符串：
+
+```
+gndk{911k46l0jln5804oo592mo9q363st1r1}
+```
+
+显然，这道题考察的是在无密钥的情况下破解维基尼亚密码。维吉尼亚密码是在凯撒密码基础上产生的一种加密方法，它将凯撒密码的全部`25`种位移排序为一张表，与原字母序列共同组成`26`行及`26`列的字母表。
+
+维吉尼亚密码的加密原理是将`26`个英文字母（`a-z`）对应`26`个自然数（`0-25`），它只对字母（不区分大小写）进行加密，若文本中出现非字母字符会保留原样。由`flag`与`gndk`的对应关系可知，`f + 1 = g`，`l + 2 = n`，`a + 3 = d`，`g + 4 = k`，因此密钥前四位为`bcde`，以此类推可得密钥为字母表`bcdefghijklmnopqrstuvwxyza`，编写`Python`代码用密文减去密钥即可得到明文：`flag{911f46f0cde5804ed592ab9c363dd1a1}`。
+
+```python
+cipher = 'gndk{911k46l0jln5804oo592mo9q363st1r1}'
+key = 'bcdefghijklmnopqrstuvwxyza'
+flag = ''
+j = 0
+for i, x in enumerate(cipher):
+    if x.isalpha():
+        flag += chr(ord('a') + ord(x) - ord(key[j%len(key)]))
+        j += 1
+    else:
+        flag += x
+
+print(flag) # flag{911f46f0cde5804ed592ab9c363dd1a1}
+```
+
+------
+
+### [Vigenère](https://ce.pwnthebox.com/challenges?type=3&id=421)
+
+根据题目名字可以推测出这题的考察点还是维吉尼亚密码，附件给出了俩个文件：`Encode.c` 和 `flag_encode`。
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+int main()
+{
+	freopen("flag.txt","r",stdin);
+	freopen("flag_encode.txt","w",stdout);
+	char key[] = /*SADLY SAYING! Key is eaten by Monster!*/;
+	int len = strlen(key);
+	char ch;
+	int index = 0;
+	while((ch = getchar()) != EOF){
+		if(ch>='a'&&ch<='z'){
+			putchar((ch-'a'+key[index%len]-'a')%26+'a');
+			++index;
+		}else if(ch>='A'&&ch<='Z'){
+			putchar((ch-'A'+key[index%len]-'a')%26+'A');
+			++index;
+		}else{
+			putchar(ch);
+		}
+	}
+	return 0;
+}
+```
+
+审计源码可以看到`SADLY SAYING! Key is eaten by Monster!`，密钥被怪物吃掉了，这题也是在无密钥的情况下破解维基尼亚密码。`.txt`文件中是多行文本，每一行是单独加密的。
+
+```
+Yzyj ia zqm Cbatky kf uavin rbgfno ig hnkozku fyyefyjzy sut gha pruyte gu famooybn bhr vqdcpipgu jaaju obecu njde pupfyytrj cpez cklb wnbzqmr ntf li wsfavm azupy nde cufmrf uh lba enxcp, tuk uwjwrnzn inq ksmuh sggcqoa zq obecu zqm Lncu gz Jagaam aaj qx Hwthxn'a Gbj gfnetyk cpez, g fwwang xnapriv li phr uyqnvupk ib mnttqnq xgioerry cpag zjws ohbaul drinsla tuk liufku obecu ovxey zjwg po gnn aecgtsneoa.
+
+Cn poyj vzyoe gxdbhf zq ty oeyl-ndiqkpl, ndag gut mrt cjy yrrgcmd rwwsf, phnz cpel gtw yjdbcnl bl zjwcn Cekjboe cklb yeezjqn htcdcannhum Rvmjlm, phnz juoam vzyoe nxn Tisk, Navarge jvd gng honshoc wf Ugrhcjefy. — Cpag zq kyyuek cpefk taadtf, Mxdeetowhps nxn qnfzklopeq gvwnt Sgf, xarvbrvg gngal fufz ywwrxu xlkm gnn koaygfn kf gnn ooiktfyz, — Tugc ehrtgnyn aae Owrz uh Yireetvmng hguiief jnateaelcre bl cpefk gfxo, ig ob bhr Xkybp os zqm Prurdy po nrcmr bx vg uxoyobp ig, gpv nk iaycqthzg fys Gbbnznzkpl, fwyvtp qtf lqmhzagoxv oa ywub lrvtlqpyku shz oemjvimopy cps cufmrf op koyh suau, af zq lbam fnjtl fkge gksg rrseye vg ybfric bhrot Kubege jvd Ugrhcjefy. Yzuqkpuy, enqknl, wvrn vcytnzn bhnz Igparasnvtf rqfa asggktifngv mdohrm vog hg ubwntkm noe rkybp aaj czaaykwhp cnabms; ntf swyoejrvgye cdf axckaqeaig zuph fnnen gncl gwnxowl aek ogla dvyywsrj vg mqfska, ehvrg wpelf gam shlhwlwbyk cpaa zq jcchg zqmmfknnyo bl gkwlvyjahc tuk owrzy vg qdipn cpel gtw uychycwmrj. Dmn shrt j toam vjuen bl jjufku shz ufaaxagoqfm, lueydqnt opnuninhug tuk usga Oopnkt rbkfwas n jnaitt vg ladhin bhrs wfxar nhbwlhzg Vyopbzram, vz kk ndevx aqguz, kl co tukrz dhza, li pheuf wfs ywub Coikavmrtv, shz tb vawvvjg fys Ghgals sut lbaie ldbuek uwwqrvzh. — Aupn jsm xert cpe cgvayjt faoneegpuy kf gnnae Pungheef; gwl shij am joj zqm nrigkmetl cqqcu iqfmprnowa tuko li wlgka bhrot xinmrx Bgsgkok ib Gbbnznzkpl. Nde uobboee qx nde cxnaeaz Mahc os Mamag Htanwia ob i hvyvglu os xnxenzgv cjjhxrms ntf mmqrcgcqoay, cdf daiowo ia jkjyyt bhsmcg zjw yotnhuqsusgfn kf nt jjsbrwly Pyegwvy bbgj ndefk Bbagku. Li lrbbn bhvy, nwn Bapzb je fadecptrj cw a pgpvcz wbxul.
+
+Hr nck lafhynl hvy Ckmang zx Tajy, vzy iofz fpoykugga aaj wmcryuslu fbx cpe caddcy gbum.
+
+Pe ugu xinbvjmmn uou Yireetxzs gu rsmo Lncb wf vsowxeagk jvd cxgkment ovxoezcfwa, uarnas fauhyjdrj rv tukkj ileegcqoa zkdf dif Gbaeaz uziqlq hn wbggkfyz; aaj fpea yq kooprtmmd, uk jsm qtgkaty akidyytrj cw agzgfx po gnnu.
+
+Hr nck lafhynl tb vckm ktuka Tajy hgl phr glkozsqvupibt xn lnxiw xesgxrktf uh hykpyk, dvlryu lbksr vnwpyk ygohd ekuqndakkb phr xrohg uh Jylrrynvtnzkgh en gnn Tetoudupuek, j zitnv ahasgovibyk vg ndez gwl fbxoaxwbyk cw tlxcfno oarh.
+
+Pe ugu uuhlrj cwgrzjwl hetobtagoxw vkdvkb it crcuyo uaabcay, apuiifbxcibyk, cfx zifzjvt sxqe nde qkywsvzqjs kf gnnqr Caddcy Rrixzdf, lqj nde fuum phxrgma os ljbitakfa phrs rvtb iqejhintlm wvzj zco mrgbcrry.
+
+Jw bws qobaoybgv Lapekbmnggvapa Hbabms ekrwupeqrh, noe urhioiam fqtu scffu fvxvvefy jam enigbqoay qf nde eopptf uh lba pruyte.
+
+Uk jsm nesabmd sut s fknt zrue, nlvwl oupn mqsfunmneoay, cw cnauw iphrxb bo ok gdyytrj, fpeekdq nde Ykpqsygvapa Pbcnzs, vtesjwbyk xn Aatkzchagoxv, hnbg jypuetnl tb zjw Jaocrn it ygtyy boe zqmie kzwlyifk; cpe Fzcly nezgrviam kf nde zkjv tvsg wrlofkm bo nrn lba dntpmrf uh ahrafoxv feuo ocphbac, inq iqfpqlfoxvs jovzcj.
+
+Hr nja eajgspkuekm bo cxgnyjt gnn xocansneoa uo bhryg Knwtry; owr gncl jqrcubm ooyvjoytvtp bhr Rcom boe Tjbuegnatwtvuw wf Sutwccnrxb; zesauahc tb vjas bzjwlo tb kwkohxcyy phroa uitxclcknf nrbhrx, cfx navyrvg gng uijdvzrwnf uh fys Acvawpeoclcknf uo Taaju.
+
+Zy daf ukateaelyz tuk Jlmvtkknnagoxv os Pwknecr hh zesauahc hvy Jasrtv li Hajy owr ryvsvhifnrvg Wafaweaee Ywwrxu.
+
+Zy daf sjle Wafyyo drvnvdrtv gh dif Crtl nrqfy boe zqm trtwjy kf gnnqr blhawas, ntm bhr gogojt ntm xalsgfn kf gnnqr fgnsleef.
+
+luig vy cxwpf{Jnxwobuqg_O_Cogiqi!}
+
+Hr nck ynepznl a zanlcpuqk xn Nrc Qxzecry, jvd fkpl betuka awnxok ib Oslrkeey vg bwrnyb wue vggjhe ntm mag uwl ndevx bcbfzcfwa.
+
+Hr nja krvv sgknt ab, qn goowm kf ckjke, Fzcfxent Gauiry yandohz cpe Pupkyjt bl xcr ykiamhagaams.
+
+Uk jsm wfsklbeq zq jyjdrx cpe Zonanwrl owleckpvyjt bl jvd farwleoe zx bhr Iknch Pbcnz.
+
+Hr nck wkmoowmd jovz iphrxb bo fadbyyt hy cw a watamzipzrwn sutwccn gu xcr pupknethzrwn, ntf mhwcxtxelrjiwx xy baa tajy; iapent nra Afygfn po gnnqr Nivk ib pekcmnqkf Dycifrjbibt:
+
+Hgl munxcmrvti dungr hxliry qx unmrj czobvu sgknt ab:
+
+Noe vtgnacgowo tuko, ts w mbit Brvgn xlkm cawqsusgfn boe gwg Mhxfwlo wuolp tuka kbkuyj lwmzov gh phr Owpaoovshps bl cpefk Ulupef:
+
+Lxz chzvahc osl xcr Gxcvy sign jtl cgtlm kf gnn eoerf:
+
+Xin izvxaiam Vsras bt da wvzjgop ohx Lwnfkpl:
+
+Zkr qkyziiopy oo ia sjvy pguwm, kf gnn jeakhan kf Gxril oe Lmlu:
+
+Fbx czaayrglpiam da breqfx Oeny cw br ztayz fbx yzegkpvyz oslnvcry:
+
+Hgl wbbrrahvti lba fekn Ayfzge ib Eamuqsu Rcom en n tnqguhqmlent Vawvvtew, yotnhuqsuopy ndeekrv aa Gttcprnxh ooiktfgang, gwl earcjaent oca Bbapvuniry bw af zq jyjdrx rb ag upuy wn rdjupyk cfx big owateaowhp fbx rvteufmwent zqm snsg svooyacm rhrg ahpo gnnae Pungheef
+
+Lxz tnqkfa wwne xcr Pncjnarf, gkwlvyjahc ohx vwsg bcdowbyk Uiwf gpv uhtrxrvg sapvuieazjtll zjw Zkrzy xn ohx Igparasnvtf:
+
+Lqj mqsckwliam qml kwa Rnoifrclonef, gwl drinslent zqmmfknnyo iabnatrj yand pbcnz tb rgycolnzn noe au ah wly ijaef cjsnoorbnz.
+
+Hr nck uxdvijbeq Mqnynnzkwb hrxg, ts zeprjziam wk iqt bl qqs Cxqlyytvuw inq ccycjg Jga ignopkn qs.
+
+Uk qis crwfxarrj xcr fkck, lwvnmnl ohx eguotf, hdzng uwj nkway, jvd qkullkyrj cpe yoxwm kf baa xebvnw.
+
+Ba if gc bhvy vaga tegwapbxvahc lnxpm Aeskwm kf suamitt Owlyeagaqef zq uiipykjb tuk yglgs bl mmagn, fwmklnzrwn, ntf lsnaath, ilekcvs xetaw eign ealyuzycinpku gz Yrhkuby & Cktxczy fijzcrra hunayrnteq op lba mbyc jaehcjiqs nmna, aaj vgnwlye dvwbxvzs phr Nnid bl c ucriyoimd agvaij.
+
+Hr nja cbtullwiakm wue lgdfkw Pocqzrtu lugea Ijxtvbg gh phr nroh Fkck nk brga Irzy cyuenfz cpevx Egojtee, cw briqey phr kgmchzkgharf uo bhrot xleeajb inq Htwndrrt, xz tb lcdf phrsbmliku ts phroa Paaju.
+
+Zy daf kgkigkf viiefzrk iaywjlacgoxvs nsqfaot hy, jvd ugu whzenbxcrrj vg vniam xv tuk kfbwbvzjvtf uh gon feuwbirxu, lba mrxlqlryu Ahzint Bivnmgk qdofk tvojt tmfa os cjzfnxg, am wn htmqsgopyoesukm lefztmwpibt xn ayr cyyo, srdna aaj eghzigoxvs.
+
+Vt gnyny fzjoe bl vzyoe Bvyzefykgho Wr njde Ckvaneoakm noe Xgvlasf ow bhr sqkn duzhum trxok: Iqr ekymagkf Hypigoxvs ugxw vaea gwawrxgv ijll hh zeckclyz iapdzy. N Vtahye, jnxae pncjuytrx ra tuau eunkrj kg eiktq uyt jnrkh zga vybiak j Byegpl, co ualrb tb hg lba rhrnz os g hjya pruyte.
+
+Aut zure Jk kmea ccfnent ow itgkplcknf zx wue Htanesu hamtuxgf. Qa hnbn eaetgv ndez lawm goow nk tvsn wf nzvwgltf hh bhrot dycifrjbuek vg yttrtm in htyslnaazjjlr pwjcodvicqoa uxwl qs. Jk qivr xgecjdrj cpez uh lba cvxlcmfzcfwas bl xcr rskylwtvuw inq yglnhezkwb hrxg. Oy daik jxprgnwx po gnnqr agvapa jhycqcr gpv gwgagwqmvza, shz wr njde pupboneq zqmm oe vzy piry xn ohx eggioa qrvdekf li zifgeww gngky qshxyitvupk, qdipn fwuyj kfyriggkty vtvwlnucz xcr pupfyytvuwa aaj eglnefvxvdrtew. Ndel zxw hnbg tyan qkjn tb zjw pkipk xn jhyvawa aaj xn cbtushcuvtrby. Jk ommp, tukamfbxg, swmuvkbke vt vzy jepkbaige, yzcyh qkwwuaigk iqr Fkyirnzkgh, wnq nxtd gnge, uo wr nxtd gng jyot bl vinxopv, Yjezona ia Ccj, cj Prglm Feogfxo.
+
+Wr, zqmrrlqjy, phr Xnxrrygfnwtvbna os zjw ojigkm Atnzgk ib Azkaqcn, op Yyjeegu Koamtwmo, Afynubykf, sjlenrrvg gu vzy Oucxnue Wafyy kf gnn eoerf xin tuk amcgovmxa os udz iazgfneoay, mw, ia zjw Hwmr, gwl bl Gwlbkrvzh wf gng yikd Ckxxlr uh lbasr Ixtoaogk, mklrswty caddcoh ntm leprcjy, Phnz cpefk wfcpeq Ixtoaogk une, ntm wf Eoizn kutnc bo ok Hjya aaj Rvdrvgfxang Ycitry, vzup tukh irr Gdkihvrj ozoz gnd Uhlrmrinpk vg nde Oxrbifn Ejisn, ntm bhnz cdf loyocqcnr eghjepzrwn okvoyan gnnu aaj vzy Otnzn wf Txgsn Xrvzjqn, vy cfx kutnc bo ok vgnwlye mqsfunnyz; aaj cpag gu Xlae ntm Qnqkrwhzeaz Bbagku, lbay ugem fhrn Hisee zx teie Ysl, yoaiucdr Vgswa, cbtczapz Cdfeaaina, efzctfesu Ixumrxew, ujd gu mw ayr qlbar Nica aaj Vzcjgf cqqcu Opvyleajnvt Fzclyo mne xn rvmjl xk. — Aaj owr gng kolpbxc wf gnkk Xacygaitvup, ocph n lrzm eknaujcr uw bhr vtgnacgoxv os Jkncje Cxxdiqkpuy, se zaccayra hfadtk cw enij gndee udz Lvbgk, iqr Suabuaku, shz ohx bicekf Zijoe.
+```
+
+使用 https://www.guballa.de/vigenere-solver 进行线上解密， 可以知道密钥为`"csuwangjiang"`，破解后的明文如下：
+
+```
+When in the Course of human events it becomes necessary for one people to dissolve the political bands which have connected them with another and to assume among the powers of the earth, the separate and equal station to which the Laws of Nature and of Nature's God entitle them, a decent respect to the opinions of mankind requires that they should declare the causes which impel them to the separation.
+
+We hold these truths to be self-evident, that all men are created equal, that they are endowed by their Creator with certain unalienable Rights, that among these are Life, Liberty and the pursuit of Happiness. — That to secure these rights, Governments are instituted among Men, deriving their just powers from the consent of the governed, — That whenever any Form of Government becomes destructive of these ends, it is the Right of the People to alter or to abolish it, and to institute new Government, laying its foundation on such principles and organizing its powers in such form, as to them shall seem most likely to effect their Safety and Happiness. Prudence, indeed, will dictate that Governments long established should not be changed for light and transient causes; and accordingly all experience hath shewn that mankind are more disposed to suffer, while evils are sufferable than to right themselves by abolishing the forms to which they are accustomed. But when a long train of abuses and usurpations, pursuing invariably the same Object evinces a design to reduce them under absolute Despotism, it is their right, it is their duty, to throw off such Government, and to provide new Guards for their future security. — Such has been the patient sufferance of these Colonies; and such is now the necessity which constrains them to alter their former Systems of Government. The history of the present King of Great Britain is a history of repeated injuries and usurpations, all having in direct object the establishment of an absolute Tyranny over these States. To prove this, let Facts be submitted to a candid world.
+
+He has refused his Assent to Laws, the most wholesome and necessary for the public good.
+
+He has forbidden his Governors to pass Laws of immediate and pressing importance, unless suspended in their operation till his Assent should be obtained; and when so suspended, he has utterly neglected to attend to them.
+
+He has refused to pass other Laws for the accommodation of large districts of people, unless those people would relinquish the right of Representation in the Legislature, a right inestimable to them and formidable to tyrants only.
+
+He has called together legislative bodies at places unusual, uncomfortable, and distant from the depository of their Public Records, for the sole purpose of fatiguing them into compliance with his measures.
+
+He has dissolved Representative Houses repeatedly, for opposing with manly firmness his invasions on the rights of the people.
+
+He has refused for a long time, after such dissolutions, to cause others to be elected, whereby the Legislative Powers, incapable of Annihilation, have returned to the People at large for their exercise; the State remaining in the mean time exposed to all the dangers of invasion from without, and convulsions within.
+
+He has endeavoured to prevent the population of these States; for that purpose obstructing the Laws for Naturalization of Foreigners; refusing to pass others to encourage their migrations hither, and raising the conditions of new Appropriations of Lands.
+
+He has obstructed the Administration of Justice by refusing his Assent to Laws for establishing Judiciary Powers.
+
+He has made Judges dependent on his Will alone for the tenure of their offices, and the amount and payment of their salaries.
+
+flag is afctf{Whooooooo_U_Gotcha!}
+
+He has erected a multitude of New Offices, and sent hither swarms of Officers to harass our people and eat out their substance.
+
+He has kept among us, in times of peace, Standing Armies without the Consent of our legislatures.
+
+He has affected to render the Military independent of and superior to the Civil Power.
+
+He has combined with others to subject us to a jurisdiction foreign to our constitution, and unacknowledged by our laws; giving his Assent to their Acts of pretended Legislation:
+
+For quartering large bodies of armed troops among us:
+
+For protecting them, by a mock Trial from punishment for any Murders which they should commit on the Inhabitants of these States:
+
+For cutting off our Trade with all parts of the world:
+
+For imposing Taxes on us without our Consent:
+
+For depriving us in many cases, of the benefit of Trial by Jury:
+
+For transporting us beyond Seas to be tried for pretended offences:
+
+For abolishing the free System of English Laws in a neighbouring Province, establishing therein an Arbitrary government, and enlarging its Boundaries so as to render it at once an example and fit instrument for introducing the same absolute rule into these Colonies
+
+For taking away our Charters, abolishing our most valuable Laws and altering fundamentally the Forms of our Governments:
+
+For suspending our own Legislatures, and declaring themselves invested with power to legislate for us in all cases whatsoever.
+
+He has abdicated Government here, by declaring us out of his Protection and waging War against us.
+
+He has plundered our seas, ravaged our coasts, burnt our towns, and destroyed the lives of our people.
+
+He is at this time transporting large Armies of foreign Mercenaries to compleat the works of death, desolation, and tyranny, already begun with circumstances of Cruelty & Perfidy scarcely paralleled in the most barbarous ages, and totally unworthy the Head of a civilized nation.
+
+He has constrained our fellow Citizens taken Captive on the high Seas to bear Arms against their Country, to become the executioners of their friends and Brethren, or to fall themselves by their Hands.
+
+He has excited domestic insurrections amongst us, and has endeavoured to bring on the inhabitants of our frontiers, the merciless Indian Savages whose known rule of warfare, is an undistinguished destruction of all ages, sexes and conditions.
+
+In every stage of these Oppressions We have Petitioned for Redress in the most humble terms: Our repeated Petitions have been answered only by repeated injury. A Prince, whose character is thus marked by every act which may define a Tyrant, is unfit to be the ruler of a free people.
+
+Nor have We been wanting in attentions to our British brethren. We have warned them from time to time of attempts by their legislature to extend an unwarrantable jurisdiction over us. We have reminded them of the circumstances of our emigration and settlement here. We have appealed to their native justice and magnanimity, and we have conjured them by the ties of our common kindred to disavow these usurpations, which would inevitably interrupt our connections and correspondence. They too have been deaf to the voice of justice and of consanguinity. We must, therefore, acquiesce in the necessity, which denounces our Separation, and hold them, as we hold the rest of mankind, Enemies in War, in Peace Friends.
+
+We, therefore, the Representatives of the united States of America, in General Congress, Assembled, appealing to the Supreme Judge of the world for the rectitude of our intentions, do, in the Name, and by Authority of the good People of these Colonies, solemnly publish and declare, That these united Colonies are, and of Right ought to be Free and Independent States, that they are Absolved from all Allegiance to the British Crown, and that all political connection between them and the State of Great Britain, is and ought to be totally dissolved; and that as Free and Independent States, they have full Power to levy War, conclude Peace, contract Alliances, establish Commerce, and to do all other Acts and Things which Independent States may of right do. — And for the support of this Declaration, with a firm reliance on the protection of Divine Providence, we mutually pledge to each other our Lives, our Fortunes, and our sacred Honor.
+```
+
+可以看到明文中有一行`flag is afctf{Whooooooo_U_Gotcha!}`，提交`afctf{Whooooooo_U_Gotcha!}`即可。
+
+------
 
 ### [BabyRSA](https://ce.pwnthebox.com/challenges?id=314)
 
