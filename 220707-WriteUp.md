@@ -1,20 +1,20 @@
 ### Reverse
 
-- #### [re1](#re1)
+- [re1](#re1)
 
-- #### [re2](#re2)
+- [re2](#re2)
 
-- #### [re3-安卓](#re3-安卓)
+- [re3-安卓](#re3-安卓)
 
 ### Crypto
 
-- #### [签到题](#签到题)
+- [签到题](#签到题)
 
-- #### [base？谁是多余的](#base谁是多余的)
+- [base？谁是多余的](#base谁是多余的)
 
-- #### [VG](#VG)
+- [VG](#VG)
 
-- #### [rsa](#rsa)
+- [rsa](#rsa)
 
 
 
@@ -557,7 +557,8 @@ AAABA c
 ABBBA p
 ABBAB o
 
-真密钥：bacpo
+假密钥：bacpo
+真密钥：bacon
 维多利亚密码：
 ```
 
