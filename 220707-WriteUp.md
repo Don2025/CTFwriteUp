@@ -253,8 +253,8 @@ print(state.posix.dumps(0)) # flag{well_done_good!}
 s = [114,96,103,103,90,90,101,100,91,85,88,96,96,85,18]
 flag = ''
 for i in range(0, 15, 5):
-	for x in s[i:i+5]:
-		flag += chr(x+i+5)
+    for x in s[i:i+5]:
+        flag += chr(x+i+5)
 
 print(f'flag{{{flag}}}') # flag{well_done_good!}
 ```

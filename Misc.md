@@ -156,9 +156,66 @@ for i in range(0, 256):
 
 ------
 
-## [文件](https://ce.pwnthebox.com/challenges?type=1&id=149)
+### [文件](https://ce.pwnthebox.com/challenges?type=1&id=149)
 
 这题附件是`key.pcapng`，用`Wireshark`打开数据流量包，发现里面有`TCP`和`HTTP`两种协议，直接输入`http contains "flag"`筛选协议。进行`HTTP`流追踪可以看到`flag{This_is_a_f10g}`，提交即可。
+
+------
+
+### [据说有些数据可以进行多重编码](https://ce.pwnthebox.com/challenges?id=1077)
+
+这题的附件是`.txt`文件，其中内容如下：
+
+```
+486d65656d727720516372697a716e7a72707a687271207262205a6278656d7163206e767a612072626b206e65727468706d7863615b32362c34352c31362c35362c31375d2c20686d6b7a657420707a7872706b7a6b2072712061637a2078707a72617a71612068706d617a70206d622061637a205a6278656d716320657262787372787a2072626b2061637a20687670656b2771206e707a2d7a776d627a6261206b70727772616d71612e437a206d71207675617a62206a7265657a6b205a62786572626b2771206272616d76627265206e767a612072626b2061637a20224472706b2076752052677662225b382c32302c33382c31322c37322c34322c332c365d2e436d7120717370676d676d62782068767069712c206d626a65736b6d6278207176777a206a7665657264767072616d7662712c206a7662716d7161207675207264767361203338206e657274712c717662627a61712c206168762065766278206272707072616d677a206e767a77712c2072626b20717a677a707265207661637a70206e767a77712e20436d71206e65727471206372677a20647a7a622061707262716572617a6b206d626176207a677a70742077726c767020656d676d627820657262787372787a2072626b2072707a206e7a70757670777a6b207776707a207675617a62206163726220616376717a20767520726274207661637a70206e65727468706d7863615b31302c36322c31322c35392c332c33382c35312c34352c342c31342c34312c31335d2e0a516372697a716e7a72707a2068727120647670622072626b2070726d717a6b206d622051617072617576706b2d736e76622d526776622e2041637a20697a74206d712076622061636d7120716172787a2e2052612061637a2072787a2076752031382c20637a20777270706d7a6b205262627a2043726163726872742c20686d6163206863767720637a2063726b206163707a7a206a636d656b707a623a20517371726262722c2072626b2061686d627120437277627a612072626b204c736b6d61632e20447a61687a7a6220313538352072626b20313539322c20637a20647a78726220722071736a6a7a7171757365206a72707a7a705b34312c34332c32322c35342c31322c34322c33332c35312c385d206d62204576626b766220727120726220726a6176702c2068706d617a702c2072626b206e727061207668627a702076752072206e6572746d6278206a76776e726274206a7265657a6b2061637a204576706b204a637277647a7065726d62277120577a622c206572617a702069627668622072712061637a20496d6278277120577a622e2041637a20756572782074767320627a7a6b206d7120637a707a3a615474486c545369587a4961677a7351596970684d446467635566616d765a554a444c634d7441427672553d3d2e20437a20726e6e7a727071206176206372677a20707a616d707a6b2061762051617072617576706b2072707673626b20313631332c2068637a707a20637a206b6d7a6b206163707a7a20747a727071206572617a702e20557a6820707a6a76706b7120767520516372697a716e7a72707a2771206e706d6772617a20656d757a20717370676d677a2c2072626b2061637a707a2063727120647a7a62206a7662716d6b7a707264657a20716e7a6a736572616d76622072647673612071736a6320777261617a707120727120636d71206e6374716d6a726520726e6e7a727072626a7a2c20717a667372656d61742c20707a656d786d76737120647a656d7a75712c2072626b2068637a61637a702061637a20687670697120726161706d6473617a6b20617620636d7720687a707a2068706d61617a62206474207661637a70715b31362c34332c33312c332c35342c31322c33332c31352c35395d2e
+```
+
+使用`s=bytes.fromhex()`进行`16`进制解码后得到：
+
+```
+Hmeemrw Qcrizqnzrpzhrq rb Zbxemqc nvza rbk nerthpmxca[26,45,16,56,17], hmkzet pzxrpkzk rq acz xpzrazqa hpmazp mb acz Zbxemqc erbxsrxz rbk acz hvpek\'q npz-zwmbzba kprwramqa.Cz mq vuazb jreezk Zbxerbk\'q bramvbre nvza rbk acz "Drpk vu Rgvb"[8,20,38,12,72,42,3,6].Cmq qspgmgmbx hvpiq, mbjeskmbx qvwz jveerdvpramvbq, jvbqmqa vu rdvsa 38 nertq,qvbbzaq, ahv evbx brppramgz nvzwq, rbk qzgzpre vaczp nvzwq. Cmq nertq crgz dzzb aprbqerazk mbav zgzpt wrlvp emgmbx erbxsrxz rbk rpz nzpuvpwzk wvpz vuazb acrb acvqz vu rbt vaczp nerthpmxca[10,62,12,59,3,38,51,45,4,14,41,13].\nQcrizqnzrpz hrq dvpb rbk prmqzk mb Qaprauvpk-snvb-Rgvb. Acz izt mq vb acmq qarxz. Ra acz rxz vu 18, cz wrppmzk Rbbz Cracrhrt, hmac hcvw cz crk acpzz jcmekpzb: Qsqrbbr, rbk ahmbq Crwbza rbk Lskmac. Dzahzzb 1585 rbk 1592, cz dzxrb r qsjjzqquse jrpzzp[41,43,22,54,12,42,33,51,8] mb Evbkvb rq rb rjavp, hpmazp, rbk nrpa vhbzp vu r nertmbx jvwnrbt jreezk acz Evpk Jcrwdzpermb\'q Wzb, erazp ibvhb rq acz Imbx\'q Wzb. Acz uerx tvs bzzk mq czpz:aTtHlTSiXzIagzsQYiphMDdgcUfamvZUJDLcMtABvrU==. Cz rnnzrpq av crgz pzampzk av Qaprauvpk rpvsbk 1613, hczpz cz kmzk acpzz tzrpq erazp. Uzh pzjvpkq vu Qcrizqnzrpz\'q npmgraz emuz qspgmgz, rbk aczpz crq dzzb jvbqmkzprdez qnzjseramvb rdvsa qsjc wraazpq rq cmq nctqmjre rnnzrprbjz, qzfsremat, pzemxmvsq dzemzuq, rbk hczaczp acz hvpiq raapmdsazk av cmw hzpz hpmaazb dt vaczpq[16,43,31,3,54,12,33,15,59].
+```
+
+接着用 http://www.quipqiup.com/ 进行`quipqiup`解码，得到：
+
+```
+William Shakespearewas an English poet and playwright[26,45,16,56,17], widely regarded as the greatest writer in the English language and the world\'s pre-eminent dramatist.He is often called England\'s national poet and the "Bard of Avon"[8,20,38,12,72,42,3,6].His surviving works, including some collaborations, consist of about 38 plays,sonnets, two long narrative poems, and several other poems. His plays have been translated into every major living language and are performed more often than those of any other playwright[10,62,12,59,3,38,51,45,4,14,41,13].\pShakespeare was born and raised in Stratford-upon-Avon. The key is on this stage. At the age of 18, he married Anne Hathaway, with whom he had three children: Susanna, and twins Hamnet and Judith. Between 1585 and 1592, he began a successful career[41,43,22,54,12,42,33,51,8] in London as an actor, writer, and part owner of a playing company called the Lord Chamberlain\'s Men, later known as the King\'s Men. The flag you need is here:tYyWjYUkGeKtveuSZkrwIBbvhFxtioEFCBJhIyTNoaF==. He appears to have retired to Stratford around 1613, where he died three years later. Few records of Shakespeare\'s private life survive, and there has been considerable speculation about such matters as his physical appearance, sexuality, religious beliefs, and whether the works attributed to him were written by others[16,43,31,3,54,12,33,15,59]
+```
+
+编写`Python`代码进行异或操作得到`ntio{QAMK-awpoK_ahTDdFl_eoSb_cogpJZCVzbBNn}`。
+
+```python
+s = 'tYyWjYUkGeKtveuSZkrwIBbvhFxtioEFCBJhIyTNoaF'
+weight = [[26,45,16,56,17],
+[8,20,38,12,72,42,3,6],
+[10,62,12,59,3,38,51,45,4,14,41,13],
+[41,43,22,54,12,42,33,51,8],
+[16,43,31,3,54,12,33,15,59]]
+weight = sum(weight, [])
+flag = [ord(x) ^ y for x, y in zip(s, weight)]
+print(bytes(flag)) # ntio{QAMK-awpoK_ahTDdFl_eoSb_cogpJZCVzbBNn}
+```
+
+接着进行凯撒密码解密可以得到`flag{ISEC-sohgC_szLVvXd_wgKt_ugyhBRUNrtTFf}`，提交即可。
+
+```python
+text = 'ntio{QAMK-awpoK_ahTDdFl_eoSb_cogpJZCVzbBNn}'
+flag = ''
+for i in range(1, 27):
+    s = ''
+    for x in text:
+        if x.isupper():
+            s += chr(ord('A')+(ord(x)-ord('A')+i)%26)
+        elif x.islower():
+            s += chr(ord('a')+(ord(x)-ord('a')+i)%26)
+        else:
+            s += x
+    if 'flag' in s:
+        flag = s
+    # print('{}的移位是{}'.format(s, (ord(text[0])-ord(s[0]))%26))
+
+print(flag) # flag{ISEC-sohgC_szLVvXd_wgKt_ugyhBRUNrtTFf}
+```
 
 ------
 
