@@ -95,10 +95,10 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 s = 'aqlipcrwjcrkmp]{mw]imv]oc'
 flag = ''
 for i, x in enumerate(s):
-	if i & 1:
-		flag += chr(ord(x)-2)
-	else:
-		flag += chr(ord(x)+2)
+    if i & 1:
+        flag += chr(ord(x)-2)
+    else:
+        flag += chr(ord(x)+2)
 print(f'flag{{{flag}}}') # flag{congratulation_you_got_me}
 ```
 

@@ -3827,9 +3827,24 @@ mov     eax, 0
 
 ------
 
+### [babyre](https://ce.pwnthebox.com/challenges?type=2&id=551)
+
+
+
+```c
+__int64 __fastcall main(int a1, char **a2, char **a3)
+{
+  return (unsigned int)sub_CB50(sub_A110, a1, a2);
+}
+```
+
+`QCTF{Rus4_1s_fun4nd_1nt3r3st1ng}`。
+
+------
+
 ### [JustRE](https://ce.pwnthebox.com/challenges?type=2&id=1150)
 
-用 `file`查看附件`RE2.exe`，可以看到信息`./RE2.exe: MS-DOS executable PE32 executable (GUI) Intel 80386, for MS Windows, MZ for MS-DOS`，用`IDA Pro 32bit`打开文件后，按`F5`反编译后在`Functions window`中选择`DialogFunc`查看源码：
+用`file`查看附件`RE2.exe`，可以看到信息`./RE2.exe: MS-DOS executable PE32 executable (GUI) Intel 80386, for MS Windows, MZ for MS-DOS`，用`IDA Pro 32bit`打开文件后，按`F5`反编译后在`Functions window`中选择`DialogFunc`查看源码：
 
 ```c
 INT_PTR __stdcall DialogFunc(HWND hWnd, UINT a2, WPARAM a3, LPARAM a4)
@@ -5328,7 +5343,7 @@ md5.update(s)
 print(md5.hexdigest()) #cb8d493521b47a4cc1ae7e62229266ce
 ```
 
-`sub_40221A()`函数中的`sub_400A71()`函数是`AES`算法的密钥拓展，`sub_40196E`函数是通过密钥`AES`加密。
+`sub_40221A()`函数中的`sub_400A71()`函数是`AES`算法的密钥拓展，`sub_40196E`函数是通过密钥`AES`加密。编写`Python`代码求解得到`flag{924a9ab2163d390410d0a1f670}`。
 
 ```python
 from Crypto.Cipher import AES
@@ -5355,6 +5370,183 @@ print(flag) # flag{924a9ab2163d390410d0a1f670}
 ```
 
 ------
+
+### [answer to everything](https://ce.pwnthebox.com/challenges?type=2&id=1364)
+
+用`file`查看附件`main.exe`，可以看到以下信息：
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf]
+└─$ file main.exe
+main.exe: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=4b9b47b7eac612e0c367f0e3a9878eb1f09b841d, not stripped
+```
+
+用`IDA Pro 64bit`打开`main.exe`，按`F5`反编译可以看到主函数的伪`C`代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v4; // [rsp+Ch] [rbp-4h] BYREF
+
+  printf("Gimme: ");
+  __isoc99_scanf("%d", &v4);
+  not_the_flag(v4);
+  return 0;
+}
+```
+
+双击`not_the_flag()`查看详情，可以看到`kdudpeh`：
+
+```c
+__int64 __fastcall not_the_flag(int a1)
+{
+  if ( a1 == 42 )
+    puts("Cipher from Bill \nSubmit without any tags\n#kdudpeh");
+  else
+    puts("YOUSUCK");
+  return 0LL;
+}
+```
+
+结合题目描述中给出的信息：
+
+> sha1 得到了一个神秘的二进制文件。寻找文件中的flag，解锁宇宙的秘密。
+
+`sha1`解密后得到`80ee2a3fe31da904c596d993f7f1de4827c1450a`。提交`flag{80ee2a3fe31da904c596d993f7f1de4827c1450a}`。
+
+------
+
+### [Easy](https://ce.pwnthebox.com/challenges?id=1148)
+
+用`file`查看附件`easy.exe`，可以看到以下信息：
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/reverse/pwnthebox]
+└─$ file easy.exe
+easy.exe: PE32 executable (console) Intel 80386, for MS Windows
+```
+
+用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  __time32_t Time; // [esp+10h] [ebp-3F0h] BYREF
+  struct tm *v5; // [esp+3FCh] [ebp-4h]
+
+  __main();
+  time(&Time);
+  v5 = localtime(&Time);
+  puts("Can you find me?\n");
+  system("pause");
+  return 0;
+}
+```
+
+在`Functions window`中可以看到`_ques`函数如下：
+
+```c
+int ques()
+{
+  int v0; // edx
+  int result; // eax
+  int v2[50]; // [esp+20h] [ebp-128h] BYREF
+  int v3; // [esp+E8h] [ebp-60h]
+  int v4[10]; // [esp+ECh] [ebp-5Ch]
+  int j; // [esp+114h] [ebp-34h]
+  __int64 v6; // [esp+118h] [ebp-30h]
+  int v7; // [esp+124h] [ebp-24h]
+  int v8; // [esp+128h] [ebp-20h]
+  int i; // [esp+12Ch] [ebp-1Ch]
+
+  v3 = 2147122737;
+  v4[0] = 140540;
+  v4[1] = -2008399303;
+  v4[2] = 141956;
+  v4[3] = 139457077;
+  v4[4] = 262023;
+  v4[5] = -2008923597;
+  v4[6] = 143749;
+  v4[7] = 2118271985;
+  v4[8] = 143868;
+  for ( i = 0; i <= 4; ++i )
+  {
+    memset(v2, 0, sizeof(v2));
+    v8 = 0;
+    v7 = 0;
+    v0 = v4[2 * i];
+    LODWORD(v6) = *(&v3 + 2 * i);
+    HIDWORD(v6) = v0;
+    while ( v6 > 0 )
+    {
+      v2[v8++] = v6 % 2;
+      v6 /= 2LL;
+    }
+    for ( j = 50; j >= 0; --j )
+    {
+      if ( v2[j] )
+      {
+        if ( v2[j] == 1 )
+        {
+          putchar('*');
+          ++v7;
+        }
+      }
+      else
+      {
+        putchar(' ');
+        ++v7;
+      }
+      if ( !(v7 % 5) )
+        putchar(32);
+    }
+    result = putchar(10);
+  }
+  return result;
+}
+```
+
+直接修改主函数的汇编代码，`Ctrl+Alt+K`修改`call _time`为`call _ques`来调用`ques()`函数，`Edit → Patch program → Apply patches to input file`保存后运行`easy.exe`可以看到`HACKIT4FUN`，提交`flag{HACKIT4FUN}`即可。
+
+```assembly
+; int __cdecl main(int argc, const char **argv, const char **envp)
+public _main
+_main proc near
+
+Time= dword ptr -3F0h
+anonymous_0= dword ptr -4
+argc= dword ptr  8
+argv= dword ptr  0Ch
+envp= dword ptr  10h
+
+push    ebp
+mov     ebp, esp
+and     esp, 0FFFFFFF0h
+sub     esp, 400h
+call    ___main
+lea     eax, [esp+400h+Time]
+mov     [esp], eax      ; Time
+call    _ques           ; Keypatch modified this from:
+                        ;   call _time
+lea     eax, [esp+400h+Time]
+mov     [esp], eax      ; Time
+call    _localtime
+mov     [esp+3FCh], eax
+mov     dword ptr [esp], offset Buffer ; "Can you find me?\n"
+call    _puts
+mov     dword ptr [esp], offset Command ; "pause"
+call    _system
+mov     eax, 0
+leave
+retn
+_main endp
+```
+
+------
+
+
+
+
 
 ## BUUCTF
 
