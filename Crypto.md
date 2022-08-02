@@ -733,7 +733,52 @@ MZWGCZ33HFRDMNZVMJSDKNZQGU4GMZBUGZ6Q
 
 
 
+### [easy_crypto](https://ce.pwnthebox.com/challenges?type=3&id=677)
 
+题目描述非常简洁：
+
+> 0010 0100 01 110 1111011 11 11111 010 000 0 001101 1010 111 100 0 001101 01111 000 001101 00 10 1 0 010 0 000 1 01111 10 11110 101011 1111101
+>
+> flag为小写
+
+`0010`让人联想到`mose`电码的`..-.`代表字母`F`，编写`Python`代码进行摩斯电码解密得到`flag`，提交`flag{m0rse_code_1s_interest1n9!}`即可。
+
+```python
+def morse(ciphertext:str, dot:str, dash:str, sign:str) -> str:
+    '''
+    ciphertext => 密文
+    dot => 点
+    dash => 划
+    sign => 分割符
+    plaintext => 明文
+    '''
+    MorseList = {
+        '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E', '..-.': 'F', '--.': 'G',
+        '....': 'H', '..': 'I', '.---': 'J', '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N',
+        '---': 'O', '.--．': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T',
+        '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y', '--..': 'Z',
+
+        '-----': '0', '.----': '1', '..---': '2', '...--': '3', '....-': '4',
+        '.....': '5', '-....': '6', '--...': '7', '---..': '8', '----.': '9',
+
+        '.-.-.-': '.', '---...': ':', '--..--': ',', '-.-.-.': ';', '..--..': '?',
+        '-...-': '=', '.----.': '\'', '-..-.': '/', '-.-.--': '!', '-....-': '-',
+        '..--.-': '_', '.-..-.': '\'', '-.--.': '(', '-.--.-': ')', '...-..-': '$',
+        '....': '&', '.--.-.': '@', '.-.-.': '+', '----.--': '{', '-----.-': '}'
+    }
+    plaintext = ''
+    for code in ciphertext.replace(dot,'.').replace(dash,'-').split(sign):
+        plaintext += MorseList[code]
+    return plaintext
+
+if __name__ == '__main__':
+    # Case: https://ce.pwnthebox.com/challenges?type=3&id=677
+    text = '0010 0100 01 110 1111011 11 11111 010 000 0 001101 1010 111 100 0 001101 01111 000 001101 00 10 1 0 010 0 000 1 01111 10 11110 101011 1111101' # 0.1-
+    flag = morse(text, '0', '1', ' ').lower()
+    print(flag) # flag{m0rse_code_1s_interest1n9!}
+```
+
+------
 
 ### [维吉尼亚密码](https://ce.pwnthebox.com/challenges?type=3&id=682)
 
@@ -1554,51 +1599,79 @@ print(flag)
 
 ------
 
-### PwnTheBox
+## BUUCTF
 
-### [easy_crypto](https://ce.pwnthebox.com/challenges?type=3&id=677)
+### [RSA](https://buuoj.cn/challenges#RSA)
 
-题目描述非常简洁：
+> 在一次RSA密钥对生成中，假设p=473398607161，q=4511491，e=17
+> 求解出d作为flag提交
 
-> 0010 0100 01 110 1111011 11 11111 010 000 0 001101 1010 111 100 0 001101 01111 000 001101 00 10 1 0 010 0 000 1 01111 10 11110 101011 1111101
->
-> flag为小写
-
-`0010`让人联想到`mose`电码的`..-.`代表字母`F`，编写`Python`代码进行摩斯电码解密得到`flag`，提交`flag{m0rse_code_1s_interest1n9!}`即可。
+编写`Python`代码进行求解，可计算出`d`的值为`125631357777427553`，提交`flag{125631357777427553}`即可。
 
 ```python
-def morse(ciphertext:str, dot:str, dash:str, sign:str) -> str:
-    '''
-    ciphertext => 密文
-    dot => 点
-    dash => 划
-    sign => 分割符
-    plaintext => 明文
-    '''
-    MorseList = {
-        '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E', '..-.': 'F', '--.': 'G',
-        '....': 'H', '..': 'I', '.---': 'J', '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N',
-        '---': 'O', '.--．': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T',
-        '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y', '--..': 'Z',
+from Crypto.Util.number import *
 
-        '-----': '0', '.----': '1', '..---': '2', '...--': '3', '....-': '4',
-        '.....': '5', '-....': '6', '--...': '7', '---..': '8', '----.': '9',
+p = 473398607161
+q = 4511491
+e = 17
+d = inverse(e, (p-1)*(q-1))
+flag = f'flag{{{d}}}'
+print(flag) # flag{125631357777427553}
+```
 
-        '.-.-.-': '.', '---...': ':', '--..--': ',', '-.-.-.': ';', '..--..': '?',
-        '-...-': '=', '.----.': '\'', '-..-.': '/', '-.-.--': '!', '-....-': '-',
-        '..--.-': '_', '.-..-.': '\'', '-.--.': '(', '-.--.-': ')', '...-..-': '$',
-        '....': '&', '.--.-.': '@', '.-.-.': '+', '----.--': '{', '-----.-': '}'
-    }
-    plaintext = ''
-    for code in ciphertext.replace(dot,'.').replace(dash,'-').split(sign):
-        plaintext += MorseList[code]
-    return plaintext
+------
 
-if __name__ == '__main__':
-    # Case: https://ce.pwnthebox.com/challenges?type=3&id=677
-    text = '0010 0100 01 110 1111011 11 11111 010 000 0 001101 1010 111 100 0 001101 01111 000 001101 00 10 1 0 010 0 000 1 01111 10 11110 101011 1111101' # 0.1-
-    flag = morse(text, '0', '1', ' ').lower()
-    print(flag) # flag{m0rse_code_1s_interest1n9!}
+### [丢失的MD5](https://buuoj.cn/challenges#%E4%B8%A2%E5%A4%B1%E7%9A%84MD5)
+
+附件解压缩后得到`md5.py`，源码如下：
+
+```python
+import hashlib   
+for i in range(32,127):
+    for j in range(32,127):
+        for k in range(32,127):
+            m=hashlib.md5()
+            m.update('TASC'+chr(i)+'O3RJMV'+chr(j)+'WDJKX'+chr(k)+'ZM')
+            des=m.hexdigest()
+            if 'e9032' in des and 'da' in des and '911513' in des:
+                print des
+```
+
+直接运行会报错：`TypeError: Strings must be encoded before hashing`。
+修改代码运行得到`e9032994dabac08080091151380478a2`，提交`flag{e9032994dabac08080091151380478a2}`即可。
+
+```python
+import hashlib   
+for i in range(32,127):
+    for j in range(32,127):
+        for k in range(32,127):
+            m=hashlib.md5()
+            m.update(b'TASC'+chr(i).encode('utf-8')+b'O3RJMV'+chr(j).encode('utf-8')+b'WDJKX'+chr(k).encode('utf-8')+b'ZM')
+            des=m.hexdigest()
+            if 'e9032' in des and 'da' in des and '911513' in des:
+                print(des)
+                flag = f'flag{{{des}}}'
+print(flag)
+```
+
+------
+
+### [Alice与Bob](https://buuoj.cn/challenges#Alice%E4%B8%8EBob)
+
+题目描述如下：
+
+> 密码学历史中，有两位知名的杰出人物，Alice和Bob。他们的爱情经过置换和轮加密也难以混淆，即使是没有身份认证也可以知根知底。就像在数学王国中的素数一样，孤傲又热情。下面是一个大整数:98554799767,请分解为两个素数，分解后，小的放前面，大的放后面，合成一个新的数字，进行md5的32位小写哈希，提交答案。 注意：得到的 flag 请包上 flag{} 提交。
+
+编写`Python`代码进行求解，提交`flag{d450209323a847c8d01c6be47c81811a}`即可。
+
+```python
+import libnum
+from hashlib import md5
+
+factor = sorted(list(libnum.factorize(98554799767).keys()))
+s = ''.join(str(x) for x in factor)
+flag = md5(s.encode('utf-8')).hexdigest().lower()
+print(f'flag{{{flag}}}') # flag{d450209323a847c8d01c6be47c81811a}
 ```
 
 ------
