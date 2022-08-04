@@ -1699,7 +1699,32 @@ key = open("key.txt", 'rb').read()
 cipher = open("密文.txt", "rb").read()
 
 flag = ''.join(chr(x^y) for x,y in zip(key,cipher))
-print(flag)
+print(flag) # flag{ea1bc0988992276b7f95b54a7435e89e}
+```
+
+------
+
+### [还原大师](https://buuoj.cn/challenges#%E8%BF%98%E5%8E%9F%E5%A4%A7%E5%B8%88)
+
+> 我们得到了一串神秘字符串：TASC?O3RJMV?WDJKX?ZM,问号部分是未知大写字母，为了确定这个神秘字符串，我们通过了其他途径获得了这个字串的32位MD5码。但是我们获得它的32位MD5码也是残缺不全，E903???4DAB????08?????51?80??8A?,请猜出神秘字符串的原本模样，并且提交这个字串的32位MD5码作为答案。 注意：得到的 flag 请包上 flag{} 提交。
+
+编写`Python`代码爆破求解，得到`E9032994DABAC08080091151380478A2`，提交`flag{E9032994DABAC08080091151380478A2}`即可。
+
+```python
+import hashlib
+#print hashlib.md5(s).hexdigest().upper()
+k = 'TASC?O3RJMV?WDJKX?ZM'
+for i in range(26):
+    temp1 = k.replace('?',str(chr(65+i)),1) #用ascii开始，从A开始查
+    for j in range(26):
+        temp2 = temp1.replace('?',chr(65+j),1)
+        for n in range(26):
+            temp3 = temp2.replace('?',chr(65+n),1)
+            s = hashlib.md5(temp3.encode('utf8')).hexdigest().upper()#注意大小写
+            if s[:4] == 'E903':#检查元素
+                flag = f'flag{{{s}}}'
+
+print(flag) # flag{E9032994DABAC08080091151380478A2}
 ```
 
 ------
