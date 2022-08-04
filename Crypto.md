@@ -1690,6 +1690,20 @@ if __name__ == '__main__':
 
 ------
 
+### [异性相吸](https://buuoj.cn/challenges#%E5%BC%82%E6%80%A7%E7%9B%B8%E5%90%B8)
+
+附件解压缩后得到`key.txt`和`密文.txt`。异性相吸？暗示异或求解？！编写`Python`代码进行异或操作。好家伙！还真是异或。提交`flag{ea1bc0988992276b7f95b54a7435e89e}`即可。
+
+```python
+key = open("key.txt", 'rb').read()
+cipher = open("密文.txt", "rb").read()
+
+flag = ''.join(chr(x^y) for x,y in zip(key,cipher))
+print(flag)
+```
+
+------
+
 ### [RSA](https://buuoj.cn/challenges#RSA)
 
 > 在一次RSA密钥对生成中，假设p=473398607161，q=4511491，e=17
