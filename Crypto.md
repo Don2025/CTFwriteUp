@@ -1729,6 +1729,92 @@ print(flag) # flag{E9032994DABAC08080091151380478A2}
 
 ------
 
+### [传感器](https://buuoj.cn/challenges#%E4%BC%A0%E6%84%9F%E5%99%A8)
+
+附件解压缩后得到`.txt`文件，内容如下：
+
+> 5555555595555A65556AA696AA6666666955
+> 这是某压力传感器无线数据包解调后但未解码的报文(hex)
+>
+> 已知其ID为0xFED31F，请继续将报文完整解码，提交hex。
+>
+> 提示1：曼联
+
+由提示`1`想到曼彻斯特编码，编写`Python`代码进行求解，得到`flag{FFFFFED31F645055F9}`。
+
+```python
+cipher='5555555595555A65556AA696AA6666666955'
+
+tmp = ''
+for i in range(len(cipher)):
+    a = bin(eval('0x'+cipher[i]))[2:].zfill(4)
+    tmp = tmp+a[1]+a[3]
+    # print(tmp)
+plain = [hex(int(tmp[i:i+8][::-1],2))[2:] for i in range(0,len(tmp),8)]
+flag = ''.join(plain).upper()
+print(f'flag{{{flag}}}') # flag{FFFFFED31F645055F9}
+```
+
+------
+
+### [SameMod](https://buuoj.cn/challenges#SameMod)
+
+> When people use same mod ,what's wrong? 注意：得到的 flag 请包上 flag{} 提交。
+
+附件解压缩后得到`.txt`文件，内容如下：
+
+```
+{6266565720726907265997241358331585417095726146341989755538017122981360742813498401533594757088796536341941659691259323065631249,773}
+{6266565720726907265997241358331585417095726146341989755538017122981360742813498401533594757088796536341941659691259323065631249,839}
+
+message1=3453520592723443935451151545245025864232388871721682326408915024349804062041976702364728660682912396903968193981131553111537349
+message2=5672818026816293344070119332536629619457163570036305296869053532293105379690793386019065754465292867769521736414170803238309535
+```
+
+题目名称叫`SameMod`，给定的公钥`{n1,e1}`和`{n2,e2}`中的模数`n`相同，推测出是`RSA`共模攻击。
+
+编写`Python`代码即可得到`flag`：`flag{whenwethinkitispossible}`。
+
+```python
+from gmpy2 import *
+import binascii
+
+n = 6266565720726907265997241358331585417095726146341989755538017122981360742813498401533594757088796536341941659691259323065631249
+e1 = 773
+e2 = 839
+c1=3453520592723443935451151545245025864232388871721682326408915024349804062041976702364728660682912396903968193981131553111537349
+c2=5672818026816293344070119332536629619457163570036305296869053532293105379690793386019065754465292867769521736414170803238309535
+s = gcdext(e1, e2)
+
+s1, s2 = s[1], s[2]
+if s1 < 0:
+    s1 = -s1
+    c1 = invert(c1, n)
+elif s2 < 0:
+    s2 = -s2
+    c2 = invert(c2, n)
+
+m1 = powmod(c1, s1, n)
+m2 = powmod(c2, s2, n)
+m = (m1*m2)%n
+# 1021089710312311910410111011910111610410511010710511610511511211111511510598108101125
+# flag = binascii.unhexlify(hex(m)[2:]).decode('utf-8')
+tmp = str(m)
+i = 0
+flag = ''
+while i < len(tmp):
+    if tmp[i] == '1':
+        flag += chr(int(tmp[i:i+3]))
+        i += 3
+    else:
+        flag += chr(int(tmp[i:i+2]))
+        i += 2
+
+print(flag) # flag{whenwethinkitispossible}
+```
+
+------
+
 ### [RSA](https://buuoj.cn/challenges#RSA)
 
 > 在一次RSA密钥对生成中，假设p=473398607161，q=4511491，e=17
@@ -1832,6 +1918,43 @@ d = invert(e, (p-1)*(q-1))
 m = powmod(c, d, p*q)
 flag = f'flag{{{m}}}'
 print(flag)
+```
+
+------
+
+### RSA
+
+附件解压缩后得到`flag.enc`和`pub.key`文件，其中`pub.key`的内容如下：
+
+```
+-----BEGIN PUBLIC KEY-----
+MDwwDQYJKoZIhvcNAQEBBQADKwAwKAIhAMAzLFxkrkcYL2wch21CM2kQVFpY9+7+
+/AvKr1rzQczdAgMBAAE=
+-----END PUBLIC KEY-----
+```
+
+使用`openssl`查看公钥，可以从得知模数`hex(n) = C0332C5C64AE47182F6C1C876D42336910545A58F7EEFEFC0BCAAF5AF341CCDD `，指数`e = 65537`。使用 http://factordb.com 在线因数分解`n`，可得`p = 285960468890451637935629440372639283459`，`q = 304008741604601924494328155975272418463`。
+
+![](https://paper.tanyaodan.com/BUUCTF/RSA/1.png)
+
+编写`Python`代码，以二进制读取方式打开`flag.enc`读取密文，将公钥加密结果用私钥进行`rsa`解密后可以得到`flag{decrypt_256}`。
+
+```python
+from gmpy2 import invert
+import rsa
+
+n = int('C0332C5C64AE47182F6C1C876D42336910545A58F7EEFEFC0BCAAF5AF341CCDD',16)
+# n = 86934482296048119190666062003494800588905656017203025617216654058378322103517
+p = 285960468890451637935629440372639283459
+q = 304008741604601924494328155975272418463
+e = 65537
+
+d = int(invert(e, (p-1)*(q-1)))
+# d = 81176168860169991027846870170527607562179635470395365333547868786951080991441
+key = rsa.PrivateKey(n, e, d, p, q)
+with open('flag.enc', 'rb') as f:
+    flag = rsa.decrypt(f.read(), key).decode()
+print(flag) # flag{decrypt_256}
 ```
 
 ------
