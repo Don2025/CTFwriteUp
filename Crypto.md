@@ -731,7 +731,26 @@ print(flag) # BITSCTF{h1d3_1n_pl41n_5173}
 MZWGCZ33HFRDMNZVMJSDKNZQGU4GMZBUGZ6Q
 ```
 
+编写`Python`代码进行`base32`解密，程序直接抛出异常`"binascii.Error: Incorrect padding"`。
 
+```python
+import base64
+
+flag = base64.b32decode('MZWGCZ33HFRDMNZVMJSDKNZQGU4GMZBUGZ6Q')
+print(flag) # binascii.Error: Incorrect padding
+```
+
+在`Python`中`base64`模块遵循`RFC 3548`。`base32`编码是用`32`个字符表示`256`个`ASCII`字符，即每`5`个`ASCII`字符一组生成`8`个`Base`字符，不足`5`个的用`0`补充。因此`base32`字符串长度应该是`8`的倍数，`"MZWGCZ33HFRDMNZVMJSDKNZQGU4GMZBUGZ6Q"`是`36`个字符，将它末尾补上`4`个`=`，重新进行`base32`解码即可得到`flag{9b675bd57058fd46}`。
+
+```python
+import base64
+
+s = 'MZWGCZ33HFRDMNZVMJSDKNZQGU4GMZBUGZ6Q'.ljust(40, '=')
+flag = base64.b32decode(s).decode()
+print(flag) # flag{9b675bd57058fd46}
+```
+
+------
 
 ### [easy_crypto](https://ce.pwnthebox.com/challenges?type=3&id=677)
 
@@ -1341,7 +1360,100 @@ print("e = {}, flag: {}".format(e,flag)) # flag{wm-l1l1ll1l1l1l111ll}
 
 ------
 
+### [Rsa-1](https://ce.pwnthebox.com/challenges?id=121)
 
+附件解压缩后内容如下：
+
+```python
+p = 473398607161
+q = 4511491
+e = 17
+import hashlib
+flag = hashlib.md5(str(d).encode()).hexdigest()
+```
+
+显然这段代码是不能运行的，因为变量`d`没有被声明。补全`Python`代码，运行得到`flag{ebde301cb778a90496afd30637b345ae}`。
+
+```python
+p = 473398607161
+q = 4511491
+e = 17
+from gmpy2 import invert
+d = invert(e, (p-1)*(q-1))
+import hashlib
+flag = hashlib.md5(str(d).encode()).hexdigest()
+print(f'flag{{{flag}}}') # flag{ebde301cb778a90496afd30637b345ae}
+```
+
+------
+
+### [Rsa2](https://ce.pwnthebox.com/challenges?id=122)
+
+附件解压缩后内容如下：
+
+```python
+e = 9381227
+p+q = 19557532192412770135396612754285285862683596643931761304241244951607949645171603318285236011702235101665676486522272947846730991666618798325812810258224406
+p-q = 1650676835020556888453234895519708130417780877512373678819915730300719385001354199106679712335032655467448380397633077586536806154457656255747639793919628 
+c = 27547276638529171065509412221175661764235537727284046788847560106007680393042160546744837423306870550936908103385332804059870319330198485286374792929657313035321660130970784463719347066550910527833718736819018212643397915649241906156866360428203454699367989718776887507055164028637433982239456710840668151058 
+```
+
+已知`p+q`和`p-q`，可得`p = ((p+q)+(p-q))/2`，从而得到`q = (p+q)-p`，`n = p×q`，接着就是`RSA`的常规求解过程啦。
+
+编写`Python`代码进行求解，运行得到`flag{7bc5c014-f08a-4877-9dea-7f1dd4b08dfb}`，提交即可。
+
+```python
+from Crypto.Util.number import *
+
+e = 9381227
+a = 19557532192412770135396612754285285862683596643931761304241244951607949645171603318285236011702235101665676486522272947846730991666618798325812810258224406
+b = 1650676835020556888453234895519708130417780877512373678819915730300719385001354199106679712335032655467448380397633077586536806154457656255747639793919628 
+c = 27547276638529171065509412221175661764235537727284046788847560106007680393042160546744837423306870550936908103385332804059870319330198485286374792929657313035321660130970784463719347066550910527833718736819018212643397915649241906156866360428203454699367989718776887507055164028637433982239456710840668151058
+p = (a+b)//2
+q = a-p
+n = p*q
+d = inverse(e, (p-1)*(q-1))
+m = pow(c, d, n)
+flag = long_to_bytes(m).decode()
+print(flag) # flag{7bc5c014-f08a-4877-9dea-7f1dd4b08dfb}
+```
+
+------
+
+### [rsa3](https://ce.pwnthebox.com/challenges?id=188)
+
+附件解压缩后得到`pub.pem`和`flag.enc`。编写`Python`进行求解，首先用`rsa`库来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用私钥对`flag.enc`进行`rsa`解密，可以得到明文`flag{decrypt_256}`，提交即可。
+
+```python
+import rsa
+import requests
+from Crypto.Util.number import inverse
+
+def factorize(n):
+    l = []
+    url="http://factordb.com/api?query="+str(n)
+    r = requests.get(url)
+    data = r.json()
+    for factor in data['factors']:
+        l.append(int(factor[0]))
+    return l
+
+with open('pub.pem', 'rb') as f:
+    public_key = rsa.PublicKey.load_pkcs1_openssl_pem(f.read())
+
+n = public_key.n
+e = public_key.e
+q, p = factorize(n)
+d = inverse(e, (p-1)*(q-1))
+private_key = rsa.PrivateKey(n, e, d, p, q)
+
+with open('flag.enc', 'rb') as f:
+    flag = rsa.decrypt(f.read(), private_key).decode()
+
+print(flag) # flag{decrypt_256}
+```
+
+------
 
 ## CTFShow
 
@@ -2199,4 +2311,6 @@ m = pow(enc_flag,d,n)
 flag = libnum.n2s(m).decode()
 print(flag) # flag{cc7490e-78ab-11e9-b422-8ba97e5da1fd}
 ```
+
+------
 
