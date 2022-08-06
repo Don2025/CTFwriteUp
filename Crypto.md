@@ -2513,3 +2513,48 @@ print(flag) # flag{B4by_Rs4}
 
 ------
 
+### [Dangerous RSA](https://buuoj.cn/challenges#Dangerous%20RSA)
+
+附件解压缩后，内容如下：
+
+```python
+#n:  0x52d483c27cd806550fbe0e37a61af2e7cf5e0efb723dfc81174c918a27627779b21fa3c851e9e94188eaee3d5cd6f752406a43fbecb53e80836ff1e185d3ccd7782ea846c2e91a7b0808986666e0bdadbfb7bdd65670a589a4d2478e9adcafe97c6ee23614bcb2ecc23580f4d2e3cc1ecfec25c50da4bc754dde6c8bfd8d1fc16956c74d8e9196046a01dc9f3024e11461c294f29d7421140732fedacac97b8fe50999117d27943c953f18c4ff4f8c258d839764078d4b6ef6e8591e0ff5563b31a39e6374d0d41c8c46921c25e5904a817ef8e39e5c9b71225a83269693e0b7e3218fc5e5a1e8412ba16e588b3d6ac536dce39fcdfce81eec79979ea6872793
+#e:  0x3
+#c:0x10652cdfaa6b63f6d7bd1109da08181e500e5643f5b240a9024bfa84d5f2cac9310562978347bb232d63e7289283871efab83d84ff5a7b64a94a79d34cfbd4ef121723ba1f663e514f83f6f01492b4e13e1bb4296d96ea5a353d3bf2edd2f449c03c4a3e995237985a596908adc741f32365
+so,how to get the message?
+```
+
+已知`n`，`e`和`c`，可以对`n`进行因数分解得到`p`和`q`，然后用常规`RSA`题求解方法获取`flag`。但是这题想考察的是低加密指数攻击，因为公钥中的加密指数`e = 3`很小，但是模数`n`又很大。低加密指数攻击的原理如下：
+
+> RSA加密公式：c = m^e%n
+>
+> 1. 当 m^e < n 时，c = m^e 
+>
+>    因此，对密文 c 开 e 次方根就能得到明文 m
+>
+> 2. 当 m^e > n 时，假设 m^e / n 的商为 i，余数为c，则 Ｍ^e = i×n + C
+>
+>    对 i 进行爆破，当满足 ( i*n + c) 开 e 次方根时就得到了明文 m
+
+编写`Python`代码进行求解，得到`flag{25df8caf006ee5db94d48144c33b2c3b}`，提交即可。
+
+```python
+from gmpy2 import *
+from libnum import n2s
+
+n = 0x52d483c27cd806550fbe0e37a61af2e7cf5e0efb723dfc81174c918a27627779b21fa3c851e9e94188eaee3d5cd6f752406a43fbecb53e80836ff1e185d3ccd7782ea846c2e91a7b0808986666e0bdadbfb7bdd65670a589a4d2478e9adcafe97c6ee23614bcb2ecc23580f4d2e3cc1ecfec25c50da4bc754dde6c8bfd8d1fc16956c74d8e9196046a01dc9f3024e11461c294f29d7421140732fedacac97b8fe50999117d27943c953f18c4ff4f8c258d839764078d4b6ef6e8591e0ff5563b31a39e6374d0d41c8c46921c25e5904a817ef8e39e5c9b71225a83269693e0b7e3218fc5e5a1e8412ba16e588b3d6ac536dce39fcdfce81eec79979ea6872793
+e = 0x3
+c = 0x10652cdfaa6b63f6d7bd1109da08181e500e5643f5b240a9024bfa84d5f2cac9310562978347bb232d63e7289283871efab83d84ff5a7b64a94a79d34cfbd4ef121723ba1f663e514f83f6f01492b4e13e1bb4296d96ea5a353d3bf2edd2f449c03c4a3e995237985a596908adc741f32365
+i = 0
+while True:
+    m, ok = iroot(c+i*n, e)
+    if ok:
+        flag = n2s(int(m)).decode()
+        break
+    i += 1
+
+print(flag) # flag{25df8caf006ee5db94d48144c33b2c3b}
+```
+
+------
+
