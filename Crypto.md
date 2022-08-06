@@ -2471,3 +2471,45 @@ print(flag) # flag{cc7490e-78ab-11e9-b422-8ba97e5da1fd}
 
 ------
 
+### [[HDCTF2019]basic rsa](https://buuoj.cn/challenges#[HDCTF2019]basic%20rsa)
+
+附件解压缩后得到`.py`文件，源码如下：
+
+```python
+import gmpy2
+from Crypto.Util.number import *
+from binascii import a2b_hex,b2a_hex
+
+flag = "*****************"
+
+p = 262248800182277040650192055439906580479
+q = 262854994239322828547925595487519915551
+
+e = 65533
+n = p*q
+
+c = pow(int(b2a_hex(flag),16),e,n)
+
+print c
+
+# 27565231154623519221597938803435789010285480123476977081867877272451638645710
+```
+
+已知`p`，`q`，`e`和`c`，真的是很基础、很常规的`RSA`题。编写`Python`代码进行求解，得到`flag{B4by_Rs4}`。
+
+```python
+from libnum import *
+
+p = 262248800182277040650192055439906580479
+q = 262854994239322828547925595487519915551
+e = 65533
+c = 27565231154623519221597938803435789010285480123476977081867877272451638645710
+n = p*q
+d = invmod(e, (p-1)*(q-1))
+m = pow(c, d, n)
+flag = n2s(m).decode()
+print(flag) # flag{B4by_Rs4}
+```
+
+------
+
