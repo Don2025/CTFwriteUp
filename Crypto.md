@@ -1753,7 +1753,7 @@ print(flag) # BJD{Advanced_mathematics_is_too_hard!!!}
 
 ------
 
-### [Power](https://ce.pwnthebox.com/challenges?id=1108)
+### ♥ [Power](https://ce.pwnthebox.com/challenges?id=1108)
 
 附件解压缩后得到`.py`文件，源码如下：
 
@@ -1839,9 +1839,41 @@ print(flag) # GWHT{f372e52f2a0918d92267ff78ff1a9f09}
 
 ------
 
+### [happy](https://ce.pwnthebox.com/challenges?id=1065)
 
+附件解压缩后内容如下：
 
+```python
+('c=', '0x7a7e031f14f6b6c3292d11a41161d2491ce8bcdc67ef1baa9eL')
+('e=', '0x872a335')
+#q + q*p^3 =1285367317452089980789441829580397855321901891350429414413655782431779727560841427444135440068248152908241981758331600586
+#qp + q *p^2 = 1109691832903289208389283296592510864729403914873734836011311325874120780079555500202475594
+```
 
+动笔算算就可以知道`p`和`q`应该如何得知：
+
+![](https://paper.tanyaodan.com/PwnTheBox/1065/1.jpg)
+
+编写`Python`代码求解得`flag{happy_rsa_1}`， 提交即可。
+
+```python
+from libnum import *
+
+c = 0x7a7e031f14f6b6c3292d11a41161d2491ce8bcdc67ef1baa9e
+e = 0x872a335
+A = 1285367317452089980789441829580397855321901891350429414413655782431779727560841427444135440068248152908241981758331600586
+B = 1109691832903289208389283296592510864729403914873734836011311325874120780079555500202475594
+C = gcd(A, B)
+p = B//C
+q = C//(1+p)
+n = p*q
+d = invmod(e, (p-1)*(q-1))
+m = pow(c, d, n)
+flag = n2s(m).decode()
+print(flag) # flag{happy_rsa_1}
+```
+
+------
 
 ## CTFShow
 
