@@ -1875,6 +1875,43 @@ print(flag) # flag{happy_rsa_1}
 
 ------
 
+### ♥ [试试大数据分解](https://ce.pwnthebox.com/challenges?id=1079)
+
+附件解压缩后得到以下文件：`flag.enc1`，`flag.enc2`，`flag.enc3`，`flag.enc4`，`public.pem`。编写`Python`进行求解，首先用`rsa`库来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。打开`flag.enc1`后发现是`base64`加密的数据，需要`base64`解密后才能得到密文。用私钥对`flag.enc1-4`系列文件进行`rsa`解密，拼接后可以得到十六进制的`flag`，使用`bytes.fromhex()`进行转换，可以得到明文`flag{ISEC-Ir5WM_G4Afbvx_mSM_Ugf8zRAoMkYCPx}`，提交即可。
+
+```python
+import rsa
+import requests
+import base64
+
+def factorize(n):
+    l = []
+    url="http://factordb.com/api?query="+str(n)
+    r = requests.get(url)
+    data = r.json()
+    for factor in data['factors']:
+        l.append(int(factor[0]))
+    return l
+
+with open('public.pem','rb') as f:
+    public_key = rsa.PublicKey.load_pkcs1_openssl_pem(f.read())
+
+n = public_key.n
+e = public_key.e
+q, p = factorize(n)
+d = rsa.common.inverse(e, (p-1)*(q-1))
+private_key = rsa.PrivateKey(n, e, d, p, q)
+flag = ''
+for i in range(1, 5):
+    with open('flag.enc'+str(i),'rb') as f:
+        c = base64.b64decode(f.read())
+        flag += rsa.decrypt(c, private_key).decode('utf-8')
+flag = bytes.fromhex(str(flag)).decode()
+print(flag) # flag{ISEC-Ir5WM_G4Afbvx_mSM_Ugf8zRAoMkYCPx}
+```
+
+------
+
 ## CTFShow
 
 ### crypto4
