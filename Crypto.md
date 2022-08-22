@@ -1570,7 +1570,7 @@ print(flag) # flag{wm-CongrAtu1ation4-1t4-ju4t-A-bAby-R4A}
 
 ### ♥ [Poor RSA](https://ce.pwnthebox.com/challenges?id=278)
 
-附件解压缩后得到`public.key`和`flag.enc`。这题和[rsa3](#rsa3)很相似，编写`Python`进行求解，首先用`Crypto.PublicKey`的`RSA`模块来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用`Crypto.PublicKey`的`PKCS1_OAEP`模块生成私钥对`flag.enc`进行`RSA`解密，可以得到明文`afctf{R54_|5_$0_B0rin9}`，提交即可。
+附件解压缩后得到`public.key`和`flag.enc`。这题和[rsa3](#rsa3)很相似，编写`Python`进行求解，首先用`Crypto.PublicKey`的`RSA`模块来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用`Crypto.PublicKey`的`PKCS1_OAEP`模块生成私钥对`base64`解码后的`flag.enc`进行`RSA`解密，可以得到明文`afctf{R54_|5_$0_B0rin9}`，提交即可。
 
 ```python
 import requests
@@ -2198,7 +2198,7 @@ print(flag) # flag{p&q_4re_t00_c1o5ed}
 
 ------
 
-### easyrsa7
+### ♥ easyrsa7
 
 附件给了一个`.txt`文件，内容如下：
 
@@ -2241,6 +2241,43 @@ print('m =', m)
 # m = 149691910197805776133774875425761425579759130391933
 flag = binascii.unhexlify(hex(m)[2:]).decode('utf-8')
 print(flag) # flag{Kn0wn_Hi9h_Bit5}
+```
+
+------
+
+### ♥ easyrsa8
+
+附件解压缩后得到`public.key`和`flag.enc`。这题和[Poor RSA](#Poor RSA)很相似，编写`Python`进行求解，首先用`Crypto.PublicKey`的`RSA`模块来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用`Crypto.PublicKey`的`PKCS1_OAEP`模块生成私钥对`flag.enc`进行`RSA`解密，可以得到明文`flag{p_1s_5mall_num6er}`，提交即可。
+
+```python
+import requests
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Util.number import inverse
+
+def factorize(n):
+    l = []
+    url="http://factordb.com/api?query="+str(n)
+    r = requests.get(url)
+    data = r.json()
+    for factor in data['factors']:
+        l.append(int(factor[0]))
+    return l
+
+with open('public.key', 'rb') as f:
+    public_key = RSA.importKey(f.read())
+
+n = public_key.n
+e = public_key.e
+q, p = factorize(n)
+d = inverse(e, (p-1)*(q-1))
+key_info = RSA.construct((n, e, d, p, q))
+private_key = PKCS1_OAEP.new(key_info)
+
+with open('flag.enc', 'rb') as f:
+    flag = private_key.decrypt(f.read()).decode()
+
+print(flag) # flag{p_1s_5mall_num6er}
 ```
 
 ------
