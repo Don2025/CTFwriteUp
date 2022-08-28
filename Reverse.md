@@ -2,7 +2,7 @@
 
 ## ADWorld
 
-### [Hello, CTF](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5075)
+### Hello, CTF
 
 用`file`查看`.exe`文件发现是`PE32`，用`IDA Pro 32bit`打开附件给出的`.exe`文件后按`F5`进行反编译，代码审计后可以发现这段代码大致逻辑为将用户输入的字符串与`v13`字符串`437261636b4d654a757374466f7246756e`进行比对，判断是否输入正确，这一串字符串是`16`进制的`ASCII`码，直接编写`Python`代码即可得到`flag`：`CrackMeJustForFun`。
 
@@ -17,13 +17,13 @@ print(flag) # CrackMeJustForFun
 
 ------
 
-### [insanity](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5079)
+### insanity
 
 用`IDA Pro 32bit`打开附件给出的文件，按`F5`进行反编译，`shift + F12`打开`Strings window`可以看到有一行`9447{This_is_a_flag}`，提交即可。
 
 ------
 
-### [Shuffle](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4942)
+### Shuffle
 
 用 `file`查看`maze`，可以看到信息`./Shuffle: ELF 32-bit LSB executable, Intel 80386`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -61,7 +61,7 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ------
 
-### [python-trade](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5083)
+### python-trade
 
 这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
 
@@ -120,13 +120,13 @@ print(flag) # nctf{d3c0mpil1n9_PyC}
 
 ------
 
-### [re1](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5073)
+### re1
 
 用`file`查看`.exe`文件发现是`PE32`，用`IDA Pro 32bit`以二进制文件形式打开附件给出的`.exe`文件后按`shift + F12`查看`Strings window`可以发现`flag`：`DUTCTF{We1c0met0DUTCTF}`。
 
 ------
 
-### [easyRE1](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5592)
+### easyRE1
 
 将附件解压缩后得到两个文件：`easy-32`和`easy-64`。这都没必要`file`了，用`IDA Pro 32bit`打开文件`easy-32`后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -170,7 +170,7 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ------
 
-### [open-source](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5076)
+### open-source
 
 这道题的附件是一个`.c`文件，直接查看源码：
 
@@ -224,7 +224,7 @@ Get your key: c0ffee
 
 ------
 
-### [simple-unpack](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5077)
+### simple-unpack
 
 题目描述中有说这是一个被加壳的二进制文件，在`Kali-Linux`中使用命令行`upx -d 文件名`进行脱壳。
 
@@ -242,7 +242,7 @@ Get your key: c0ffee
 
 ------
 
-### [logmein](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5078)
+### logmein
 
 用`file`查看`.exe`文件发现是`ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开附件，按`F5`进行反编译可以看到以下伪`C`代码：
 
@@ -274,7 +274,7 @@ Great job!
 
 ------
 
-### [game](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5074)
+### game
 
 `file`查看附件`game.exe`可以看到：`./game.exe: PE32 executable (console) Intel 80386, for MS Windows`。使用`IDA Pro 32bit`打开附件，按`F5`进行反编译可以看到以下源码：
 
@@ -506,7 +506,7 @@ print(flag) # zsctf{T9is_tOpic_1s_v5ry_int7resting_b6t_others_are_n0t}
 
 ------
 
-### [no-strings-attached](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5080)
+### no-strings-attached
 
 `file`查看附件`./no-strings-attached`可以看到以下信息：
 
@@ -546,7 +546,7 @@ x/sw $eax
 
 ------
 
-### [csaw2013reversing2](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5081)
+### csaw2013reversing2
 
 用 `file`查看附件`csaw2013reversing2.exe`，可以看到信息`./csaw2013reversing2.exe: PE32 executable (console) Intel 80386, for MS Windows`。用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -595,7 +595,7 @@ int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
 
 ------
 
-### [getit](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5082)
+### getit
 
 用 `file`查看附件`getit`，可以看到信息`./getit: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -661,7 +661,7 @@ print(flag) # SharifCTF{b70c59275fcfa8aebf2d5911223c6589}
 
 ------
 
-### [maze](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=0&id=5084)
+### maze
 
 用 `file`查看附件`maze`，可以看到信息`./maze: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：	
 
@@ -810,7 +810,7 @@ print(g)
 
 ------
 
-### [srm-50](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4963)
+### srm-50
 
 用 `file`查看附件`srm-50.exe`，可以看到信息`./srm-50.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -902,7 +902,7 @@ INT_PTR __stdcall DialogFunc(HWND hDlg, UINT a2, WPARAM a3, LPARAM a4)
 
 ------
 
-### [Mysterious](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5480)
+### Mysterious
 
 用 `file`查看附件`Mysterious.exe`，可以看到信息`./Mysterious.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -992,7 +992,7 @@ int __stdcall sub_401090(HWND hWnd, int a2, int a3, int a4)
 
 ------
 
-### [re4-unvm-me](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5033)
+### re4-unvm-me
 
 这道题的附件是一个`.pyc`文件，`.pyc`是一种二进制文件，是由`.py`文件经过编译后生成的文件，是一种`byte code`，`.py`文件变成`.pyc`文件后，运行加载的速度会有所提高，并且可以实现部分的源码隐藏，保证了`Python`做商业化软件时的安全性。
 
@@ -1054,7 +1054,7 @@ adb778a0f729293e7e0b19b96a4c5a61
 
 ------
 
-### [流浪者](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5570)
+### 流浪者
 
 用 `file`查看附件`Mysterious.exe`，可以看到信息`./cm.exe: PE32 executable (GUI) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -1196,7 +1196,7 @@ print(f'flag{{{flag}}}') # flag{j0rXI4bTeustBiIGHeCF70DDM}
 
 ------
 
-### [666](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5573)
+### 666
 
 用 `file`查看附件`666`，可以看到信息`./666: ELF 64-bit LSB pie executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -1262,7 +1262,7 @@ print(flag) # unctf{b66_6b6_66b}
 
 ------
 
-### [Reversing-x64Elf-100](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4826)
+### Reversing-x64Elf-100
 
 用 `file`查看附件`Reversing-x64Elf-100.re`，可以看到`./Reversing-x64Elf-100.re: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -1323,7 +1323,7 @@ print(flag) # Code_Talkers
 
 ------
 
-### [Guess-the-Number](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4908)
+### Guess-the-Number
 
 将附件`Guess-the-Number.jar`解压后可以得到`guess.class`，使用`Java`反编译工具`jd-gui`打开后可以看到以下源代码：
 
@@ -1413,7 +1413,7 @@ public class guess
 
 ------
 
-### [BABYRE](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4662)
+### BABYRE
 
 用 `file`查看附件`BABYRE`，可以看到信息`./BABYRE: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -1954,7 +1954,7 @@ print(flag) # flag{n1c3_j0b}
 
 ------
 
-### [EasyRE](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5446)
+### EasyRE
 
 用 `file`查看附件`EasyRE.exe`，可以看到信息`./EasyRE.exe: PE32 executable (console) Intel 80386, for MS Windows`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
 
@@ -2019,7 +2019,7 @@ print(flag) # flag{xNqU4otPq3ys9wkDsN}
 
 ------
 
-### [re-for-50-plz-50](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4952)
+### re-for-50-plz-50
 
 用 `file`查看附件`re-for-50-plz-50`，可以看到信息`./re-for-50-plz-50: ELF 32-bit LSB executable, MIPS`，用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
@@ -2200,7 +2200,7 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ------
 
-### [parallel-comparator-200](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4706)
+### parallel-comparator-200
 
 这道题附件是一个 ` .c` 文件，打开后源码如下：
 
@@ -2325,7 +2325,7 @@ for i in range(26):
 
 ------
 
-### [secret-galaxy-300](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4707)
+### secret-galaxy-300
 
 这题附件是一个压缩包，解压缩后可以得到三个文件：`task10_x86_secret-galaxy-300.exe`，`task10_x86_secret-galaxy-300`，`task10_x86_64_secret-galaxy-300`，那就随机挑选一个运行吧。`./task10_x86_64_secret-galaxy-300`运行结果如下：
 
@@ -2438,7 +2438,7 @@ print(flag)
 
 ------
 
-### [secret-string-400](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4708)
+### secret-string-400
 
 这题附件是一个压缩包，解压缩后可以得到两个文件：`Task.html`和`Machine.js`。其中`Task.html`的源代码如下：
 
@@ -2762,7 +2762,7 @@ print(flag)  # flag is: WOW_so_EASY
 
 ------
 
-### [testre](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5476)
+### testre
 
 用 `file`查看附件`testre`，可以看到信息`./testre: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译后，再对所有的`ASCII`数值按`R`转换为`ASCII`字符，可以看到主函数的`C`语言代码如下：
 
@@ -2963,7 +2963,7 @@ print(flag) # base58_is_boring
 
 ------
 
-### [re1-100](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4720)
+### re1-100
 
 用 `file`查看附件`RE100`，可以看到信息`./RE100: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译，可以看到主函数的`C`语言代码如下：
 
@@ -3118,7 +3118,7 @@ print(flag)
 
 ------
 
-### [simple-check-100](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=4709)
+### simple-check-100
 
 这题附件是一个压缩包，解压缩后可以得到三个文件：`task9_x86_simple-check-100.exe`，`task9_x86_simple-check-100`，`task9_x86_64_simple-check-100`，那就随机挑选一个吧。用`IDA Pro 64bit`打开文件`./task9_x86_64_simple-check-100`后，按`F5`反编译后，可以看到主函数的`C`语言代码如下：
 
@@ -3338,7 +3338,7 @@ flag_is_you_know_cracking!!![Inferior 1 (process 408560) exited normally]
 
 ------
 
-### [answer_to_everything](https://adworld.xctf.org.cn/task/answer?type=reverse&number=4&grade=1&id=5511)
+### answer_to_everything
 
 用 `file`查看附件`main.exe`，可以看到信息`./main.exe: ELF 64-bit LSB executable, x86-64`，用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的`C`语言代码如下：
 
