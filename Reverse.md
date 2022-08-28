@@ -5662,7 +5662,202 @@ _main endp
 
 ------
 
+### [Base_re2](https://ce.pwnthebox.com/challenges?id=107)
 
+用`file`查看附件`./base_re2`，可以看到以下信息：
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/reverse/pwnthebox]
+└─$ file ./base_re2
+./base_re2: ELF 32-bit LSB pie executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, BuildID[sha1]=61cc87083bed0ad6c353713d0adabb07c4e3041b, for GNU/Linux 3.2.0, stripped
+```
+
+用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
+
+```c
+// positive sp value has been detected, the output may be wrong!
+void __usercall __noreturn start(int a1@<eax>, void (*a2)(void)@<edx>)
+{
+  int v2; // esi
+  int v3; // [esp-4h] [ebp-4h] BYREF
+  char *retaddr; // [esp+0h] [ebp+0h] BYREF
+
+  v2 = v3;
+  v3 = a1;
+  __libc_start_main(
+    (int (__cdecl *)(int, char **, char **))sub_1469,
+    v2,
+    &retaddr,
+    (void (*)(void))sub_15E0,
+    (void (*)(void))nullsub_1,
+    a2,
+    &v3);
+  __halt();
+}
+```
+
+双击`sub_1469`函数查看详情：
+
+```c
+// bad sp value at call has been detected, the output may be wrong!
+void __cdecl __noreturn sub_1469(int a1)
+{
+  int v1; // [esp-12h] [ebp-50h]
+  int v2; // [esp-Eh] [ebp-4Ch]
+  int v3; // [esp-Ah] [ebp-48h]
+  int v4; // [esp-6h] [ebp-44h]
+  unsigned __int16 v5; // [esp-2h] [ebp-40h]
+  char s[4]; // [esp+0h] [ebp-3Eh] BYREF
+  int v7; // [esp+4h] [ebp-3Ah]
+  int v8; // [esp+8h] [ebp-36h]
+  int v9; // [esp+Ch] [ebp-32h]
+  int v10; // [esp+10h] [ebp-2Eh]
+  int v11; // [esp+14h] [ebp-2Ah]
+  int v12; // [esp+18h] [ebp-26h]
+  int v13; // [esp+1Ch] [ebp-22h]
+  int v14; // [esp+20h] [ebp-1Eh]
+  int v15; // [esp+24h] [ebp-1Ah]
+  int v16; // [esp+28h] [ebp-16h]
+  int v17; // [esp+2Ch] [ebp-12h]
+  __int16 v18; // [esp+30h] [ebp-Eh]
+  char *s1; // [esp+32h] [ebp-Ch]
+  int *v20; // [esp+36h] [ebp-8h]
+
+  v20 = &a1;
+  *(_WORD *)&s[2] = 0;
+  v7 = 0;
+  v8 = 0;
+  v9 = 0;
+  v10 = 0;
+  v11 = 0;
+  v12 = 0;
+  v13 = 0;
+  v14 = 0;
+  v15 = 0;
+  v16 = 0;
+  v17 = 0;
+  v18 = 0;
+  puts(aWelcomeXinjian);
+  printf("pleas give me you key:");
+  ((void (__stdcall *)(const char *, char *, int, int, int, int, _DWORD))__isoc99_scanf)("%s", s, v1, v2, v3, v4, v5);
+  sub_1404(s);            // 异或操作
+  if ( strlen(s) != 38 )  // flag长度为38
+  {
+    puts("you key is wrong!");
+    exit(0);
+  }
+  s1 = 0;
+  s1 = (char *)sub_11F9(s);
+  if ( !strcmp(s1, off_4034) )
+  {
+    sub_1404(s);  // 异或操作
+    printf("you flag is %s\n", s);
+    exit(0);
+  }
+  puts("you key is wrong!");
+  exit(0);
+}
+```
+
+双击`sub_1404`函数查看详情：
+
+```c
+int __cdecl sub_1404(char *s)
+{
+  int result; // eax
+  signed int v2; // [esp+8h] [ebp-10h]
+  int v3; // [esp+Ch] [ebp-Ch]
+
+  v3 = 0;
+  v2 = strlen(s);
+  while ( 1 )
+  {
+    result = v3;
+    if ( v3 >= v2 )
+      break;
+    s[v3] ^= v3;
+    ++v3;
+  }
+  return result;
+}
+```
+
+双击`sub_11F9`函数查看详情：
+
+```c
+_BYTE *__cdecl sub_11F9(char *s)
+{
+  _BYTE *v2; // [esp+8h] [ebp-20h]
+  signed int v3; // [esp+Ch] [ebp-1Ch]
+  int v4; // [esp+14h] [ebp-14h]
+  int v5; // [esp+18h] [ebp-10h]
+  int v6; // [esp+1Ch] [ebp-Ch]
+
+  v3 = strlen(s);
+  if ( v3 % 3 )
+    v6 = 4 * (v3 / 3 + 1);
+  else
+    v6 = 4 * (v3 / 3);
+  v2 = malloc(v6 + 1);
+  v2[v6] = 0;
+  v5 = 0;
+  v4 = 0;
+  while ( v5 < v6 - 2 )
+  {
+    v2[v5] = aAbcdefghijklmn[(unsigned __int8)s[v4] >> 2];
+    v2[v5 + 1] = aAbcdefghijklmn[(16 * s[v4]) & 0x30 | ((unsigned __int8)s[v4 + 1] >> 4)];
+    v2[v5 + 2] = aAbcdefghijklmn[(4 * s[v4 + 1]) & 0x3C | ((unsigned __int8)s[v4 + 2] >> 6)];
+    v2[v5 + 3] = aAbcdefghijklmn[s[v4 + 2] & 0x3F];
+    v4 += 3;
+    v5 += 4;
+  }
+  if ( v3 % 3 == 1 )
+  {
+    v2[v5 - 2] = 61;
+    v2[v5 - 1] = 61;
+  }
+  else if ( v3 % 3 == 2 )
+  {
+    v2[v5 - 1] = 61;
+  }
+  return v2;
+}
+```
+
+双击`aAbcdefghijklmn`变量，跳转到以下汇编代码：
+
+```assembly
+.rodata:00002040    aAbcdefghijklmn db 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/',0
+```
+
+审计代码后发现`sub_11F9`函数的作用是进行`base64`加密。
+
+返回`sub_1469`函数，双击`off_4034`变量，跳转到以下`.data`段：
+
+```assembly
+.data:00004034     off_4034        dd offset aZm1jzh9kygrqpm
+```
+
+双击`aZm1jzh9kygrqpm`变量，跳转到以下汇编代码：
+
+```assembly
+.rodata:00002008     aZm1jzh9kygrqpm db 'Zm1jZH9kYGRqPms5ajxtPiUpICsidyIvKC8oeHglJipBGBoVElg=',0
+```
+
+`strcmp`函数执行后又进行了一次异或操作，编写`Python`进行求解得到`flag{afcb7a2f1c158286b48062cd885a9866}`。
+
+```python
+from base64 import b64decode
+
+s = b64decode('Zm1jZH9kYGRqPms5ajxtPiUpICsidyIvKC8oeHglJipBGBoVElg=').decode()
+flag = ''
+for i in range(len(s)):
+    flag += chr(ord(s[i])^i)
+    
+print(flag) # flag{afcb7a2f1c158286b48062cd885a9866}
+```
+
+------
 
 ## BUUCTF
 
