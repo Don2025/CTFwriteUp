@@ -3378,6 +3378,124 @@ print(f'flag{{{flag}}}')
 
 ------
 
+### hackme
+
+用 `file`查看附件`main.exe`，可以看到以下信息：
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/reverse/adworld]
+└─$ file ./hackme   
+./hackme: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.32, BuildID[sha1]=348718855931f716cb9b4ba8d207b358c3a20081, stripped
+```
+
+用`IDA Pro 64bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
+
+```c
+__int64 __fastcall sub_400F8E(__int64 a1, int a2, int a3, int a4, int a5, int a6)
+{
+  int v6; // edx
+  int v7; // ecx
+  int v8; // er8
+  int v9; // er9
+  int v10; // ecx
+  int v11; // er8
+  int v12; // er9
+  char v14; // [rsp+0h] [rbp-C0h]
+  char v15; // [rsp+0h] [rbp-C0h]
+  char v16[136]; // [rsp+10h] [rbp-B0h] BYREF
+  int v17; // [rsp+98h] [rbp-28h]
+  char v18; // [rsp+9Fh] [rbp-21h]
+  int v19; // [rsp+A0h] [rbp-20h]
+  unsigned __int8 v20; // [rsp+A6h] [rbp-1Ah]
+  char v21; // [rsp+A7h] [rbp-19h]
+  int v22; // [rsp+A8h] [rbp-18h]
+  int v23; // [rsp+ACh] [rbp-14h]
+  int v24; // [rsp+B0h] [rbp-10h]
+  int v25; // [rsp+B4h] [rbp-Ch]
+  _BOOL4 v26; // [rsp+B8h] [rbp-8h]
+  int i; // [rsp+BCh] [rbp-4h]
+
+  sub_407470((unsigned int)"Give me the password: ", a2, a3, a4, a5, a6, a2);
+  sub_4075A0((unsigned int)"%s", (unsigned int)v16, v6, v7, v8, v9, v14);
+  for ( i = 0; v16[i]; ++i )
+    ;
+  v26 = i == 22;
+  v25 = 10;
+  do
+  {
+    v10 = (int)sub_406D90() % 22;     // 随机产生0~21间的数
+    v22 = v10;
+    v24 = 0;
+    v21 = byte_6B4270[v10];
+    v20 = v16[v10];
+    v19 = v10 + 1;
+    v23 = 0;
+    while ( v23 < v19 )
+    {
+      ++v23;
+      v24 = 1828812941 * v24 + 12345;
+    }
+    v18 = v24 ^ v20;
+    if ( v21 != ((unsigned __int8)v24 ^ v20) )
+      v26 = 0;
+    --v25;
+  }
+  while ( v25 );
+  if ( v26 )
+    v17 = sub_407470((unsigned int)"Congras\n", (unsigned int)v16, v24, v10, v11, v12, v15);
+  else
+    v17 = sub_407470((unsigned int)"Oh no!\n", (unsigned int)v16, v24, v10, v11, v12, v15);
+  return 0LL;
+}
+```
+
+双击变量`byte_6B4270`查看详情：
+
+```assembly
+.data:00000000006B4270 ; char byte_6B4270[24]
+.data:00000000006B4270 byte_6B4270     db 5Fh                  ; DATA XREF: sub_400F8E+AF↑r
+.data:00000000006B4271                 db 0F2h
+.data:00000000006B4272                 db  5Eh ; ^
+.data:00000000006B4273                 db  8Bh
+.data:00000000006B4274                 db  4Eh ; N
+.data:00000000006B4275                 db  0Eh
+.data:00000000006B4276                 db 0A3h
+.data:00000000006B4277                 db 0AAh
+.data:00000000006B4278                 db 0C7h
+.data:00000000006B4279                 db  93h
+.data:00000000006B427A                 db  81h
+.data:00000000006B427B                 db  3Dh ; =
+.data:00000000006B427C                 db  5Fh ; _
+.data:00000000006B427D                 db  74h ; t
+.data:00000000006B427E                 db 0A3h
+.data:00000000006B427F                 db    9
+.data:00000000006B4280                 db  91h
+.data:00000000006B4281                 db  2Bh ; +
+.data:00000000006B4282                 db  49h ; I
+.data:00000000006B4283                 db  28h ; (
+.data:00000000006B4284                 db  93h
+.data:00000000006B4285                 db  67h ; g
+.data:00000000006B4286                 db    0
+```
+
+编写`Python`代码进行求解，得到`flag{d826e6926098ef46}`。
+
+```python
+l = [0x5F, 0xF2, 0x5E, 0x8B, 0x4E, 0x0E, 0xA3, 0xAA, 0xC7, 0x93, 0x81, 0x3D, 0x5F, 0x74, 0xA3, 0x09, 
+0x91, 0x2B, 0x49, 0x28, 0x93, 0x67]
+flag = ''
+for i in range(22):
+    v10 = i + 1
+    v14, v15 = 0, 0
+    while v14 < v10:
+        v14 += 1
+        v15 = 1828812941*v15+12345
+    flag += chr((l[i]^v15)&0xFF)
+print(flag) # flag{d826e6926098ef46}
+```
+
+------
+
 ## PwnTheBox
 
 ### [签到](https://ce.pwnthebox.com/challenges?type=2&id=86)
@@ -7418,121 +7536,6 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 ```
 
 显然`flag`就是`wctf2020{Just_upx_-d}`，提交`flag{Just_upx_-d}`即可。
-
-------
-
-### [[ACTF新生赛2020]rome](https://buuoj.cn/challenges#[ACTF%E6%96%B0%E7%94%9F%E8%B5%9B2020]rome)
-
-用`file`查看附件`rome.exe`，可以看到以下信息：
-
-```bash
-┌──(tyd㉿kali-linux)-[~/ctf/reverse/buuctf]
-└─$ file ./rome.exe            
-./rome.exe: PE32 executable (console) Intel 80386, for MS Windows
-```
-
-用`IDA Pro 32bit`打开文件后，按`F5`反编译可以看到主函数的伪`C`代码如下：
-
-```c
-int __cdecl main(int argc, const char **argv, const char **envp)
-{
-  __main();
-  func();
-  return 0;
-}
-```
-
-双击`func()`函数查看详情：
-
-```c
-int func()
-{
-  int result; // eax
-  int v1[4]; // [esp+14h] [ebp-44h]
-  unsigned __int8 v2; // [esp+24h] [ebp-34h] BYREF
-  unsigned __int8 v3; // [esp+25h] [ebp-33h]
-  unsigned __int8 v4; // [esp+26h] [ebp-32h]
-  unsigned __int8 v5; // [esp+27h] [ebp-31h]
-  unsigned __int8 v6; // [esp+28h] [ebp-30h]
-  int v7; // [esp+29h] [ebp-2Fh]
-  int v8; // [esp+2Dh] [ebp-2Bh]
-  int v9; // [esp+31h] [ebp-27h]
-  int v10; // [esp+35h] [ebp-23h]
-  unsigned __int8 v11; // [esp+39h] [ebp-1Fh]
-  char v12[29]; // [esp+3Bh] [ebp-1Dh] BYREF
-
-  strcpy(v12, "Qsw3sj_lz4_Ujw@l");
-  printf("Please input:");
-  scanf("%s", &v2);
-  result = v2;
-  if ( v2 == 65 )
-  {
-    result = v3;
-    if ( v3 == 67 )
-    {
-      result = v4;
-      if ( v4 == 84 )
-      {
-        result = v5;
-        if ( v5 == 70 )
-        {
-          result = v6;
-          if ( v6 == 123 )
-          {
-            result = v11;
-            if ( v11 == 125 )
-            {
-              v1[0] = v7;
-              v1[1] = v8;
-              v1[2] = v9;
-              v1[3] = v10;
-              *(_DWORD *)&v12[17] = 0;
-              while ( *(int *)&v12[17] <= 15 )
-              {
-                if ( *((char *)v1 + *(_DWORD *)&v12[17]) > 64 && *((char *)v1 + *(_DWORD *)&v12[17]) <= 90 )
-                  *((_BYTE *)v1 + *(_DWORD *)&v12[17]) = (*((char *)v1 + *(_DWORD *)&v12[17]) - 51) % 26 + 65;
-                if ( *((char *)v1 + *(_DWORD *)&v12[17]) > 96 && *((char *)v1 + *(_DWORD *)&v12[17]) <= 122 )
-                  *((_BYTE *)v1 + *(_DWORD *)&v12[17]) = (*((char *)v1 + *(_DWORD *)&v12[17]) - 79) % 26 + 97;
-                ++*(_DWORD *)&v12[17];
-              }
-              *(_DWORD *)&v12[17] = 0;
-              while ( *(int *)&v12[17] <= 15 )
-              {
-                result = (unsigned __int8)v12[*(_DWORD *)&v12[17]];
-                if ( *((_BYTE *)v1 + *(_DWORD *)&v12[17]) != (_BYTE)result )
-                  return result;
-                ++*(_DWORD *)&v12[17];
-              }
-              result = printf("You are correct!");
-            }
-          }
-        }
-      }
-    }
-  }
-  return result;
-}
-```
-
-编写`Python`代码对字符串进行处理可以得到`flag{Cae3ar_th4_Gre@t}`：
-
-```python
-import string
-
-l = [81,115,119,51,115,106,95,108,122,52,95,85,106,119,64,108]
-s1 = string.ascii_lowercase
-s2 = string.ascii_uppercase
-flag = ''
-for i in l:
-    if i > 64 and i <=90:
-        flag += s2[i-14-65]
-    elif i > 96 and i <= 122:
-        flag += s1[i-18-97]
-    else:
-        flag += chr(i)
-
-print(f'flag{{{flag}}}') # flag{Cae3ar_th4_Gre@t}
-```
 
 ------
 
