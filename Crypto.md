@@ -2003,6 +2003,57 @@ print(flag) # flag{a4e3676e1e340581f7018972dd1905be}
 
 ------
 
+### [Feistival](https://ce.pwnthebox.com/challenges?id=1875)
+
+附件解压缩后得到`cipher.txt`和`enc.py`两个文件，其中`enc.py`的源码如下：
+
+```python
+m, n = 21, 22
+def f(word, key):
+    out = ""
+    for i in range(len(word)):
+        out += chr(ord(word[i]) ^ key)
+    return out
+
+flag = open("flag.txt", "r").read()
+
+L, R = flag[0:len(flag)//2], flag[len(flag)//2:]
+x = "".join(chr(ord(f(R, m)[i]) ^ ord(L[i])) for i in range(len(L)))
+y = f(R, 0)
+
+L, R = y, x
+x = "".join(chr(ord(f(R, n)[i]) ^ ord(L[i])) for i in range(len(L)))
+y = f(R, 0)
+
+ciphertext = x + y
+ct = open("cipher.txt", "w")
+ct.write(ciphertext)
+ct.close()
+```
+
+编写`Python`代码进行异或操作，得到`KCTF{feistel_cipher_ftw}`。
+
+```python
+m, n = 21, 22
+def f(word, key):
+    out = ""
+    for i in range(len(word)):
+        out += chr(ord(word[i]) ^ key)
+    return out
+
+ct = open("cipher.txt", "r").read()
+x, y = ct[0:len(ct)//2], ct[len(ct)//2:]
+R = f(y, 0)
+L = ''.join(chr(ord(f(R, n)[i]) ^ ord(x[i])) for i in range(len(x)))
+y, x = L, R
+R = f(y, 0)
+L = ''.join(chr(ord(f(y, m)[i]) ^ ord(x[i])) for i in range(len(x)))
+flag = L+R
+print(flag) # KCTF{feistel_cipher_ftw}
+```
+
+------
+
 ## CTFShow
 
 ### crypto4
