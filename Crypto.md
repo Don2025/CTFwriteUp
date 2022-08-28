@@ -2054,6 +2054,70 @@ print(flag) # KCTF{feistel_cipher_ftw}
 
 ------
 
+### [A CRYPTO](https://ce.pwnthebox.com/challenges?id=1089)
+
+题目描述如下：
+
+> 4O595954494Q32515046324757595N534R52415653334357474R4N575955544R4O5N4Q46434S4O59474253464Q5N444R4Q51334557524O5N4S424944473542554O595N44534O324R49565746515532464O49345649564O464R4R494543504N35
+
+字符串中发现字母`NOPQRS`，而`16`进制字符串中只有`ABCDEF`，将其依次进行替换即可，也可以使用`ROT13`编码解码得到：
+
+```
+4B595954494D32515046324757595A534E52415653334357474E4A575955544E4B5A4D46434F4B59474253464D5A444E4D51334557524B5A4F424944473542554B595A44534B324E49565746515532464B49345649564B464E4E494543504A35
+```
+
+将其转换为字符串，调用`bytes.fromhex()`函数得到：
+
+```
+KYYTIM2QPF2GWYZSNRAVS3CWGNJWYUTNKZMFCOKYGBSFMZDNMQ3EWRKZOBIDG5BUKYZDSK2NIVWFQU2FKI4VIVKFNNIECPJ5
+```
+
+调用`base64.b32decode()`函数进行`base32`解码得到：
+
+```
+V143Pytkc2lAYlV3SlRmVXQ9X0dVdmd6KEYpP3t4V29+MElXSER9TUEkPA==
+```
+
+调用`base64.b64decode()`函数进行`base64`解码得到：
+
+```
+W^7?+dsi@bUwJTfUt=_GUvgz(F)?{xWo~0IWHD}MA$<
+```
+
+调用`base64.b85decode()`函数进行`base85`解码得到：
+
+```
+flag{W0w_y0u_c4n_rea11y_enc0d1ng!}
+```
+
+------
+
+### [base64?base64换表](https://ce.pwnthebox.com/challenges?id=1981)
+
+[**CyberChef**](https://github.com/gchq/CyberChef)是英国情报机构政府通信总部（GCHQ）发布了一款新型的开源Web工具，为安全从业人员分析和解密数据提供了方便。
+
+附件解压缩后的`.txt`文件包含以下信息：
+
+```
+25)G64I+9VQ-2D5S<51)=4LR>6U+,T%I2S)Q:6\R13D
+```
+
+选中`From Base64`，`Alphabet`为`Uuencoding: -_`，解码得到：
+
+```
+IRgYJKglMJEsqTIuK2ymK3AiK2qio2E9
+```
+
+选中`From Base64`，`Alphabet`为`ROT13:N-ZA-Mn-za-m0-9+/=`，解码得到：
+
+```
+TKKY{red_tea_is_so_good}
+```
+
+提交即可。
+
+------
+
 ## CTFShow
 
 ### crypto4
