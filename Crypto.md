@@ -2711,7 +2711,38 @@ with open('flag.enc', 'rb') as f:
 print(flag) # bugku{tw0_Tig3rs_l0V3_d4nc1ng~ei!}
 ```
 
+------
 
+#### [where is flag 5](https://ctf.bugku.com/challenges/detail/id/366.html)
+
+附件解压缩后得到`.txt`文件，内容如下：
+
+```
+Gx8EAA8SCBIfHQARCxMUHwsAHRwRHh8BEQwaFBQfGwMYCBYRHx4SBRQdGR8HAQ0QFQ==
+```
+
+进行`base64`解码得到：
+
+```
+\x1b\x1f\x04\x00\x0f\x12\x08\x12\x1f\x1d\x00\x11\x0b\x13\x14\x1f\x0b\x00\x1d\x1c\x11\x1e\x1f\x01\x11\x0c\x1a\x14\x14\x1f\x1b\x03\x18\x08\x16\x11\x1f\x1e\x12\x05\x14\x1d\x19\x1f\x07\x01\r\x10\x15
+```
+
+解码内容看似`16`进制，但是`\x1b`,`\x1f`，`\x04`等等又不在`ASCII`码字母范围内。转二进制后，左边补齐`0`，共五组，每组`49`位，每七位转`ASCII`码，拼接后得到`bugku{ce26f61d40fea75fc0b980d7588e}`。
+
+```python
+import base64
+s = "Gx8EAA8SCBIfHQARCxMUHwsAHRwRHh8BEQwaFBQfGwMYCBYRHx4SBRQdGR8HAQ0QFQ=="
+s = base64.b64decode(s)
+l = [bin(i).replace('0b', '').rjust(5, '0') for i in s]
+flag = ''
+for i in range(5):
+    s = ''.join([x[i] for x in l])
+    flag += ''.join([chr(int(s[i:i+7], 2)) for i in range(0, len(s), 7)])
+
+print(flag) # bugku{ce26f61d40fea75fc0b980d7588e}
+```
+
+------
 
 ## BUUCTF
 
