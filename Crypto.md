@@ -2118,6 +2118,33 @@ TKKY{red_tea_is_so_good}
 
 ------
 
+### [ezpy](https://ce.pwnthebox.com/challenges?id=1116)
+
+```python
+#!/usr/bin/env python3
+import numpy as np
+from hashlib import sha256
+
+def check(flag):
+    if flag.startswith('flag{') and flag.endswith('}'):
+        content = np.array(bytearray(flag[5:-1].encode()))*233
+        cipher = ''.join(np.base_repr(b, base=20) for b in content)
+        hsh = sha256(flag.encode()).hexdigest()
+        return cipher == '4A658BF5J445J2A3D2A1D5J17883D7D7DBH1A9BBH5J7875JC09E3D17787517BH5J2A3D8B75175J3D3G9B79E7578882D5J3D1A45J4BH2D8G1A8B789E3D78BH5J3D1A5J8G52BH9EAE3G73J5J751A5JCE652DA81D' \
+            and hsh == 'f7494167e4c3fc8e6b36525c5c12a5c73077b5f6fdd6f75dd205903b0779b181'
+    return False
+
+
+if __name__ == "__main__":
+    flag = input()
+    if check(flag):
+        print('You got it')
+    else:
+        print('Wrong')
+```
+
+
+
 ## CTFShow
 
 ### crypto4
@@ -2558,6 +2585,71 @@ print(flag) # flag{r54__c0pp3r5m17h_p4r714l_m_4774ck_15_c00l~}
 ```python
 flag = bytes.fromhex('424a447b57653163306d655f74345f424a444354467d').decode('utf-8')
 print(flag)
+```
+
+------
+
+## Bugku
+
+#### ♥ [Double](https://ctf.bugku.com/challenges/detail/id/214.html)
+
+附件解压缩后得到`Double.sage`，源码如下：
+
+```python
+from Crypto.Util.number import bytes_to_long
+from secrets import k, P, flag
+
+E = EllipticCurve(QQ,[0,2021,0,310,-2783])
+assert P.xy()[1] == E.lift_x(2)
+Q = k * P
+R = Q + P
+
+p = Q[0].numerator()
+q = R[0].numerator()
+e = 0x10001
+n = p * q
+assert k < n.bit_length()
+
+m = bytes_to_long(flag)
+c = pow(m, e, n)
+
+print(f'n = {n}')
+print(f'c = {c}')
+
+#n = 2627832721798532654645633759787364870195582649392807630554510880534973280751482201937816738488273589173932960856611147584617677312265144131447658399933331448791094639659769069406481681017795446858858181106274806005669388289349727511470680972
+#c = 96830301447792999743877932210925094490214669785432172099311147672020980136112114653571739648595225131425493319224428213036136642899189859618195566355934768513439007527385261977662612094503054618556883356183687422846428828606638722387070581
+```
+
+已知`n`，`e`，`c`，求`m`。编写`Python`进行求解，首先调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到一系列因数后，根据$\phi(n)=\prod_{i=1}^{k}(p_{i}-1)$算出 `φ(n)`，进而得到解密质数`d`，最后算出加密前的明文`m`，`n2s`转换后得到`flag`。
+
+```python
+import requests
+from libnum import *
+
+def factorize(n):
+    l = []
+    url="http://factordb.com/api?query="+str(n)
+    r = requests.get(url)
+    data = r.json()   
+    for factor in data['factors']:
+        for i in range(int(factor[1])):
+            l.append(int(factor[0]))
+    return l
+
+def getPhi(p_list):
+    phi = 1
+    for p in p_list:
+        phi *= (p-1)
+    return phi
+
+n = 2627832721798532654645633759787364870195582649392807630554510880534973280751482201937816738488273589173932960856611147584617677312265144131447658399933331448791094639659769069406481681017795446858858181106274806005669388289349727511470680972
+c = 96830301447792999743877932210925094490214669785432172099311147672020980136112114653571739648595225131425493319224428213036136642899189859618195566355934768513439007527385261977662612094503054618556883356183687422846428828606638722387070581
+e = 0x10001
+phi = getPhi(factorize(n))
+d = invmod(e, phi)
+m = pow(c, d, n)
+flag = n2s(m).decode()
+print(flag) # flag{D4mn_e45y_eCC_4Nd_R54_m1XeD}
 ```
 
 ------
