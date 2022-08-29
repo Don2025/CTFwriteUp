@@ -1422,7 +1422,7 @@ print(flag) # flag{7bc5c014-f08a-4877-9dea-7f1dd4b08dfb}
 
 ### ♥ [rsa3](https://ce.pwnthebox.com/challenges?id=188)
 
-附件解压缩后得到`pub.pem`和`flag.enc`。编写`Python`进行求解，首先用`rsa`库来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用私钥对`flag.enc`进行`rsa`解密，可以得到明文`flag{decrypt_256}`，提交即可。
+附件解压缩后得到`pub.pem`和`flag.enc`。编写`Python`代码进行求解，首先用`rsa`库来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用私钥对`flag.enc`进行`rsa`解密，可以得到明文`flag{decrypt_256}`，提交即可。
 
 ```python
 import rsa
@@ -1570,7 +1570,7 @@ print(flag) # flag{wm-CongrAtu1ation4-1t4-ju4t-A-bAby-R4A}
 
 ### ♥ [Poor RSA](https://ce.pwnthebox.com/challenges?id=278)
 
-附件解压缩后得到`public.key`和`flag.enc`。这题和[rsa3](#rsa3)很相似，编写`Python`进行求解，首先用`Crypto.PublicKey`的`RSA`模块来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用`Crypto.PublicKey`的`PKCS1_OAEP`模块生成私钥对`base64`解码后的`flag.enc`进行`RSA`解密，可以得到明文`afctf{R54_|5_$0_B0rin9}`，提交即可。
+附件解压缩后得到`public.key`和`flag.enc`。这题和[rsa3](#rsa3)很相似，编写`Python`代码进行求解，首先用`Crypto.PublicKey`的`RSA`模块来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用`Crypto.PublicKey`的`PKCS1_OAEP`模块生成私钥对`base64`解码后的`flag.enc`进行`RSA`解密，可以得到明文`afctf{R54_|5_$0_B0rin9}`，提交即可。
 
 ```python
 import requests
@@ -2480,7 +2480,7 @@ print(flag) # flag{Kn0wn_Hi9h_Bit5}
 
 ### ♥ easyrsa8
 
-附件解压缩后得到`public.key`和`flag.enc`。这题和[Poor RSA](#Poor RSA)很相似，编写`Python`进行求解，首先用`Crypto.PublicKey`的`RSA`模块来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用`Crypto.PublicKey`的`PKCS1_OAEP`模块生成私钥对`flag.enc`进行`RSA`解密，可以得到明文`flag{p_1s_5mall_num6er}`，提交即可。
+附件解压缩后得到`public.key`和`flag.enc`。这题和[Poor RSA](#Poor RSA)很相似，编写`Python`代码进行求解，首先用`Crypto.PublicKey`的`RSA`模块来获取公钥对`<n, e>`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用`Crypto.PublicKey`的`PKCS1_OAEP`模块生成私钥对`flag.enc`进行`RSA`解密，可以得到明文`flag{p_1s_5mall_num6er}`，提交即可。
 
 ```python
 import requests
@@ -2653,6 +2653,65 @@ print(flag) # flag{D4mn_e45y_eCC_4Nd_R54_m1XeD}
 ```
 
 ------
+
+#### ♥ [给你私钥吧](https://ctf.bugku.com/challenges/detail/id/194.html)
+
+附件解压缩后共有四个文件：`flag.enc`，`privatekey.pem`，`pubkey.pem`，`rsaencrypt.py`。其中`rsaencrypt.py`的源码如下：
+
+```python
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+import base64
+from flag import flag
+
+
+f=open(r"pubkey.pem","r")
+key=RSA.importKey(f.read())
+cipher=PKCS1_OAEP.new(key)
+cipher_txt=base64.b64encode(cipher.encrypt(flag))
+
+with open(r"flag.enc","wb") as f:
+    f.write(cipher_txt)
+    f.close()
+```
+
+编写`Python`代码进行求解，首先用`Crypto.PublicKey`的`RSA`模块读入`pubkey.pem`，获取公钥对`<n, e>`，得到`n`和`e`，然后调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`，至此私钥已经拿到。用`Crypto.PublicKey`的`PKCS1_OAEP`模块生成私钥对`base64`解码后的`flag.enc`进行`RSA`解密，可以得到明文`bugku{tw0_Tig3rs_l0V3_d4nc1ng~ei!}}`，提交即可。
+
+```python
+import requests
+from base64 import b64decode
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Util.number import inverse
+
+def factorize(n):
+    l = []
+    url="http://factordb.com/api?query="+str(n)
+    r = requests.get(url)
+    data = r.json()
+    for factor in data['factors']:
+        l.append(int(factor[0]))
+    return l
+
+with open('pubkey.pem', 'rb') as f:
+    public_key = RSA.import_key(f.read())
+
+
+n = public_key.n
+e = public_key.e
+q, p = factorize(n)
+d = inverse(e, (p-1)*(q-1))
+key_info = RSA.construct((n, e, d, p, q))
+private_key = PKCS1_OAEP.new(key_info)
+
+with open('flag.enc', 'rb') as f:
+    cipher_text = b64decode(f.read())
+    flag = private_key.decrypt(cipher_text).decode()
+
+print(flag) # bugku{tw0_Tig3rs_l0V3_d4nc1ng~ei!}
+```
+
+
 
 ## BUUCTF
 
