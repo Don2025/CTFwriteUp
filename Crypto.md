@@ -2152,33 +2152,6 @@ print(flag) # flag{D0_Y0u_kNoW_Th1s_b4se_map}
 
 ------
 
-### [ezpy](https://ce.pwnthebox.com/challenges?id=1116)
-
-```python
-#!/usr/bin/env python3
-import numpy as np
-from hashlib import sha256
-
-def check(flag):
-    if flag.startswith('flag{') and flag.endswith('}'):
-        content = np.array(bytearray(flag[5:-1].encode()))*233
-        cipher = ''.join(np.base_repr(b, base=20) for b in content)
-        hsh = sha256(flag.encode()).hexdigest()
-        return cipher == '4A658BF5J445J2A3D2A1D5J17883D7D7DBH1A9BBH5J7875JC09E3D17787517BH5J2A3D8B75175J3D3G9B79E7578882D5J3D1A45J4BH2D8G1A8B789E3D78BH5J3D1A5J8G52BH9EAE3G73J5J751A5JCE652DA81D' \
-            and hsh == 'f7494167e4c3fc8e6b36525c5c12a5c73077b5f6fdd6f75dd205903b0779b181'
-    return False
-
-
-if __name__ == "__main__":
-    flag = input()
-    if check(flag):
-        print('You got it')
-    else:
-        print('Wrong')
-```
-
-
-
 ## CTFShow
 
 ### crypto4
