@@ -7734,3 +7734,33 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ------
 
+### Hello_Reverse
+
+`shift + F12`可以在`Strings window`中看到`.rdata:0000000140003260	0000000D	C	flag{h3llo_r`。`F5`反编译主函数可以看到另一半：`3vers1ng_w0rld}`，拼接可得`flag{h3llo_r3vers1ng_w0rld}`。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [rsp+20h] [rbp-48h]
+  int v5; // [rsp+24h] [rbp-44h]
+  char Source[16]; // [rsp+30h] [rbp-38h] BYREF
+  char Destination[24]; // [rsp+40h] [rbp-28h] BYREF
+
+  strcpy(Source, "3vers1ng_w0rld}");
+  sub_140001230("%s\n", off_140005000[0]);
+  sub_140001230("%s\n", off_140005008[0]);
+  sub_1400012B0("%s", Destination);
+  for ( i = 0; i < strlen(Str); ++i )
+    sub_140001230("%c", (unsigned int)Str[i]);
+  v5 = 0;
+  do
+    sub_140001230("%c", (unsigned int)off_140005018[v5++]);
+  while ( off_140005018[v5] );
+  strcpy(Destination, Source);
+  system("pause");
+  return 0;
+}
+```
+
+------
+
