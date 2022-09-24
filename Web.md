@@ -862,6 +862,16 @@ if(file_get_contents($_GET['data']) == "Welcome to CTF"){
 
 ------
 
+### Word-For-You
+
+题目描述如下：
+
+> 赛博顶针先生悄悄把flag告诉了Mr.H，Mr.H为了确保安全把flag放到了数据库中，你能找到吗？
+
+这题考察点应该是`SQL`注入，`1'or 1=1#`拿下`flag{Th1s_is_0_simp1e_S0L_test}`。
+
+------
+
 ## PwnTheBox
 
 ### [XSS](https://ce.pwnthebox.com/challenges?type=5&id=673)
