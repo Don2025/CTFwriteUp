@@ -7736,7 +7736,9 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 
 ### Hello_Reverse
 
-`shift + F12`可以在`Strings window`中看到`.rdata:0000000140003260	0000000D	C	flag{h3llo_r`。`F5`反编译主函数可以看到另一半：`3vers1ng_w0rld}`，拼接可得`flag{h3llo_r3vers1ng_w0rld}`。
+用`IDA Pro 64bit`打开，`shift + F12`可以在`Strings window`中看到`.rdata:0000000140003260 0000000D C flag{h3llo_r`。
+
+`F5`反编译主函数可以看到另一半：`3vers1ng_w0rld}`，拼接可得`flag{h3llo_r3vers1ng_w0rld}`。
 
 ```c
 int __cdecl main(int argc, const char **argv, const char **envp)
@@ -7760,6 +7762,147 @@ int __cdecl main(int argc, const char **argv, const char **envp)
   system("pause");
   return 0;
 }
+```
+
+------
+
+### Baby_Re
+
+`file`查看文件类型：
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf]
+└─$ file ./Init_re            
+./Init_re: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=59abad722aac0d7639f5965a2ed9fb38ec0cc11d, for GNU/Linux 3.2.0, not stripped
+```
+
+用`IDA Pro 64bit`打开，按`F5`反编译可以看到主函数如下：
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  size_t v3; // rbx
+  char s[8]; // [rsp+0h] [rbp-40h] BYREF
+  __int64 v6; // [rsp+8h] [rbp-38h]
+  __int64 v7; // [rsp+10h] [rbp-30h]
+  __int64 v8; // [rsp+18h] [rbp-28h]
+  char v9; // [rsp+20h] [rbp-20h]
+  int i; // [rsp+2Ch] [rbp-14h]
+
+  *(_QWORD *)s = 0LL;
+  v6 = 0LL;
+  v7 = 0LL;
+  v8 = 0LL;
+  v9 = 0;
+  puts("Welcome to RE world,Can you solve the problem?");
+  printf("Now you should input your flag and i'll tell you if it is right:");
+  __isoc99_scanf("%s", s);
+  for ( i = 0; ; ++i )
+  {
+    v3 = i;
+    if ( v3 >= strlen(s) )
+      break;
+    s[i] ^= i;
+  }
+  if ( (unsigned int)compare(s) )
+    puts("Well done! You find the secret!");
+  else
+    puts("The flag is wrong! Maybe something run before main");
+  return 0;
+}
+```
+
+双击`compare()`函数查看详情，可以知道`flag`长度为`32`位，再结合主函数中的异或操作，~~好家伙，这TM不是白给flag！~~
+
+```c
+__int64 __fastcall compare(const char *a1)
+{
+  int i; // [rsp+1Ch] [rbp-4h]
+
+  if ( strlen(a1) != 32 )
+  {
+    puts("The length of flag is Wrong!!");
+    exit(0);
+  }
+  for ( i = 0; i <= 31; ++i )
+  {
+    if ( final[i] != a1[i] )
+      return 0LL;
+  }
+  return 1LL;
+}
+```
+
+编写`Python`代码求解得到`flag{Something_run_before_main?}`。
+
+```python
+final = [0x66, 0x6D, 0x63, 0x64, 0x7F, 0x56, 0x69, 0x6A, 0x6D, 0x7D, 0x62, 0x62, 0x62, 0x6A, 0x51, 0x7D, 0x65, 0x7F, 0x4D, 0x71, 0x71, 0x73, 0x79, 0x65, 0x7D, 0x46, 0x77, 0x7A, 0x75, 0x73, 0x21, 0x62]
+flag = ''
+for i in range(len(final)):
+    flag += chr(i^final[i])
+    
+printflag) # flag{Something_run_before_main?}
+```
+
+然而！！！这是一个`fake flag`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf]
+└─$ ./Init_re 
+Welcome to RE world,Can you solve the problem?
+Now you should input your flag and i'll tell you if it is right:flag{Something_run_before_main?}
+The flag is wrong! Maybe something run before main
+```
+
+回看题目描述程序真的都是从main开始的吗？怎么办没招了，静态和动态分析相结合吧。
+
+在`Kali Linux.vmx`中添加以下内容：
+
+```bash
+debugStub.listen.guest64 = "TRUE"
+debugStub.hideBreakpoints= "TRUE"
+debugStub.listen.guest64.remote = "TRUE"
+```
+
+将`IDA Pro`根目录下的`dbgsrv`文件夹中的`linux_server64`复制到虚拟机中并授予权限运行。
+
+查看虚拟机中`Kali Linux`的`ip`信息：
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf]
+└─$ ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 192.168.110.131  netmask 255.255.255.0  broadcast 192.168.110.255
+        inet6 fe80::20c:29ff:feb7:b2d  prefixlen 64  scopeid 0x20<link>
+        ether 00:0c:29:b7:0b:2d  txqueuelen 1000  (Ethernet)
+        RX packets 53817  bytes 21237962 (20.2 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 38078  bytes 10360684 (9.8 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 60  bytes 3000 (2.9 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 60  bytes 3000 (2.9 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+在`IDA Pro 64bit`中选择`Remote Linux debugger`，输入`ip`进行远程调试`ELF`文件，可以得到真正的`final`，编写`Python`代码求解得到`flag{S0meth1ng_run_bef0re_main!}`。
+
+```python
+final = [0x66, 0x6D, 0x63, 0x64, 0x7F, 0x56, 0x69, 0x6A, 0x6D, 0x7D, 0x62, 0x62, 0x62, 0x6A, 0x51, 0x7D, 0x65, 0x7F, 0x4D, 0x71, 0x71, 0x73, 0x79, 0x65, 0x7D, 0x46, 0x77, 0x7A, 0x75, 0x73, 0x21, 0x62]
+real_final = [0x66, 0x6D, 0x63, 0x64, 0x7F, 0x56, 0x36, 0x6A, 0x6D, 0x7D, 0x62, 0x3A, 0x62, 0x6A, 0x51, 0x7D, 0x65, 0x7F, 0x4D, 0x71, 0x71, 0x73, 0x26, 0x65, 0x7D, 0x46, 0x77, 0x7A, 0x75, 0x73, 0x3F, 0x62, 0x00]
+fake_flag = ''
+flag = ''
+for i in range(len(final)):
+    fake_flag += chr(i^final[i])
+    flag += chr(i^real_final[i])
+
+print(fake_flag) # flag{Something_run_before_main?}
+print(flag)      # flag{S0meth1ng_run_bef0re_main!}
 ```
 
 ------
