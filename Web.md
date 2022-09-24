@@ -778,6 +778,28 @@ X-Powered-By: PHP/7.3.15
 
 ------
 
+### Head?Header!
+
+进入靶机后看到：
+
+> Must Use `CTF` Brower!
+
+`Harkbar`添加`Request header`，`Name`为`User-Agent`，`Value`为`CTF`，勾选刷新页面。
+
+> Must From `ctf.com`
+
+`Harkbar`添加`Request header`，`Name`为`Referer`，`Value`为`ctf.com`，勾选刷新页面。
+
+> Only Local User Can Get Flag
+
+`Harkbar`添加`Request header`，`Name`为`X-Forwarded-For`，`Value`为`127.0.0.1`，勾选刷新页面。
+
+> You Are Good,This is your flag: flag{af1b7bd5-ae50-4b7f-85f1-790ffc7f244a}
+
+提交`flag{af1b7bd5-ae50-4b7f-85f1-790ffc7f244a}`即可。
+
+------
+
 ## PwnTheBox
 
 ### [XSS](https://ce.pwnthebox.com/challenges?type=5&id=673)
