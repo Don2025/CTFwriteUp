@@ -124,6 +124,39 @@ print(flag) # flag{70354300a5100ba78068805661b93a5c}
 
 ------
 
+### EzSnake
+
+题目描述：达到114分即可获得一个一个一个一个flag。题目附件给出一个`EzSnake.jar`文件，直接用[**jd-gui**](https://github.com/java-decompiler/jd-gui)或[**Luyten**](https://github.com/deathmarine/Luyten)这种`jar`包反编译工具打开`jar`包进行解码后，全部保存在文件夹`decompiled-EzSnake`中。用`IDEA`对`decompiled-EzSnake\top\woodwhale\snake\GamePanel.java`文件进行修改，把`114`改成一个很小的数字，比如`1`。重新编译运行项目，如果报错`java: 对Timer的引用不明确`的话，在`GamePanel`中添加以下代码即可：
+
+```java
+import javax.swing.Timer;
+```
+
+编译运行项目，只要得到一分就能弹出来提示框：
+
+![](https://paper.tanyaodan.com/BUUCTF/EzSnake/1.png)
+
+很明显，这是一张少了三个锚点的二维码，用Photoshop把锚点加上即可识别。
+
+![](https://paper.tanyaodan.com/BUUCTF/EzSnake/2.png)
+
+扫描二维码的结果如下：
+
+```
+ZmxhZ3tZMHVfNHJlXzBuZV9vTmVfMG5FX3N0NFJ9=
+```
+
+这是一个`base64`字符串，编写`Python`代码进行解码可得`flag{Y0u_4re_0ne_oNe_0nE_st4R}`。
+
+```python
+from base64 import *
+
+flag = b64decode('ZmxhZ3tZMHVfNHJlXzBuZV9vTmVfMG5FX3N0NFJ9=').decode()
+print(flag) # flag{Y0u_4re_0ne_oNe_0nE_st4R}
+```
+
+------
+
 ## PwnTheBox
 
 ### [迟来的签到题](https://ce.pwnthebox.com/challenges?tag=29&id=962)
