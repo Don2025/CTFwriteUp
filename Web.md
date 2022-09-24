@@ -800,6 +800,34 @@ X-Powered-By: PHP/7.3.15
 
 ------
 
+### 我真的会谢
+
+进入靶机后看到：
+
+> **Flag has three part, qsdz hid them in different files.**
+> **By the way, these files are sensitive.**
+
+查看源码发现注释<!--I used VIM to write this file, but some errors occurred midway.--> 根据注释想到`vim`非正常退出的话会留下`swp`文件，访问靶机`/.index.php.swp`，可以下载该文件。`vim -r index.php.swp`可以看到以下内容：
+
+```php
+<?php
+echo "<br><h1<flag has three part, qsdz hid them in different files.By the way, these files are sensitive.</h1><!--I used VIM to write this file, but some errors occurred midway.-->";
+#This is my secret
+$Part_two = "0_e4sy_d0_y00";
+```
+
+还有两段`flag`未知，`dirsearch`扫描靶机目录，发现`robots.txt`和`www.zip`。访问靶机`/robots.txt`，可以看到：
+
+> Part One: flag{Th1s_Is_s00
+
+访问靶机`/www.zip`，解压缩可得文件`secret`，内容如下：
+
+> Part Three: u_th1nk_so?}
+
+将三部分拼接可得`flag{Th1s_Is_s000_e4sy_d0_y00u_th1nk_so?}`，提交即可。
+
+------
+
 ## PwnTheBox
 
 ### [XSS](https://ce.pwnthebox.com/challenges?type=5&id=673)
