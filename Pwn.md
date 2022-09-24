@@ -2486,6 +2486,150 @@ io.interactive()
 
 ------
 
+### calc
+
+先`file ./pwn`查看文件类型，再`checksec --file=./pwn`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/calc]
+└─$ file ./pwn
+./pwn: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=5aeaa15b87f358f1145d4c7b9d226d51df696cf1, stripped
+
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/calc]
+└─$ checksec --file=./pwn
+[*] '/home/tyd/ctf/pwn/buuctf/NewStarCTF/calc/pwn'
+    Arch:     amd64-64-little
+    RELRO:    Full RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      PIE enabled
+```
+
+用`IDA Pro 64bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+__int64 __fastcall main(__int64 a1, char **a2, char **a3)
+{
+  sub_C1B(a1, a2, a3);
+  sub_B3A();
+  sub_CE1();
+  return 0LL;
+}
+```
+
+双击`sub_B3A`函数查看详情：
+
+```c
+int sub_B3A()
+{
+  puts("Welcome to NewStarCTF!\nCan you make a calculator to slove 100 math calculations in 30 seconds?!");
+  return puts("Enjoy it!");
+}
+```
+
+`30`秒内算`100`道加减乘除题，挺有意思。双击`sub_CE1`函数查看详情：
+
+```c
+void __fastcall sub_CE1(const char *a1)
+{
+  int v1; // eax
+  int v2; // eax
+  int v3; // eax
+  char v4; // [rsp+Fh] [rbp-21h]
+  int v5; // [rsp+10h] [rbp-20h] BYREF
+  int v6; // [rsp+14h] [rbp-1Ch]
+  int v7; // [rsp+18h] [rbp-18h]
+  int i; // [rsp+1Ch] [rbp-14h]
+  int v9; // [rsp+20h] [rbp-10h]
+  int v10; // [rsp+24h] [rbp-Ch]
+  unsigned __int64 v11; // [rsp+28h] [rbp-8h]
+
+  v11 = __readfsqword(0x28u);
+  v5 = 0;
+  v6 = 0;
+  v7 = 100;
+  for ( i = 0; i <= 99; ++i )
+  {
+    v1 = time(0LL);
+    srand(v1 * (i + 114));
+    v9 = rand() % 1919 + 1;
+    v2 = time(0LL);
+    srand(v2 * (i + 514));
+    v10 = rand() % 810 + 1;
+    v3 = time(0LL);
+    srand(v3 * (i + 1919810));
+    v4 = byte_202010[rand() % 3];
+    printf("What's the answer? %d %c %d = what?\n", (unsigned int)v9, (unsigned int)v4, (unsigned int)v10);
+    __isoc99_scanf("%d", &v5);
+    if ( v4 == 45 )
+    {
+      v6 = v9 - v10;
+    }
+    else if ( v4 > 45 )
+    {
+      if ( v4 == 47 )
+      {
+        v6 = v9 / v10;
+      }
+      else if ( v4 == 120 )
+      {
+        v6 = v10 * v9;
+      }
+    }
+    else if ( v4 == 43 )
+    {
+      v6 = v9 + v10;
+    }
+    if ( v6 != v5 )
+    {
+      handler((int)"%d");
+      return;
+    }
+    a1 = "Right! Next!";
+    puts("Right! Next!");
+    --v7;
+  }
+  if ( v7 )
+    handler((int)a1);
+  else
+    sub_BE9();
+}
+```
+
+编写`Python`代码求解，算完100道算术题后，`cat flag`可得`flag{e1a1007a-ee74-4a32-b819-51249594c4fa}`。
+
+```python
+from pwn import *
+
+def cal(x, y, opertor):
+    if opertor == '+':
+        return x+y
+    elif opertor == '-':
+        return x-y
+    elif opertor == 'x':
+        return x*y
+    elif opertor == '/':
+        return x/y
+    else:
+        return 0
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 25690)
+elf = ELF('./pwn')
+for i in range(100):
+    io.recvuntil(b"What's the answer? ")
+    n1 = int(io.recvuntil(b' '))
+    oper = io.recvuntil(b' ')[:-1].decode()
+    n2 = int(io.recvuntil(b' =')[:-2])
+    n = cal(n1, n2, oper)
+    io.sendline(str(n).encode())
+    log.success('%d %c %d = %d' % (n1, oper, n2, n))
+
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
