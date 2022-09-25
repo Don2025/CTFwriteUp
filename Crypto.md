@@ -3878,6 +3878,113 @@ print(flag) # flag{D4mn_y0u_h4s74d_wh47_4_b100dy_b4s74rd!}
 
 ------
 
+### caeser
+
+题目描述：
+
+> 听说尤利乌斯发明了一套防止消息泄漏的方法
+
+附件`ciphertext.txt`内容如下：
+
+> synt{uvfgbevpny_pvcure_vf_ihyarenoyr}
+
+凯撒密码，编写`Python`代码求解：
+
+```python
+text = 'synt{uvfgbevpny_pvcure_vf_ihyarenoyr}' # 
+flag = ''
+for i in range(1, 27):
+    s = ''
+    for x in text:
+        if x.isalpha():
+            s += chr(ord('a')+(ord(x)-ord('a')+i)%26)
+        else:
+            s += x
+    s = s.lower()
+    if 'flag' in s:
+        flag = s
+        print('{}的移位是{}'.format(s, (ord(text[0])-ord(s[0]))%26))
+
+print(flag) # flag{historical_cipher_is_vulnerable}
+```
+
+------
+
+### 吉奥万·巴蒂斯塔·贝拉索先生的密码
+
+题目描述：
+
+> 一个古老的密码, 你能破解它吗
+
+附件`ciphertext.txt`内容如下：
+
+> pqcq{gteygpttmj_kc_zuokwv_kqb_gtofmssi_mnrrjt}
+>
+> Hint: key length is 3
+
+吉奥万·巴蒂斯塔·贝拉索先生发明的那种多表密码，其实就是那个被后人误认为是维吉尼亚发明的密码，即维吉尼亚密码。维吉尼亚密码的加密原理是将`26`个英文字母（`a-z`）对应`26`个自然数（`0-25`），它只对字母（不区分大小写）进行加密，若文本中出现非字母字符会保留原样。已知`key`的长度为`3`，而明文的前五位必为`flag{`，用密文减去已知的明文可得到密钥，由`flag`与`pqcq`的对应关系可知，`f + 10 = p`，`l + 5 = q`，`a + 2 = c`，`g + 10 = k`，因此密钥`key`为`kfc`，好家伙肯德基记得打钱，编写`Python`代码用密文减去密钥即可得到明文：`flag{bruteforce_is_useful_for_breaking_cipher}`。
+
+```python
+cipher = 'pqcq{gteygpttmj_kc_zuokwv_kqb_gtofmssi_mnrrjt}'
+s = 'flag{'
+key = ''
+for i in range(3):
+    key += chr(ord('a') + ord(cipher[i])-ord(s[i]))
+# key = 'kfc'
+flag = ''
+j = 0
+for i, x in enumerate(cipher):
+    if x.isalpha():
+        flag += chr(ord('a') + (ord(x) - ord(key[j%len(key)]))%26)
+        j += 1
+    else:
+        flag += x
+
+print(flag) # flag{bruteforce_is_useful_for_breaking_cipher}
+```
+
+------
+
+### eazyxor
+
+附件给出了`xor.py`和`output.txt`，其中`xor.py`的源码如下：
+
+```python
+from os import urandom
+from secret import flag
+key = urandom(1)
+
+def xor(plaintext, key):
+    ret = []
+    for i in range(len(plaintext)):
+        ret.append(plaintext[i] ^ key[0])
+    return bytes(ret)
+
+ciphertext = xor(flag, key) # '\x9b\x91\x9c\x9a\x86\x85\xcd\x8f\xa2\x94\xc8\xa2\x8c\x88\xcc\x89\xce\xa2\xce\x9c\x87\x84\x80'
+
+print(ciphertext.hex()) # 9b919c9a8685cd8fa294c8a28c88cc89cea2ce9c878480
+```
+
+`output.txt`中的内容就是`ciphertext.hex()`
+
+```
+9b919c9a8685cd8fa294c8a28c88cc89cea2ce9c878480
+```
+
+由于`key`只有一字节，而`flag`的前五个字符是`flag{`，由异或操作可以推出`key`为`b'\xfd'`，即`253`。编写`Python`代码异或求解得到`flag{x0r_i5_qu1t3_3azy}`，提交即可。
+
+```python
+s = bytes.fromhex('9b919c9a8685cd8fa294c8a28c88cc89cea2ce9c878480') #  b'\x9b\x91\x9c\x9a\x86\x85\xcd\x8f\xa2\x94\xc8\xa2\x8c\x88\xcc\x89\xce\xa2\xce\x9c\x87\x84\x80'
+key = 253 # b'\xfd'
+l = []
+for i in range(len(s)):
+    l.append(s[i]^253)
+flag = bytes(l).decode()
+print(flag) # flag{x0r_i5_qu1t3_3azy}
+```
+
+------
+
 ### ♥ RSA_begin
 
 题目给出了俩个附件`task.py`和`output.txt`，其中`task.py`的源码如下：
@@ -4493,3 +4600,176 @@ print(flag) # flag{W0w_U_ar3_re4L1y_g0Od_4t_m4th_4nD_RSA!!}
 ```
 
 ------
+
+### chaos
+
+题目描述：
+
+> 看上去很复杂？
+
+附件`chaos.py`内容如下：
+
+```python
+import random
+import time
+from secret import flag
+
+def LC(key, x, times, flags):
+    (k1, k2) = key
+    xn = []
+    xn.append(x)
+    if flags:
+        xn.append(1 - 2 * xn[0]**2)
+    else:
+        xn.append(k2 * xn[0]**3 + (1 - k2)*xn[0])
+    for i in range(times):
+        assert xn[i]>=-1 and xn[i]<=1 and xn[i+1]>=-1 and xn[i+1]<=1
+        if flags:
+            xn.append((1 - 2 * xn[i]**2)*(k1 * xn[i+1]**3 + (1 - k1)*xn[i+1]))
+        else:
+            xn.append((k2 * xn[i]**3 + (1 - k2)*xn[i])*(1 - 2 * xn[i+1]**2))
+    return xn[times + 1]
+
+def init(): 
+    sum, r, k = 0, 1, []
+    k1 = random.uniform(3.2, 4) 
+    k2 = random.uniform(3.2, 4)
+    for i in range(16): 
+        k.append(random.randint(1,256)) 
+        sum += k[-1]
+        r ^= k[-1]  
+    a_1 = (sum/256) % 1 
+    timea1 = 3 + int(1000 * a_1) % 30
+    b_1 = (r/256)
+    timeb1 = 3 + int(1000 * b_1) % 30
+    xc_1 = a_1 * b_1
+    yc_1 = (a_1 + b_1) % 1
+    print('k1, k2 = %r, %r'%(k1, k2))
+    print('k = %r'%k)
+    return (k1, k2), (a_1, timea1, b_1, timeb1, xc_1, yc_1)
+
+def encrypt(key, data, flag):
+    (k1, k2) = key
+    (a_1, timea1, b_1, timeb1, xc_1, yc_1) = data
+    flag = list(flag)
+    m, c = [], []
+    miu, omiga = [], []
+    ta = timea1
+    tb = timeb1
+    for tmp in flag:
+        mi = ord(tmp)
+        miu.append(LC(key, a_1, ta, 1))
+        omiga.append(LC(key, b_1, tb, 0))
+        c.append(((int(miu[-1] * 1000) + int(omiga[-1] * 1000)) ^ mi) % 256)
+        delta = c[-1]/256
+        for i in range(3):
+            y = (yc_1 + delta) % 1
+            y = k1 * y**3 + (1 - k1) * y
+            x = xc_1
+            x = k2 * x**3 + (1 - k2) * x
+        ta = 3 + int(1000 * x) % 30
+        tb = 3 + int(1000 * y) % 30
+    print('c = %r'%(c))
+    return c
+
+if __name__=="__main__":
+    # print(flag)
+    key, data = init()
+    c = encrypt(key, data, flag)
+
+'''
+k1, k2 = 3.967139695598587, 3.7926025078694305                                           
+k = [107, 99, 55, 198, 210, 56, 137, 44, 127, 25, 150, 113, 75, 215, 187, 132]           
+c = [23, 84, 105, 111, 230, 105, 97, 50, 58, 61, 25, 97, 57, 21, 175, 77, 102, 138, 120, 17, 66, 172, 52, 178, 101, 221, 109, 126, 71, 149, 63, 32, 56, 6, 134, 255, 110, 57, 15, 20, 116]
+'''
+```
+
+编写`Python`代码求解可得`flag{ii24nji9-8ckkpil1-5hiev3n6-1u24g07m}`。
+
+```python
+import random
+import time
+#from secret import flag
+
+def LC(key, x, times, flags):
+    (k1, k2) = key
+    xn = []
+    xn.append(x)
+    if flags:
+        xn.append(1 - 2 * xn[0]**2)
+    else:
+        xn.append(k2 * xn[0]**3 + (1 - k2)*xn[0])
+    for i in range(times):
+        assert xn[i]>=-1 and xn[i]<=1 and xn[i+1]>=-1 and xn[i+1]<=1
+        if flags:
+            xn.append((1 - 2 * xn[i]**2)*(k1 * xn[i+1]**3 + (1 - k1)*xn[i+1]))
+        else:
+            xn.append((k2 * xn[i]**3 + (1 - k2)*xn[i])*(1 - 2 * xn[i+1]**2))
+    return xn[times + 1]
+
+def init(): 
+    sum, r, k = 0, 1, []
+    #k1 = random.uniform(3.2, 4) 
+    #k2 = random.uniform(3.2, 4)
+    k1, k2 = 3.967139695598587, 3.7926025078694305                                           
+    k = [107, 99, 55, 198, 210, 56, 137, 44, 127, 25, 150, 113, 75, 215, 187, 132]           
+
+    for i in range(16): 
+        #k.append(random.randint(1,256)) 
+        sum += k[i]
+        r ^= k[i]  
+    a_1 = (sum/256) % 1 
+    timea1 = 3 + int(1000 * a_1) % 30
+    b_1 = (r/256)
+    timeb1 = 3 + int(1000 * b_1) % 30
+    xc_1 = a_1 * b_1
+    yc_1 = (a_1 + b_1) % 1
+    print('k1, k2 = %r, %r'%(k1, k2))
+    print('k = %r'%k)
+    return (k1, k2), (a_1, timea1, b_1, timeb1, xc_1, yc_1)
+
+def decrypt(key, data):
+                                            
+    #k = [107, 99, 55, 198, 210, 56, 137, 44, 127, 25, 150, 113, 75, 215, 187, 132]           
+    c = [23, 84, 105, 111, 230, 105, 97, 50, 58, 61, 25, 97, 57, 21, 175, 77, 102, 138, 120, 17, 66, 172, 52, 178, 101, 221, 109, 126, 71, 149, 63, 32, 56, 6, 134, 255, 110, 57, 15, 20, 116]
+
+    (k1, k2)=key
+    (a_1, timea1, b_1, timeb1, xc_1, yc_1) = data
+    #flag = list(flag)
+    
+    miu, omiga = [], []
+    ta = timea1
+    tb = timeb1
+    m=''
+    for tmp in c:
+        #mi = ord(tmp)
+        miu.append(LC(key, a_1, ta, 1))
+        omiga.append(LC(key, b_1, tb, 0))
+        #c.append(((int(miu[-1] * 1000) + int(omiga[-1] * 1000)) ^ mi) % 256)
+        
+        m+=(chr(tmp^((int(miu[-1] * 1000) + int(omiga[-1] * 1000)))%256))
+        delta = tmp/256
+        for i in range(3):
+            y = (yc_1 + delta) % 1
+            y = k1 * y**3 + (1 - k1) * y
+            x = xc_1
+            x = k2 * x**3 + (1 - k2) * x
+        ta = 3 + int(1000 * x) % 30
+        tb = 3 + int(1000 * y) % 30
+    print('m= %r'%(m))
+    return m
+
+if __name__=="__main__":
+    # print(flag)
+    (key, data)=init()
+    c = decrypt(key, data)
+
+'''
+k1, k2 = 3.967139695598587, 3.7926025078694305
+k = [107, 99, 55, 198, 210, 56, 137, 44, 127, 25, 150, 113, 75, 215, 187, 132]
+m= 'flag{ii24nji9-8ckkpil1-5hiev3n6-1u24g07m}'
+'''
+```
+
+------
+

