@@ -7907,3 +7907,79 @@ print(flag)      # flag{S0meth1ng_run_bef0re_main!}
 
 ------
 
+### Pyre
+
+下载 [**PyInstaller Extractor**](https://sourceforge.net/projects/pyinstallerextractor/files/dist/pyinstxtractor.py/download?use_mirror=udomain)后，运行以下命令行可生成`pyre.exe_extracted`文件夹，文件夹内包含二进制文件`pyre`和`struct`。
+
+```bash
+python pyinstxtractor.py pyre.exe
+```
+
+将`struct`头文件中起始的以下十六进制数值复制，插入到`pyre`的`E3`前面，另存为`pyre.pyc`。
+
+```
+330D0D0A7079693010010000
+```
+
+使用[**python-uncompyle6**](https://github.com/rocky/python-uncompyle6)来对`.pyc`文件进行反编译从而得到`.py`文件。
+
+```bash
+pip install uncompyle6
+uncompyle6 -o . pyre.pyc
+```
+
+打开反编译得到的`.py`文件可以看到以下`Python3`源码：
+
+```python
+# uncompyle6 version 3.7.4
+# Python bytecode 3.6 (3379)
+# Decompiled from: Python 3.8.8 (default, Apr 13 2021, 15:08:03) [MSC v.1916 64 bit (AMD64)]
+# Embedded file name: pyre.py
+# Compiled at: 1995-09-28 00:18:56
+# Size of source mod 2**32: 272 bytes
+flag = ''
+encode = 'REla{PSF!!fg}!Y_SN_1_0U'
+table = [7, 8, 1, 2, 4, 5, 13, 16, 20, 21, 0, 3, 22, 19, 6, 12, 11, 18, 9, 10, 15, 14, 17]
+
+def enc(input):
+    tmp = ''
+    for i in range(len(input)):
+        tmp += input[table[i]]
+
+    return tmp
+
+
+if __name__ == '__main__':
+    print('Please input your flag:')
+    flag = input()
+    if len(flag) != 23:
+        print('Length Wrong!!')
+    else:
+        final = enc(flag)
+        if final == encode:
+            print('Wow,you get the right flag!!')
+        else:
+            print('Sorry,Your input is Wrong')
+```
+
+编写`Python`代码求解得到`flag{PYRE_1S_S0_FUN!!!}`。
+
+```python
+encode = 'REla{PSF!!fg}!Y_SN_1_0U'
+table = [7, 8, 1, 2, 4, 5, 13, 16, 20, 21, 0, 3, 22, 19, 6, 12, 11, 18, 9, 10, 15, 14, 17]
+
+# encode = enc(flag)
+d = {}
+
+def dec(input):
+    tmp = ''
+    for i in range(len(input)):
+        d[table[i]] = encode[i]
+
+dec(encode)
+flag=''.join(d[i] for i in sorted(d))
+print(flag) # flag{PYRE_1S_S0_FUN!!!}
+```
+
+------
+

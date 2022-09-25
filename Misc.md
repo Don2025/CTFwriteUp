@@ -124,6 +124,42 @@ print(flag) # flag{70354300a5100ba78068805661b93a5c}
 
 ------
 
+### Yesec no drumsticks
+
+题目描述：
+
+> Yesec是个老涩逼（lsb），所以要给他扣鸡腿
+
+附件是`.png`，根据题目描述的提示，用`StegSolve`打开图片，进行`Data Extract`，`Bit Order`设置`LSB first`，`Bit Planes`勾选`Red 0`，`Green 0`，`Blue 0`，点击`Preview`预览，可以看到`flag{Yesec_1s_lsb}`，提交即可。
+
+------
+
+### qsdz's girlfriend
+
+题目描述：
+
+> 我失忆了，这是我在我桌面上发现的压缩包，可是我忘记了压缩包密码了...请问你能帮助我找到我女朋友的名字吗？flag格式为：flag{女朋友名字_女朋友生日}
+
+根据题目描述，压缩包的密码很可能是女朋友生日，生日作为密码，可能是`6`位，可能是`8`位，但一定是纯数字，设置好范围后，使用`Advanced Archive Password Recovery`暴力破解，得到密码`20031201`，解压缩后得到一张图片。
+
+![](https://paper.tanyaodan.com/BUUCTF/qsdz's_girlfriend/girlfriend.png)
+
+这是音乐游戏**Arcaea**里的光，`WinHex`打开图片可以在文件末尾看见隐藏信息：
+
+```
+TXkgZ2lybGZyaWVuZCdzIG5hbWUgaGFzIHNpeCBsZXR0ZXJzIGFuZCB0aGUgZmlyc3QgbGV0dGVyIGlzIGNhcGl0YWxpemVk
+```
+
+`base64`解码得到：
+
+```
+My girlfriend's name has six letters and the first letter is capitalized
+```
+
+他女朋友名字有六个字母且首字母大写。重新回到韵律源点这款音乐游戏，姓名为“光”的日文“ひかり”所对应的罗马音为“Hikari”。最终构造出`flag`为`flag{Hikari_20031201}`。
+
+------
+
 ### EzSnake
 
 题目描述：达到114分即可获得一个一个一个一个flag。题目附件给出一个`EzSnake.jar`文件，直接用[**jd-gui**](https://github.com/java-decompiler/jd-gui)或[**Luyten**](https://github.com/deathmarine/Luyten)这种`jar`包反编译工具打开`jar`包进行解码后，全部保存在文件夹`decompiled-EzSnake`中。用`IDEA`对`decompiled-EzSnake\top\woodwhale\snake\GamePanel.java`文件进行修改，把`114`改成一个很小的数字，比如`1`。重新编译运行项目，如果报错`java: 对Timer的引用不明确`的话，在`GamePanel`中添加以下代码即可：
@@ -156,6 +192,8 @@ print(flag) # flag{Y0u_4re_0ne_oNe_0nE_st4R}
 ```
 
 ------
+
+
 
 ## PwnTheBox
 
