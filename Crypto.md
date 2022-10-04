@@ -4798,7 +4798,7 @@ print(bytes(ciphertext))
 b"\xb1\x83\x82T\x10\x80\xc9O\x84\xc9<\x0f\xf2\x82\x9a\xc9\x9b8'\x9b<\xdb\x9b\x9b\x82\xc8\xe0V"
 ```
 
-`getPrime(8)`获取一个最大为`8`位的素数。这题考察的是放射加密，编写`Python`代码求解可得`flag{Kn0wn_p1aint3xt_4ttack}`。
+这题考察的是放射加密，`getPrime(8)`获取一个最大为`8`位的素数。编写`Python`代码求解可得`flag{Kn0wn_p1aint3xt_4ttack}`。
 
 ```python
 from Crypto.Util.number import *
@@ -4823,6 +4823,58 @@ for f in cipher_text:
     flag += chr((n1*f-n2)%256)
     
 print(flag) # flag{Kn0wn_p1aint3xt_4ttack}
+```
+
+------
+
+### unusual_base
+
+附件给出`unusal_base.py`和`output.txt`两个文件，其中`unusal_base.py`的源码如下：
+
+```python
+from secret import flag
+from Crypto.Util.number import *
+from random import shuffle
+from string import ascii_lowercase, ascii_uppercase, digits
+
+alphabet = ascii_uppercase + ascii_lowercase + digits +'$&'
+alphabet = list(alphabet)
+bits = ''
+pad_len = len(flag) % 3
+
+for f in flag:  
+    bits += bin(f)[2:].rjust(8,'0') # 不足8位用0填充
+bits += '0000'*pad_len
+encoded = ''
+shuffle(alphabet)  # 将字母表元素随机排序
+alphabet = "".join(alphabet)
+for i in range(0, len(bits), 6):  # 6位为一次,一共38次
+    encoded += alphabet[int(bits[i:i+6], 2)] # 从打乱的字母表中取字符
+encoded += '%'*pad_len
+print(f'encoded = "{encoded}"')
+print(f'alphabet = "{alphabet}"')
+```
+
+`output.txt`的内容如下：
+
+```python
+encoded = "GjN3G$B3de58ym&7wQh9dgVNGQhfG2hndsGjlOyEdaxRFY%"
+alphabet = "c5PKAQmgI&qSdyDZYCbOV2seXGloLwtFW3f9n7j481UMHBp6vNETRJa$rxuz0hik"
+```
+
+编写`Python`代码求解可得`flag{a1ph4bet_c0u1d_be_d1ffi3r3nt}`。
+
+```python
+encoded = "GjN3G$B3de58ym&7wQh9dgVNGQhfG2hndsGjlOyEdaxRFY"
+alphabet = "c5PKAQmgI&qSdyDZYCbOV2seXGloLwtFW3f9n7j481UMHBp6vNETRJa$rxuz0hik"
+bits = ''
+for i in encoded:
+    bits += bin(alphabet.index(i))[2:].rjust(6, '0')
+print(bits)
+flag = ''
+for i in range(0, len(bits), 8):
+    flag += chr(int(bits[i:i+8], 2))
+print(flag) # flag{a1ph4bet_c0u1d_be_d1ffi3r3nt}
 ```
 
 ------
