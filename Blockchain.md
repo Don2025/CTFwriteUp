@@ -56,7 +56,7 @@ Your goal is to make isSolved() function returns true!
 [+] transaction hash: 0xac761bf32b3e77209a1896c6e79888a68acb30f5879ff80734417dbe09af7807
 ```
 
-在[**Etherscan**](https://etherscan.io)中查找对应的交易，可以看到生成合约的地址。
+在[**Etherscan**](https://goerli.etherscan.io)中查找对应的交易，也可以看到生成合约的地址。
 
 ![](https://paper.tanyaodan.com/BUUCTF/Checkin/3.png)
 
@@ -105,9 +105,7 @@ contract Checkin {
 
 ![](https://paper.tanyaodan.com/BUUCTF/Checkin/7.png)
 
-
-
-在[**Etherscan**](https://etherscan.io)中可以查找对应的交易，`Click to see More`可以看到`setGreeting(string _greeting)`函数已经被触发啦。
+在[**Etherscan**](https://goerli.etherscan.io/tx/0xf5d58c603a70d6778617c4932f8ae8d76814bf77d5d4aa4d66054f1f1aa6cec5)中查看本次交易，`Click to see More`可以看到`setGreeting(string _greeting)`函数已经被触发啦。
 
 ![](https://paper.tanyaodan.com/BUUCTF/Checkin/8.png)
 
@@ -126,6 +124,87 @@ Your goal is to make isSolved() function returns true!
 [-] input your choice: 3
 [-] input your token: v4.local.F1GNQXmK8Za2LJYV3jSOtZFNHumsNOvHV6HdLiErWMRQ7PnBNDRkaLIlRBD3njfYP2K3R4hORUpFRYR134vDTs6Oz0FjRp04Lq7qRpfq10A3-cUF-LiBJuktZHU4ADHd5lxz9oAk51SkEovATNdCn0ylh0uhTawW4wZBb3XGXo47oQ
 [+] flag: flag{Ea2y_B1ockChain_Ch3ckin}
+```
+
+------
+
+### Guess Number
+
+题目描述如下：
+
+> 猜猜数字是什么？
+>
+> 0x168d2A47c58ae63ea2a2A4c622259c84086f791D@Goerli 
+>
+> nc 124.221.212.109 10001
+
+`nc`链接靶机，选择`2`选项查看合约代码，审计代码后发现通过`guess`函数赋值使得`guess_number = number`即可触发`isSolved()`函数解决问题。
+
+```solidity
+pragma solidity ^0.4.23;
+
+contract guessnumber {
+    mapping(address => uint) private answer;
+    address owner;
+    uint number;
+    
+    constructor()public{
+        owner = msg.sender;
+    }
+
+    event isSolved();
+
+    modifier onlyOwner(){
+        require(msg.sender == owner);
+        _;
+    }
+
+    function set_number(uint new_number) public onlyOwner{
+        number=new_number;
+    }
+
+    function guess(uint guess_number) public {
+        answer[msg.sender]=guess_number;
+        if(answer[msg.sender]==number){
+            emit isSolved();
+        }
+    }
+}
+```
+
+我们在`Remix`中新建一个`GuessNumber.sol`文件，粘贴选项`2`中给出的合约代码后，点击`Compile GuessNumber.sol`进行编译。
+
+![](https://paper.tanyaodan.com/BUUCTF/GuessNumber/1.png)
+
+由于题目给出的是一个固定地址，可以在[**Etherscan**](https://goerli.etherscan.io/address/0x168d2a47c58ae63ea2a2a4c622259c84086f791d)中看到该地址的交易信息，随意访问一个`Method`为`Guess`的`Txn Hash`，可以看到它是一个交互成功且存在`Logs`项的交易（`Logs`项说明这笔交易触发了事件）。在`Input Data`中可以看到`uint256`型变量`_guess`被赋值为`7810111911511697114678470`。用`Metamask`连接`Remix`后在`At Address`处输入题目描述中的合约地址后点击`At Address`。
+
+![](https://paper.tanyaodan.com/BUUCTF/GuessNumber/2.png)
+
+在`Deployed Contracts`的`guess`中给`guess_number`赋值为`"7810111911511697114678470"`，并点击`transact`进行交易。
+
+![](https://paper.tanyaodan.com/BUUCTF/GuessNumber/3.png)
+
+在`Metamask`中核实交易地址后确认交易，即可与合约地址进行交互。
+
+![](https://paper.tanyaodan.com/BUUCTF/GuessNumber/4.png)
+
+在[**Etherscan**](https://goerli.etherscan.io/tx/0x45c2b7ee162fb3046ef5ec3c813ea9bb3a93f370d2d7d70c5e6ec91f4435891d)中可以查看到本次交易已经触发了`isSolved`事件，复制`Transaction Hash`。
+
+![](https://paper.tanyaodan.com/BUUCTF/GuessNumber/5.png)
+
+交易完成后，选择`1`选项，输入`tx hash`即可拿到`flag{Wh4t_1s_th3_numb3r}`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf]
+└─$ nc 124.221.212.109 10001
+Just guess the secret number!
+Get the flag after isSolved event is emitted！
+
+[1] - Get your flag once you meet the requirement
+[2] - Show the contract source code
+[-] input your choice: 1
+[-] input tx hash that emitted isSolved event: 0x45c2b7ee162fb3046ef5ec3c813ea9bb3a93f370d2d7d70c5e6ec91f4435891d
+[+] flag: flag{Wh4t_1s_th3_numb3r}
 ```
 
 ------
