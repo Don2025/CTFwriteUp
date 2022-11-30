@@ -1004,6 +1004,56 @@ We, therefore, the Representatives of the united States of America, in General C
 
 ------
 
+### [Caesar](https://ce.pwnthebox.com/challenges?id=83)
+
+附件解压缩后得到`.py`文件，源码如下：
+
+```python
+import hashlib
+
+def change(key, str):
+    result = ""
+    for i in str:
+        if ord(i) >= 97 and ord(i) <= 122:
+            result += chr(97+(ord(i)+key) % 26)
+        else:
+            result += i
+    return result
+
+
+key = *
+str1 = "********************************"
+str2 = change(key, str1)  # zab81501z9740b67dc0by8z15093a426
+flag = hashlib.md5(str1).hexdigest()
+print(flag[10:16]）  # aebc0a
+```
+
+编写`Python`代码求解得到`flag{8f36ba62b0aebc0ae2a9c7abea36f7ef}`。
+
+```python
+import hashlib
+
+def change(key, str):
+    result = ""
+    for i in str:
+        if ord(i) >= 97 and ord(i) <= 122:
+            result += chr(97+(ord(i)+key) % 26)
+        else:
+            result += i
+    return result
+
+
+str2 = 'zab81501z9740b67dc0by8z15093a426'
+for key in range(1,26):
+    str1 = change(key, str2)
+    flag = hashlib.md5(str1.encode()).hexdigest()
+    if flag[10:16] == 'aebc0a':
+        print(f'flag{{{flag}}}')
+        break
+```
+
+------
+
 ### [BabyRSA](https://ce.pwnthebox.com/challenges?id=314)
 
 ```python
