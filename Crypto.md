@@ -3538,6 +3538,45 @@ print(flag) # flag{13212je2ue28fy71w8u87y31r78eu1e2}
 
 ------
 
+### [[WUSTCTF2020]babyrsa](https://buuoj.cn/challenges#[WUSTCTF2020]babyrsa)
+
+附件内容如下：
+
+```
+c = 28767758880940662779934612526152562406674613203406706867456395986985664083182
+n = 73069886771625642807435783661014062604264768481735145873508846925735521695159
+e = 65537
+```
+
+调用`requests`库在线请求 http://factordb.com 分解模数`n`，得到`p`和`q`，算出 `φ(n) = (p-1)(q-1)`，进而得到私钥的解密质数`d`。
+
+编写`Python`代码求解，得到`wctf2020{just_@_piece_0f_cak3}`，提交错误，提交`flag{just_@_piece_0f_cak3}`通过。
+
+```python
+import requests
+from libnum import *
+
+def factorize(n):
+    l = []
+    url="http://factordb.com/api?query="+str(n)
+    r = requests.get(url)
+    data = r.json()
+    for factor in data['factors']:
+        l.append(int(factor[0]))
+    return l
+
+c = 28767758880940662779934612526152562406674613203406706867456395986985664083182
+n = 73069886771625642807435783661014062604264768481735145873508846925735521695159
+e = 65537
+q, p = factorize(n)
+d = invmod(e, (p-1)*(q-1))
+m = pow(c, d, n)
+flag = n2s(m).decode()
+print(flag)  # wctf2020{just_@_piece_0f_cak3}
+```
+
+------
+
 ### [[GUET-CTF2019]BabyRSA](https://buuoj.cn/challenges#[GUET-CTF2019]BabyRSA)
 
 附件内容如下：
