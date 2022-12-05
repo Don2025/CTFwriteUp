@@ -5099,6 +5099,73 @@ print(flag) # NCTF{Th3r3_ar3_1ns3cure_RSA_m0duli_7hat_at_f1rst_gl4nce_appe4r_t0_
 
 ------
 
+### [[HDCTF2019]bbbbbbrsa](https://buuoj.cn/challenges#[HDCTF2019]bbbbbbrsa)
+
+附件解压缩后得到`encode.py`和`enc`，`encode.py`源码如下，写的真不敢恭维呐：
+
+```python
+from base64 import b64encode as b32encode
+from gmpy2 import invert,gcd,iroot
+from Crypto.Util.number import *
+from binascii import a2b_hex,b2a_hex
+import random
+
+flag = "******************************"
+nbit = 128
+p = getPrime(nbit)
+q = getPrime(nbit)
+n = p*q
+print p
+print n
+
+phi = (p-1)*(q-1)
+e = random.randint(50000,70000)
+
+while True:
+    if gcd(e,phi) == 1:
+        break;
+    else:
+        e -= 1;
+
+c = pow(int(b2a_hex(flag),16),e,n)
+print b32encode(str(c))[::-1]
+# 2373740699529364991763589324200093466206785561836101840381622237225512234632
+```
+
+`enc`内容如下：
+
+```
+p = 177077389675257695042507998165006460849
+n = 37421829509887796274897162249367329400988647145613325367337968063341372726061
+c = ==gMzYDNzIjMxUTNyIzNzIjMyYTM4MDM0gTMwEjNzgTM2UTN4cjNwIjN2QzM5ADMwIDNyMTO4UzM2cTM5kDN2MTOyUTO5YDM0czM3MjM
+```
+
+显然，`c`是`base64`加密后倒序的字符串，`q`可以根据`p`和`n`得到，`e`给定了一个可爆破的范围，编写`Python`代码求解得到`flag{rs4_1s_s1mpl3!#}`。
+
+```python
+from libnum import *
+from base64 import b64decode
+
+p = 177077389675257695042507998165006460849
+n = 37421829509887796274897162249367329400988647145613325367337968063341372726061
+c = '==gMzYDNzIjMxUTNyIzNzIjMyYTM4MDM0gTMwEjNzgTM2UTN4cjNwIjN2QzM5ADMwIDNyMTO4UzM2cTM5kDN2MTOyUTO5YDM0czM3MjM'
+q = n//p
+c = int(b64decode(c[::-1]))
+# c = 2373740699529364991763589324200093466206785561836101840381622237225512234632
+phi = (p-1)*(q-1)
+for e in range(50000, 70000):
+    if gcd(e, phi) == 1:
+        d = invmod(e, phi)
+        m = pow(c, d, n)
+        if b'flag' in n2s(m):
+            print('e = ', e) # e =  51527
+            flag = n2s(m).decode()
+            print(flag) # flag{rs4_1s_s1mpl3!#}
+            break
+```
+
+------
+
 ## Real
 
 ### DASCTF2022_RSA
