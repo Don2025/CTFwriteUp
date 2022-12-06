@@ -5978,7 +5978,7 @@ print(flag) # flag{wm-CongrAtu1ation4-1t4-ju4t-A-bAby-R4A}
 
 ------
 
-### [[RoarCTF2019]RSA](https://buuoj.cn/challenges#[RoarCTF2019]RSA)
+### ❤[[RoarCTF2019]RSA](https://buuoj.cn/challenges#[RoarCTF2019]RSA)
 
 附件解压缩后内容如下：
 
@@ -6030,6 +6030,96 @@ while True:
 
 print("e = {}, flag: {}".format(e,flag))
 # e = 65537, flag: RoarCTF{wm-l1l1ll1l1l1l111ll}
+```
+
+------
+
+### [ACTF新生赛2020]crypto-classic0
+
+附件解压缩后得到`howtoencrypt.zip`，`cipher`和`hint.txt`，其中`hint.txt`内容如下：
+
+> 哼，压缩包的密码？这是小Z童鞋的生日吧==
+
+根据`hint.txt`得知密码是小Z同学的生日，小Z是谁并不重要，重点是密码是`6`或`8`位纯数字，爆破压缩包得到密码是`19990306`。
+
+`cipher`内容如下：
+
+```
+Ygvd<0x7f>mq[lYate[elghqvakl}
+```
+
+`classic0.c`源码如下：
+
+```c
+#include<stdio.h>
+
+char flag[25] = ***
+
+int main()
+{
+    int i;
+    for(i=0;i<25;i++)
+    {
+        flag[i] -= 3;
+        flag[i] ^= 0x7;
+        printf("%c",flag[i]);
+    }
+    return 0; 
+}
+```
+
+编写`Python`代码求解得到`actf{my_naive_encrytion}`，提交`flag{my_naive_encrytion}`：
+
+```python
+cipher = 'Ygvd\x7fmq[lYate[elghqvakl}'
+flag=''
+for c in cipher:
+    t = ord(c)^0x7
+    t += 3
+    flag += chr(t)
+
+print(flag) # actf{my_naive_encrytion}
+```
+
+------
+
+### [[网鼎杯 2020 青龙组]you_raise_me_up](https://buuoj.cn/challenges#[%E7%BD%91%E9%BC%8E%E6%9D%AF%202020%20%E9%9D%92%E9%BE%99%E7%BB%84]you_raise_me_up)
+
+附件解压缩后得到`you_raise_me_up.py`，源码如下：
+
+```python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from Crypto.Util.number import *
+import random
+
+n = 2 ** 512
+m = random.randint(2, n-1) | 1
+c = pow(m, bytes_to_long(flag), n)
+print 'm = ' + str(m)
+print 'c = ' + str(c)
+
+# m = 391190709124527428959489662565274039318305952172936859403855079581402770986890308469084735451207885386318986881041563704825943945069343345307381099559075
+# c = 6665851394203214245856789450723658632520816791621796775909766895233000234023642878786025644953797995373211308485605397024123180085924117610802485972584499
+```
+
+已知`c`，`m`，`n`，求离散对数。
+
+> $\Large{c = m^{bytes\_to\_long(flag)}modn}$
+>
+> $\Large{bytes\_to\_long(flag) =\log_{(m\ mod\ n)}{(c\ mod \ n)}}$
+
+用`sage`库的`discrete_log()`函数求解就完事啦。编写`Python`代码求解得到`flag{5f95ca93-1594-762d-ed0b-a9139692cb4a}`。
+
+```python
+from sage.all import *
+from Crypto.Util.number import long_to_bytes
+
+n = 2 ** 512
+m = 391190709124527428959489662565274039318305952172936859403855079581402770986890308469084735451207885386318986881041563704825943945069343345307381099559075
+c = 6665851394203214245856789450723658632520816791621796775909766895233000234023642878786025644953797995373211308485605397024123180085924117610802485972584499
+flag = long_to_bytes(discrete_log(c,mod(m,n))).decode()
+print(flag) # flag{5f95ca93-1594-762d-ed0b-a9139692cb4a}
 ```
 
 ------
