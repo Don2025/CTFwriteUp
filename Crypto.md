@@ -6906,6 +6906,55 @@ print(flag)   # wctf2020{dp_leaking_1s_very_d@angerous}
 
 ------
 
+### [[ACTF新生赛2020]crypto-aes](https://buuoj.cn/challenges#[ACTF%E6%96%B0%E7%94%9F%E8%B5%9B2020]crypto-aes)
+
+附件解压缩后得到`aes.py`和`output`，其中`aes.py`源码如下：
+
+```python
+from Cryptodome.Cipher import AES
+import os
+import gmpy2
+from flag import FLAG
+from Cryptodome.Util.number import *
+
+def main():
+    key=os.urandom(2)*16
+    iv=os.urandom(16)
+    print(bytes_to_long(key)^bytes_to_long(iv))
+    aes=AES.new(key,AES.MODE_CBC,iv)
+    enc_flag = aes.encrypt(FLAG)
+    print(enc_flag)
+    
+if __name__=="__main__":
+    main()
+```
+
+`output`内容如下：
+
+```python
+91144196586662942563895769614300232343026691029427747065707381728622849079757
+b'\x8c-\xcd\xde\xa7\xe9\x7f.b\x8aKs\xf1\xba\xc75\xc4d\x13\x07\xac\xa4&\xd6\x91\xfe\xf3\x14\x10|\xf8p'
+```
+
+`os.urandom(n)`函数返回`n`个随机字节，`os.urandom(n)*k`函数返回`k`个随机的`n`字节，因此`key`是由`16`个重复的随机`2`字节组成的。而偏移量`iv`是`16`字节，当`key`和`iv`两者异或操作时，实际上只有低`16`位进行了异或，高`16`位依然是`key`原来的高`16`位，而`key`又是由重复的两字节组成，所以可以推出`key`的全部字节。算出`key`后再对`iv`和`key`的异或结果进行异或，就可以得到`iv`。得到`key`和`iv`后再`import AES`继续求解（`mode`是`CBC`）。编写`Python`代码求解得到`flag{W0W_y0u_can_so1v3_AES_now!}`。
+
+```python
+from Crypto.Util.number import *
+from Crypto.Cipher import AES
+from pwn import xor
+
+iv_key = 91144196586662942563895769614300232343026691029427747065707381728622849079757
+cipher = b'\x8c-\xcd\xde\xa7\xe9\x7f.b\x8aKs\xf1\xba\xc75\xc4d\x13\x07\xac\xa4&\xd6\x91\xfe\xf3\x14\x10|\xf8p'
+iv_key = long_to_bytes(iv_key)
+key = iv_key[:16]*2
+iv = xor(iv_key, key)[16:]
+aes = AES.new(key, AES.MODE_CBC, iv)
+flag = aes.decrypt(cipher).decode()
+print(flag) # actf{W0W_y0u_can_so1v3_AES_now!}
+```
+
+------
+
 ## Real
 
 ### DASCTF2022_RSA
