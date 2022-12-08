@@ -7117,6 +7117,57 @@ print(flag) # INSA{(I)NSA_W0uld_bE_pr0uD}
 
 ------
 
+### [[b01lers2020]safety_in_numbers](https://buuoj.cn/challenges#[b01lers2020]safety_in_numbers)
+
+附件解压缩后得到`pubkey.pem`，`flag.enc`，`enc.py`，其中`enc.py`源码如下：
+
+```python
+import sys
+import Crypto.PublicKey.RSA as RSA
+
+def enc(msg, pubkey):
+   (n,e) = pubkey
+   m = int.from_bytes(msg, byteorder = 'little')
+   c = pow(m, e, n)
+   ctxt = (c).to_bytes(c.bit_length() // 8 + 1, byteorder = 'little')
+   return ctxt
+
+
+with open("pubkey.pem", "r") as f:
+   ciph = RSA.importKey(f.read())     # chill out, Crypto.RSA takes its sweet time... (minutes)
+
+pubkey = (ciph.n, ciph.e)
+
+with open("flag.txt", "rb") as f:
+   flag = f.read()
+
+sys.stdout.buffer.write(enc(flag, pubkey))
+```
+
+`c`和`m`的转化过程中，都有`byteorder='little'`，也就是小端存储，最后的`flag`需要倒序才能得到。`Python`求解过程中，`n`迟迟算不出，我懒得等了，拿了`e = 0x10001`就行，因为`n`很大且`e`很小，根据$\large{c=m^e\ mod\ n}$，且$\large{m^e<<<n}$，所以对`c`开`e`次方就能得到`m`。编写`Python`代码求解得到`pctf{!fUtuR3_pR00f}`，提交`flag{!fUtuR3_pR00f}`即可。
+
+```python
+import rsa
+from gmpy2 import iroot
+from Crypto.Util.number import long_to_bytes
+
+with open('pubkey.pem', 'rb') as f:
+    pubkey = rsa.PublicKey.load_pkcs1_openssl_pem(f.read())
+
+# n = pubkey.n
+e = pubkey.e
+# e = 65537
+with open('flag.enc', 'rb') as f:
+   cipher = f.read()
+
+c = int.from_bytes(cipher, byteorder='little')
+m = iroot(c, e)[0]
+flag = long_to_bytes(m)[::-1]
+print(flag.decode())  # pctf{!fUtuR3_pR00f}
+```
+
+------
+
 ## Real
 
 ### DASCTF2022_RSA
