@@ -7089,6 +7089,34 @@ print(flag) # ACTF{WHAT_A_CLASSICAL_VIGENERE}
 
 ------
 
+### [[INSHack2017]rsa16m](https://buuoj.cn/challenges#[INSHack2017]rsa16m)
+
+附件解压缩后，`rsa_16m`中给定了`n`，`c`和`e`，`description.md`内容如下：
+
+> #### Challenge description:
+>
+> When you need really secure communications, you use RSA with a 4096 bit key. <br>
+> I want really really really secure communications to transmit the nuclear launch codes (yeah IoT is everywhere man) so I used RSA with a 16777216 bit key. Surely russians will not be able to factor that one ! <br>
+> File md5 : 1049a0c83a2e34760363b4ad9778753f
+
+`rsa_16m`中给出的`n`和`c`很大，但`e`很小。根据$\large{c=m^e\ mod\ n}$，且$\large{m^e<<<n}$，`c`很可能就是`m`的`e`次方，所以对`c`开`e`次方就能得到`m`。编写`Python`代码求解得到`INSA{(I)NSA_W0uld_bE_pr0uD}`，提交`flag{(I)NSA_W0uld_bE_pr0uD}`即可。
+
+```python
+from gmpy2 import iroot
+from libnum import n2s
+
+with open('rsa_16m', 'r') as f:
+    data = f.read().split('\n')
+
+c = int(data[1][4:], 16)
+e = int(data[2][4:], 16)
+m = int(iroot(c, e)[0])
+flag = n2s(m).decode()
+print(flag) # INSA{(I)NSA_W0uld_bE_pr0uD}
+```
+
+------
+
 ## Real
 
 ### DASCTF2022_RSA
