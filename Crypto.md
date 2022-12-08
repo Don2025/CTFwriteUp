@@ -7055,6 +7055,40 @@ print(flag)   # flag{23re_SDxF_y78hu_5rFgS}
 
 ------
 
+### [[ACTF新生赛2020]crypto-classic1](https://buuoj.cn/challenges#[ACTF%E6%96%B0%E7%94%9F%E8%B5%9B2020]crypto-classic1)
+
+附件解压缩后得到`hint.txt`和`vigenere.zip`，先来看`hint.txt`内容如下：
+
+```
+哇，这里有压缩包的密码哦，于是我低下了头，看向了我的双手，试图从中找到某些规律
+xdfv ujko98 edft54 xdfv pok,.; wsdr43
+```
+
+举头望屏幕，低头看键盘。将上述字符串包围的字符进行拼接得到`circle`。解压后得到：
+
+```
+SRLU{LZPL_S_UASHKXUPD_NXYTFTJT}
+```
+
+编写`Python`代码进行维吉尼亚密码解密，最后提交`flag{what_a_classical_vigenere}`即可。
+
+```python
+s = 'SRLU{LZPL_S_UASHKXUPD_NXYTFTJT}'
+m = 'ACTF{'
+l = []
+for i in range(4):
+    l.append(str(ord(s[i])-ord(m[i])))
+flag = m
+for i in range(5,len(s)):
+    if s[i].isupper():
+        flag += chr((ord(s[i])-int(l[i%4])-ord('A'))%26+ord('A'))
+    else:
+        flag += s[i]
+print(flag) # ACTF{WHAT_A_CLASSICAL_VIGENERE}
+```
+
+------
+
 ## Real
 
 ### DASCTF2022_RSA
