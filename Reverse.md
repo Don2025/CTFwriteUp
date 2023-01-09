@@ -7983,3 +7983,145 @@ print(flag) # flag{PYRE_1S_S0_FUN!!!}
 
 ------
 
+### [[GUET-CTF2019]re](https://buuoj.cn/challenges#[GUET-CTF2019]re)
+
+下载附件`re`后查看文件详情，`upx`去壳得到新的`re`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/reverse/buuctf]
+└─$ file ./re            
+./re: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, no section header
+                                                                                                          
+┌──(tyd㉿kali-linux)-[~/ctf/reverse/buuctf]
+└─$ upx -d ./re  
+                       Ultimate Packer for eXecutables
+                          Copyright (C) 1996 - 2020
+UPX 3.96        Markus Oberhumer, Laszlo Molnar & John Reiser   Jan 23rd 2020
+
+        File size         Ratio      Format      Name
+   --------------------   ------   -----------   -----------
+    840640 <-    304524   36.23%   linux/amd64   re
+
+Unpacked 1 file.
+                                                                                                          
+┌──(tyd㉿kali-linux)-[~/ctf/reverse/buuctf]
+└─$ file ./re  
+./re: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.32, BuildID[sha1]=8e1dab1c17003eb8d1339fb1fdedf0d2216e1d0b, stripped
+```
+
+用`IDA Pro 64bit`打开去壳后的`re`，`shift+F12`看到`input your flag:`，定位到相应代码。
+
+```c
+__int64 __fastcall sub_400E28(__int64 a1, int a2, int a3, int a4, int a5, int a6)
+{
+  int v6; // edx
+  int v7; // ecx
+  int v8; // er8
+  int v9; // er9
+  __int64 result; // rax
+  __int64 v11; // [rsp+0h] [rbp-30h] BYREF    // char[32] key
+  unsigned __int64 v12; // [rsp+28h] [rbp-8h]
+
+  v12 = __readfsqword(0x28u);
+  sub_40F950((unsigned int)"input your flag:", a2, a3, a4, a5, a6, 0LL, 0LL, 0LL, 0LL);  // printf
+  sub_40FA80((unsigned int)"%s", (unsigned int)&v11, v6, v7, v8, v9, v11);  // scanf
+  if ( (unsigned int)sub_4009AE(&v11) )
+    sub_410350("Correct!");
+  else
+    sub_410350("Wrong!");
+  result = 0LL;
+  if ( __readfsqword(0x28u) != v12 )
+    sub_443550();
+  return result;
+}
+```
+
+双击`sub_4009AE()`函数查看详情：
+
+```c
+_BOOL8 __fastcall sub_4009AE(char *a1)
+{
+  if ( 1629056 * *a1 != 166163712 )
+    return 0LL;
+  if ( 6771600 * a1[1] != 731332800 )
+    return 0LL;
+  if ( 3682944 * a1[2] != 357245568 )
+    return 0LL;
+  if ( 10431000 * a1[3] != 1074393000 )
+    return 0LL;
+  if ( 3977328 * a1[4] != 489211344 )
+    return 0LL;
+  if ( 5138336 * a1[5] != 518971936 )
+    return 0LL;
+  if ( 7532250 * a1[7] != 406741500 )
+    return 0LL;
+  if ( 5551632 * a1[8] != 294236496 )
+    return 0LL;
+  if ( 3409728 * a1[9] != 177305856 )
+    return 0LL;
+  if ( 13013670 * a1[10] != 650683500 )
+    return 0LL;
+  if ( 6088797 * a1[11] != 298351053 )
+    return 0LL;
+  if ( 7884663 * a1[12] != 386348487 )
+    return 0LL;
+  if ( 8944053 * a1[13] != 438258597 )
+    return 0LL;
+  if ( 5198490 * a1[14] != 249527520 )
+    return 0LL;
+  if ( 4544518 * a1[15] != 445362764 )
+    return 0LL;
+  if ( 3645600 * a1[17] != 174988800 )
+    return 0LL;
+  if ( 10115280 * a1[16] != 981182160 )
+    return 0LL;
+  if ( 9667504 * a1[18] != 493042704 )
+    return 0LL;
+  if ( 5364450 * a1[19] != 257493600 )
+    return 0LL;
+  if ( 13464540 * a1[20] != 767478780 )
+    return 0LL;
+  if ( 5488432 * a1[21] != 312840624 )
+    return 0LL;
+  if ( 14479500 * a1[22] != 1404511500 )
+    return 0LL;
+  if ( 6451830 * a1[23] != 316139670 )
+    return 0LL;
+  if ( 6252576 * a1[24] != 619005024 )
+    return 0LL;
+  if ( 7763364 * a1[25] != 372641472 )
+    return 0LL;
+  if ( 7327320 * a1[26] != 373693320 )
+    return 0LL;
+  if ( 8741520 * a1[27] != 498266640 )
+    return 0LL;
+  if ( 8871876 * a1[28] != 452465676 )
+    return 0LL;
+  if ( 4086720 * a1[29] != 208422720 )
+    return 0LL;
+  if ( 9374400 * a1[30] == 515592000 )
+    return 5759124 * a1[31] == 719890500;
+  return 0LL;
+}
+```
+
+编写`Python`代码求解得到`flag`：`flag{e165421110ba03099a1c039337}`。
+
+```python
+a = [166163712, 731332800, 357245568, 1074393000, 489211344, 518971936, 406741500, 294236496, 177305856, 650683500,
+     298351053, 386348487, 438258597, 249527520, 445362764, 981182160, 174988800, 493042704, 257493600,
+     767478780, 312840624, 1404511500, 316139670, 619005024, 372641472, 373693320, 498266640, 452465676,
+     208422720, 515592000, 719890500]
+b = [1629056, 6771600, 3682944, 10431000, 3977328, 5138336, 7532250, 5551632, 3409728, 13013670, 6088797,
+     7884663, 8944053, 5198490, 4544518, 10115280, 3645600, 9667504, 5364450, 13464540, 5488432, 14479500,
+     6451830, 6252576, 7763364, 7327320, 8741520, 8871876, 4086720, 9374400, 5759124]
+z = [chr((int(a[i]/b[i]))) for i in range(len(a))]
+for i in range(10): # 少了第6位 用数字爆破
+     s = z[:]
+     s.insert(6, str(i))
+     print(''.join(s))
+# flag{e165421110ba03099a1c039337}
+```
+
+------
+
