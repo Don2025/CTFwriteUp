@@ -7748,6 +7748,129 @@ s = s.replace('.', 'a').replace('-', 'b').replace('–','b')
 
 ------
 
+### [[watevrCTF 2019]ECC-RSA](https://buuoj.cn/challenges#[watevrCTF%202019]ECC-RSA)
+
+附件解压缩后得到的`ecc-rsa.py`源码如下：
+
+```python
+from fastecdsa.curve import P521 as Curve
+from fastecdsa.point import Point
+from Crypto.Util.number import bytes_to_long, isPrime
+from os import urandom
+from random import getrandbits
+
+def gen_rsa_primes(G):
+    urand = bytes_to_long(urandom(521//8))
+    while True:
+        s = getrandbits(521) ^ urand
+
+        Q = s*G
+        if isPrime(Q.x) and isPrime(Q.y):
+            print("ECC Private key:", hex(s))
+            print("RSA primes:", hex(Q.x), hex(Q.y))
+            print("Modulo:", hex(Q.x * Q.y))
+            return (Q.x, Q.y)
+
+
+flag = int.from_bytes(input(), byteorder="big")
+
+ecc_p = Curve.p
+a = Curve.a
+b = Curve.b
+
+Gx = Curve.gx
+Gy = Curve.gy
+G = Point(Gx, Gy, curve=Curve)
+
+e = 0x10001
+p, q = gen_rsa_primes(G)
+n = p*q
+
+file_out = open("downloads/ecc-rsa.txt", "w")
+
+file_out.write("ECC Curve Prime: " + hex(ecc_p) + "\n")
+file_out.write("Curve a: " + hex(a) + "\n")
+file_out.write("Curve b: " + hex(b) + "\n")
+file_out.write("Gx: " + hex(Gx) + "\n")
+file_out.write("Gy: " + hex(Gy) + "\n")
+file_out.write("e: " + hex(e) + "\n")
+file_out.write("p * q: " + hex(n) + "\n")
+
+c = pow(flag, e, n)
+file_out.write("ciphertext: " + hex(c) + "\n")
+```
+
+再来看`ecc-rsa.txt`中的内容：
+
+```python
+ECC Curve Prime: 0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+Curve a: -0x3
+Curve b: 0x51953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489918ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1ef451fd46b503f00
+Gx: 0xc6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429bf97e7e31c2e5bd66
+Gy: 0x11839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd16650
+e: 0x10001
+p * q: 0x118aaa1add80bdd0a1788b375e6b04426c50bb3f9cae0b173b382e3723fc858ce7932fb499cd92f5f675d4a2b05d2c575fc685f6cf08a490d6c6a8a6741e8be4572adfcba233da791ccc0aee033677b72788d57004a776909f6d699a0164af514728431b5aed704b289719f09d591f5c1f9d2ed36a58448a9d57567bd232702e9b28f
+ciphertext: 0x3862c872480bdd067c0c68cfee4527a063166620c97cca4c99baff6eb0cf5d42421b8f8d8300df5f8c7663adb5d21b47c8cb4ca5aab892006d7d44a1c5b5f5242d88c6e325064adf9b969c7dfc52a034495fe67b5424e1678ca4332d59225855b7a9cb42db2b1db95a90ab6834395397e305078c5baff78c4b7252d7966365afed9e
+```
+
+ECC (Ellipse Curve Cryptography) 是椭圆曲线密码，一般情况下160bit的ECC密钥强度和1024bit的RSA密钥迁都相当，使用较短的密钥的好处在于加密解密的速度更快、更节省资源和存储空间。比特币和中国第二代身份证都使用了256bit的椭圆曲线密码算法。ECC的常见加密解密过程如下：
+
+> 1. 选择椭圆曲线参数：首先，选择一条椭圆曲线`Ep(a, b)`作为密码系统的基础，并且选取曲线上的一点作为基点 P。
+> 2. 生成密钥对：在椭圆曲线上生成密钥对，包括一个私钥（private key）和对应的公钥（public key）。随机选择一个大整数k作为私钥，公钥Q=kP是由私钥通过一定的计算得出的曲线上的点。
+> 3. 加密：选择一个随机数r，将消息M生成密文C 密文也是一个点对，即加密的数据为（rP,M+rQ）。
+> 4. 解密： 使用密文点对：y-kx = M M + rQ - k(rP) == M +rkP - krp = M 以上就是大概的ECC的操作。
+
+已知a和b，那么这个椭圆曲线就已知啦。
+$$
+y^2= x^3+ax+b
+$$
+我们又知道了p和q是满足上述式子的，且已知p*q=n，那么，
+$$
+q^2 = p^3 = a×p + b\\
+p*q = n
+$$
+把式子带入到乘法中，
+$$
+q = \sqrt{p^3+a×p+b}\\
+\sqrt{p^3+a×p+b}×p=n\\
+=>p^5+a×p^3+b×p^2=n^2
+$$
+直接编写`Python`代码调用`sage`进行求解：
+
+```python
+from sage.all import *
+
+a = -0x3
+b = 0x51953eb9618e1c9a1f929a21a0b68540eea2da725b99b315f3b8b489918ef109e156193951ec7e937b1652c0bd3bb1bf073573df883d2c34f1ef451fd46b503f00
+n = 0x118aaa1add80bdd0a1788b375e6b04426c50bb3f9cae0b173b382e3723fc858ce7932fb499cd92f5f675d4a2b05d2c575fc685f6cf08a490d6c6a8a6741e8be4572adfcba233da791ccc0aee033677b72788d57004a776909f6d699a0164af514728431b5aed704b289719f09d591f5c1f9d2ed36a58448a9d57567bd232702e9b28f
+p = 0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+PR = PolynomialRing(Zmod(p), 'x')
+x = PR.gen()
+f = x**5+a*x**3+b*x**2-n**2
+roots=f.roots()
+print(roots) # [(6813140671672694477701511883397067876211159809088064490593325584756562268820329988116480298456252746748095410666300132267213094431909630229631434972416225885, 1), (4573744216059593260686660411936793507327994800883645562370166075007970317346237399760397301505506131100113886281839847419425482918932436139080837246914736557, 1), (1859314969084523636298100850823722544590555574470838518640063093117116629078281861281849586432508721074855657736668366212762253040197962779753163192386773060, 1)]
+```
+
+发现第二个解是质数符合条件，继续编写`Python`代码进行常规`RSA`求解：
+
+```python
+from Crypto.Util.number import *
+
+p = int(roots[1][0])  # 4573744216059593260686660411936793507327994800883645562370166075007970317346237399760397301505506131100113886281839847419425482918932436139080837246914736557
+n = 0x118aaa1add80bdd0a1788b375e6b04426c50bb3f9cae0b173b382e3723fc858ce7932fb499cd92f5f675d4a2b05d2c575fc685f6cf08a490d6c6a8a6741e8be4572adfcba233da791ccc0aee033677b72788d57004a776909f6d699a0164af514728431b5aed704b289719f09d591f5c1f9d2ed36a58448a9d57567bd232702e9b28f
+q = n//p # 2824062321531218201174796572016162635824475505413691713885561763408852922459097896008852396651320629671944905279844855869954833917289579518017582137554769067
+ciphertext = 0x3862c872480bdd067c0c68cfee4527a063166620c97cca4c99baff6eb0cf5d42421b8f8d8300df5f8c7663adb5d21b47c8cb4ca5aab892006d7d44a1c5b5f5242d88c6e325064adf9b969c7dfc52a034495fe67b5424e1678ca4332d59225855b7a9cb42db2b1db95a90ab6834395397e305078c5baff78c4b7252d7966365afed9e
+e = 0x10001
+d = inverse(e, (p-1)*(q-1))
+m = pow(ciphertext, d, n)
+flag = long_to_bytes(m)  # watevr{factoring_polynomials_over_finite_fields_is_too_ez}
+flag = flag.decode().replace('watevr', 'flag') # flag{factoring_polynomials_over_finite_fields_is_too_ez}
+```
+
+提交`flag{factoring_polynomials_over_finite_fields_is_too_ez}`即可。
+
+------
+
 ## Real
 
 ### DASCTF2022_RSA
