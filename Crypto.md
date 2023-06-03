@@ -7728,7 +7728,25 @@ flag = f'flag{{{n2s(m).decode()}}}'  # flag{345y!}
 
 ------
 
+### [[GUET-CTF2019]NO SOS](https://buuoj.cn/challenges#[GUET-CTF2019]NO%20SOS)
 
+附件内容如下：
+
+```
+..-.-.-.–…….–..-…-..-…–.-.-….-..-..–.-.-..-.-..—-
+```
+
+题目名称NO SOS说明了这不是摩尔斯电码，但这些内容由`.`，`-`，`–`还有`...`四种字符组成，将点和横进行统一，得到`..-.-.-.--.......--..-...-..-...--.-.-....-..-..--.-.-..-.-..----`。
+
+```python
+s = "..-.-.-.--.......--..-...-..-...--.-.-....-..-..--.-.-..-.-..----"
+s = s.replace('.', 'a').replace('-', 'b').replace('–','b')
+# aababababbaaaaaaabbaabaaabaabaaabbababaaaabaabaabbababaababaabbbb
+```
+
+[培根密码在线解密](http://www.hiencode.com/baconian.html)后得到`flagisguetkkp`，提交`flag{guetkkp}`即可。
+
+------
 
 ## Real
 
