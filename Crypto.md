@@ -7656,6 +7656,78 @@ print(flag)  # flag{I_w1ll_us3_OTp_n3xT_T1M3}
 
 ------
 
+### [[NPUCTF2020]认清形势，建立信心](https://buuoj.cn/challenges#[NPUCTF2020]%E8%AE%A4%E6%B8%85%E5%BD%A2%E5%8A%BF%EF%BC%8C%E5%BB%BA%E7%AB%8B%E4%BF%A1%E5%BF%83)
+
+附件解压缩后得到的`.py`文件内容如下：
+
+```python
+from Crypto.Util.number import *
+from gmpy2 import *
+from secret import flag
+
+p = getPrime(25)
+e = # Hidden
+q = getPrime(25)
+n = p * q
+m = bytes_to_long(flag.strip(b"npuctf{").strip(b"}"))
+
+c = pow(m, e, n)
+print(c)
+print(pow(2, e, n))
+print(pow(4, e, n))
+print(pow(8, e, n))
+
+'''
+169169912654178
+128509160179202
+518818742414340
+358553002064450
+'''
+```
+根据上述代码可得公式：
+$$
+2^e\ mod\ n = a_{1}\\
+4^e\ mod\ n = a_{2}\\
+8^e\ mod\ n = a_{3}\\
+m^e\ mod\ n = c
+$$
+
+可以进行推导：
+$$
+a_1=2^e\%n\\
+a_2=4^e\%n=((2^e\%n)×(2^e\%n))\%n=a_{1}^2\%n\\
+a_3=8^e\%n=((2^e\%n)×(2^e\%n)×(2^e\%n))\%n=a_{1}×a_{2}\%n\\
+$$
+由此可得：
+$$
+a_{2}-a_{1}^2=k_{1}n\\
+a_{3}-a_{1}×a_{2}=k_{2}n\\
+=> n=gcd(a_{1}^2-a_{2}, a_{1}×a_{2}-a_{3})
+$$
+编写`Python`代码进行求解得到`flag{345y!}`。
+
+```python
+from libnum import *
+from sage.all import *
+from sympy import discrete_log
+
+c = 169169912654178
+a1 = 128509160179202
+a2 = 518818742414340
+a3 = 358553002064450
+n = gcd(a2-a1**2, a1*a2-a3)  # 1054494004042394
+factors = factor(n)
+l = list(factors)
+p, q = l[1][0], l[2][0]
+n = p*q
+e = discrete_log(n, a1, 2)  # mpz(808723997)
+d = invmod(e, (p-1)*(q-1))  # mpz(315420901534133)
+m = int(pow(c, d, n))  # 219919251745
+flag = f'flag{{{n2s(m).decode()}}}'  # flag{345y!}
+```
+
+------
+
 
 
 ## Real
