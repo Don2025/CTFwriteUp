@@ -4837,7 +4837,7 @@ unsigned int vuln()
 }
 ```
 
-
+用`pwndbg`进行分析：
 
 ```bash
 $gdb ./ex2
@@ -7653,10 +7653,168 @@ from pwn import *
 shell = ssh(user='fd', host='pwnable.kr', port=2222, password='guest')
 io = shell.process(executable='./fd', argv=['fd', '4660'])
 io.sendline(b'LETMEWIN')
-io.interactive() 
+io.interactive()
 ```
 
 ![](https://paper.tanyaodan.com/Pwnable/kr/fd/5.png)
+
+------
+
+### collision
+
+这是**Pwnable.kr**的第二个挑战`collision`，来自**[Toddler's Bottle]**部分。题目描述中可以看到有个小孩说他爸今天告诉了他什么是MD5散列冲突。
+
+```bash
+Daddy told me about cool MD5 hash collision today.
+I wanna do something like that too!
+
+ssh col@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh col@pwnable.kr -p2222 
+col@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Thu Jun  8 03:55:34 2023 from 188.64.206.152
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+col@pwnable:~$ ls -la
+total 36
+drwxr-x---   5 root    col     4096 Oct 23  2016 .
+drwxr-xr-x 117 root    root    4096 Nov 10  2022 ..
+d---------   2 root    root    4096 Jun 12  2014 .bash_history
+-r-sr-x---   1 col_pwn col     7341 Jun 11  2014 col
+-rw-r--r--   1 root    root     555 Jun 12  2014 col.c
+-r--r-----   1 col_pwn col_pwn   52 Jun 11  2014 flag
+dr-xr-xr-x   2 root    root    4096 Aug 20  2014 .irssi
+drwxr-xr-x   2 root    root    4096 Oct 23  2016 .pwntools-cache
+```
+
+我们可以看到三个文件`col`、`col.c`和`flag`，其中`col`是`ELF`二进制可执行文件，`col.c`是编译二进制文件的`C`代码，用户`col`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat col.c`来查看`col.c`的代码。
+
+```bash
+col@pwnable:~$ cat col.c
+#include <stdio.h>
+#include <string.h>
+unsigned long hashcode = 0x21DD09EC;
+unsigned long check_password(const char* p){
+    int* ip = (int*)p;
+    int i;
+    int res=0;
+    for(i=0; i<5; i++){
+        res += ip[i];
+    }
+    return res;
+}
+
+int main(int argc, char* argv[]){
+    if(argc<2){
+        printf("usage : %s [passcode]\n", argv[0]);
+        return 0;
+    }
+    if(strlen(argv[1]) != 20){
+        printf("passcode length should be 20 bytes\n");
+        return 0;
+    }
+
+    if(hashcode == check_password( argv[1] )){
+        system("/bin/cat flag");
+        return 0;
+    }
+    else
+        printf("wrong passcode.\n");
+    return 0;
+}
+```
+
+先来看主函数，通过代码审计可知，我们需要输入一个长度为`20`个字节的密码，然后程序会将输入的密码送入到`check_password()`函数中进行执行，如果函数的返回值等于硬编码的哈希值`0x21DD09EC`则输出`flag`中的内容。我们可以使用`gdb`来进一步了解程序。
+
+```bash
+col@pwnable:~$ gdb ./col
+(gdb) disass check_password  # disassemble
+Dump of assembler code for function check_password:
+   0x08048494 <+0>:     push   %ebp
+   0x08048495 <+1>:     mov    %esp,%ebp
+   0x08048497 <+3>:     sub    $0x10,%esp
+   0x0804849a <+6>:     mov    0x8(%ebp),%eax
+   0x0804849d <+9>:     mov    %eax,-0x4(%ebp)
+   0x080484a0 <+12>:    movl   $0x0,-0x8(%ebp)
+   0x080484a7 <+19>:    movl   $0x0,-0xc(%ebp)
+   0x080484ae <+26>:    jmp    0x80484c2 <check_password+46>
+   0x080484b0 <+28>:    mov    -0xc(%ebp),%eax
+   0x080484b3 <+31>:    shl    $0x2,%eax
+   0x080484b6 <+34>:    add    -0x4(%ebp),%eax
+   0x080484b9 <+37>:    mov    (%eax),%eax
+   0x080484bb <+39>:    add    %eax,-0x8(%ebp)
+   0x080484be <+42>:    addl   $0x1,-0xc(%ebp)
+   0x080484c2 <+46>:    cmpl   $0x4,-0xc(%ebp)
+   0x080484c6 <+50>:    jle    0x80484b0 <check_password+28>
+   0x080484c8 <+52>:    mov    -0x8(%ebp),%eax
+   0x080484cb <+55>:    leave  
+   0x080484cc <+56>:    ret    
+End of assembler dump.
+(gdb) b *0x80484cc  # break
+Breakpoint 1 at 0x80484cc
+(gdb) run "AAAAAAAAAAAAAAAAAAAA"
+Starting program: /home/col/col "AAAAAAAAAAAAAAAAAAAA"
+
+Breakpoint 1, 0x080484cc in check_password ()
+(gdb) print $eax
+$1 = 1179010629
+(gdb) set $eax=0x21DD09EC
+(gdb) print $eax
+$2 = 568134124
+(gdb) c
+Continuing.
+/bin/cat: flag: Permission denied
+[Inferior 1 (process 58207) exited normally]
+```
+
+我们通过修改`check_password()`函数的返回值让程序执行了`system("/bin/cat flag");`，但是用户`col`并没有权限查看`flag`文件中的内容。根据`check_password()`函数，我们需要把`0x21DD09EC`划分为`5`份，但是`568134124`并不能被`5`整除，存在余数`4`。我们可以把余数放到第五份中，即数组变量`ip`中的数值为`[113626824, 113626824, 113626824, 113626824, 113626828]`。接着得把它们转换成十六进制：
+
+```python
+>>> hex(113626824)
+'0x6c5cec8'
+>>> hex(113626828)
+'0x6c5cecc'
+```
+
+由于这些数据是小端存储方式，所以我们应该输入的值是`"\xc8\xce\xc5\x06" * 4 + "\xcc\xce\xc5\x06"`，编写`Python`代码求解，得到`flag`：`daddy! I just managed to create a hash collision :)`。
+
+```python
+from pwn import *
+
+shell = ssh(user='col', host='pwnable.kr', port=2222, password='guest')
+hashcode = 0x21DD09EC
+a = hashcode//5     # 0x6c5cec8
+b = a + hashcode%5  # 0x6c5cecc
+payload = p32(a)*4 + p32(b)
+# payload = p32(0x6c5cec8)*4 + p32(0x6c5cecc)
+io = shell.process(executable='./col', argv=['col', payload])
+flag = io.recv()
+log.success(flag)  # daddy! I just managed to create a hash collision :)
+io.close()
+shell.close()
+```
 
 ------
 
