@@ -2862,6 +2862,18 @@ print(flag)  # ctfshow{base64_is_easy}
 
 ------
 
+### 0x36d
+
+>密文：
+>
+>😫🙄👰😰👣🙋😱👧👌👷👯👩😴👖👫👚🙃👹👏👏😶👳😫👕🙂🙊👵👶👨👰👮🙉👶👵👸👲👺👮👑😶👴😫🙊👫😴👬👹👤👑😱👗🙃👐😶
+>
+>提示： 有没有一种可能，标题就是密码？
+
+用 https://txtmoji.com/ 解密颜文字，根据密码是`0x36d`即`877`，解密后得到`ctfshow{emoji_is_funny}`。
+
+------
+
 ## CTFHub
 
 ### 2020-BJDCTF-Crypto-sign in
