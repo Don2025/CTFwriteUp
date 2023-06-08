@@ -7972,3 +7972,104 @@ io.interactive()
 
 ------
 
+### flag
+
+这是**Pwnable.kr**的第四个挑战`flag`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Papa brought me a packed present! let's open it.
+
+Download : http://pwnable.kr/bin/flag
+
+This is reversing task. all you need is binary
+```
+
+这题只给出一个二进制文件，让我们来看看。
+
+```bash
+$ wget http://pwnable.kr/bin/flag
+$ sudo chmod +x ./flag
+$ ./flag
+I will malloc() and strcpy the flag there. take it.
+$ file ./flag
+./flag: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, no section header
+$ strings ./flag | grep packed
+$Info: This file is packed with the UPX executable packer http://upx.sf.net $
+```
+
+可以看到`flag`是一个加密的二进制文件，现在用`UPX`进行解密。
+
+```bash
+$ upx -d ./flag     
+                       Ultimate Packer for eXecutables
+                          Copyright (C) 1996 - 2020
+UPX 3.96        Markus Oberhumer, Laszlo Molnar & John Reiser   Jan 23rd 2020
+
+        File size         Ratio      Format      Name
+   --------------------   ------   -----------   -----------
+    883745 <-    335288   37.94%   linux/amd64   flag
+
+Unpacked 1 file.
+```
+
+解密后先`file ./flag  `查看文件类型，再`checksec --file=./flag  `检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ file ./flag
+./flag: ELF 64-bit LSB executable, x86-64, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.24, BuildID[sha1]=96ec4cc272aeb383bd9ed26c0d4ac0eb5db41b16, not stripped
+                                                                                                  
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ checksec --file=./flag
+[*] '/home/tyd/ctf/pwn/pwnable.kr/flag'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+使用`IDA pro 64bit`打开`flag`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char *v4; // [rsp+8h] [rbp-8h]
+
+  puts(4810328LL, argv, envp);
+  v4 = (char *)malloc(100LL);
+  strcpy(v4, (const char *)flag);
+  return 0;
+}
+```
+
+按下`Shift+F12`查看`Strings window`可以看到`UPX...? sounds like a delivery service :)`，没错这就是`flag`。如果不信的话可以用`gdb`来获取`flag`。
+
+```bash
+$ gdb ./flag
+pwndbg> disass main
+Dump of assembler code for function main:
+   0x0000000000401164 <+0>:     push   rbp
+   0x0000000000401165 <+1>:     mov    rbp,rsp
+   0x0000000000401168 <+4>:     sub    rsp,0x10
+   0x000000000040116c <+8>:     mov    edi,0x496658
+   0x0000000000401171 <+13>:    call   0x402080 <puts>
+   0x0000000000401176 <+18>:    mov    edi,0x64
+   0x000000000040117b <+23>:    call   0x4099d0 <malloc>
+   0x0000000000401180 <+28>:    mov    QWORD PTR [rbp-0x8],rax
+   0x0000000000401184 <+32>:    mov    rdx,QWORD PTR [rip+0x2c0ee5]        # 0x6c2070 <flag>
+   0x000000000040118b <+39>:    mov    rax,QWORD PTR [rbp-0x8]
+   0x000000000040118f <+43>:    mov    rsi,rdx
+   0x0000000000401192 <+46>:    mov    rdi,rax
+   0x0000000000401195 <+49>:    call   0x400320
+   0x000000000040119a <+54>:    mov    eax,0x0
+   0x000000000040119f <+59>:    leave  
+   0x00000000004011a0 <+60>:    ret    
+End of assembler dump.
+pwndbg> x/1s *0x6c2070  # 根据程序的注释查看flag的内容
+0x496628:       "UPX...? sounds like a delivery service :)"
+```
+
+------
+
+### 
