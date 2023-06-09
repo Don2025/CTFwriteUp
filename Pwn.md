@@ -8311,7 +8311,7 @@ io.recvuntil("enter you name : ")
 payload = b'a'*96 + p32(0x804a004)
 io.sendline(payload)
 io.recvuntil("enter passcode1 : ")
-io.sendline(b'134514147')  # str.encode(str(0x80485e3))
+io.sendline(b'134514147')  # str(0x80485e3).encode()
 flag = io.recv()
 log.success(flag)
 # Sorry mom.. I got confused about scanf usage :(
@@ -8322,5 +8322,153 @@ shell.close()
 
 ------
 
+### random
 
+这是**Pwnable.kr**的第六个挑战`random`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Daddy, teach me how to use random value in programming!
+
+ssh random@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~]
+└─$ ssh random@pwnable.kr -p2222
+random@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Thu Jun  8 20:12:02 2023 from 80.145.91.187
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+random@pwnable:~$ ls -la
+total 40
+drwxr-x---   5 root       random 4096 Oct 23  2016 .
+drwxr-xr-x 117 root       root   4096 Nov 10  2022 ..
+d---------   2 root       root   4096 Jun 30  2014 .bash_history
+-r--r-----   1 random_pwn root     49 Jun 30  2014 flag
+dr-xr-xr-x   2 root       root   4096 Aug 20  2014 .irssi
+drwxr-xr-x   2 root       root   4096 Oct 23  2016 .pwntools-cache
+-r-sr-x---   1 random_pwn random 8538 Jun 30  2014 random
+-rw-r--r--   1 root       root    301 Jun 30  2014 random.c
+```
+
+我们可以看到三个文件`random`、`random.c`和`flag`，其中`random`是`ELF`二进制可执行文件，`random.c`是编译二进制文件的`C`代码，用户`random`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat random.c`来查看`random.c`的代码。
+
+```bash
+random@pwnable:~$ cat random.c
+#include <stdio.h>
+
+int main(){
+    unsigned int random;
+    random = rand();        // random value!
+
+    unsigned int key=0;
+    scanf("%d", &key);
+
+    if( (key ^ random) == 0xdeadbeef ){
+        printf("Good!\n");
+        system("/bin/cat flag");
+        return 0;
+    }
+
+    printf("Wrong, maybe you should try 2^32 cases.\n");
+    return 0;
+}
+```
+
+`C`语言的`rand()`是一种伪随机数，只要种子是确定的，生成的随机数列就是固定的。在上述代码中没有设置种子，所以不管执行多少次该程序，都会生成同样的数。因此，我们可以直接用`gdb`来查看变量`random`的数值。
+
+```assembly
+random@pwnable:~$ gdb ./random
+(gdb) disass main
+Dump of assembler code for function main:
+   0x00000000004005f4 <+0>:     push   %rbp
+   0x00000000004005f5 <+1>:     mov    %rsp,%rbp
+   0x00000000004005f8 <+4>:     sub    $0x10,%rsp
+   0x00000000004005fc <+8>:     mov    $0x0,%eax
+   0x0000000000400601 <+13>:    callq  0x400500 <rand@plt>
+   0x0000000000400606 <+18>:    mov    %eax,-0x4(%rbp)
+   0x0000000000400609 <+21>:    movl   $0x0,-0x8(%rbp)
+   0x0000000000400610 <+28>:    mov    $0x400760,%eax
+   0x0000000000400615 <+33>:    lea    -0x8(%rbp),%rdx
+   0x0000000000400619 <+37>:    mov    %rdx,%rsi
+   0x000000000040061c <+40>:    mov    %rax,%rdi
+   0x000000000040061f <+43>:    mov    $0x0,%eax
+   0x0000000000400624 <+48>:    callq  0x4004f0 <__isoc99_scanf@plt>
+   0x0000000000400629 <+53>:    mov    -0x8(%rbp),%eax
+   0x000000000040062c <+56>:    xor    -0x4(%rbp),%eax
+   0x000000000040062f <+59>:    cmp    $0xdeadbeef,%eax
+   0x0000000000400634 <+64>:    jne    0x400656 <main+98>
+   0x0000000000400636 <+66>:    mov    $0x400763,%edi
+   0x000000000040063b <+71>:    callq  0x4004c0 <puts@plt>
+   0x0000000000400640 <+76>:    mov    $0x400769,%edi
+   0x0000000000400645 <+81>:    mov    $0x0,%eax
+   0x000000000040064a <+86>:    callq  0x4004d0 <system@plt>
+   0x000000000040064f <+91>:    mov    $0x0,%eax
+   0x0000000000400654 <+96>:    jmp    0x400665 <main+113>
+   0x0000000000400656 <+98>:    mov    $0x400778,%edi
+   0x000000000040065b <+103>:   callq  0x4004c0 <puts@plt>
+   0x0000000000400660 <+108>:   mov    $0x0,%eax
+   0x0000000000400665 <+113>:   leaveq 
+   0x0000000000400666 <+114>:   retq   
+End of assembler dump.
+```
+
+其中这部分代码是调用`rand()`函数生成一个随机数，并将结果存储在局部变量`$ebp-0x4`中。
+
+```assembly
+0x00000000004005fc <+8>:     mov    $0x0,%eax
+0x0000000000400601 <+13>:    callq  0x400500 <rand@plt>
+0x0000000000400606 <+18>:    mov    %eax,-0x4(%rbp)
+```
+
+在接下来的第`*main+21`行汇编代码中，程序会将局部变量 `$rbp-0x8` 设置为`0`，我们可以在这行打断点来查看`$eax`寄存器中的数值。
+
+```bash
+(gdb) b *main+21
+Breakpoint 1 at 0x400609
+(gdb) run
+Starting program: /home/random/random 
+
+Breakpoint 1, 0x0000000000400609 in main ()
+(gdb) info registers $eax
+eax            0x6b8b4567       1804289383
+```
+
+所以变量`random`的数值是`0x6b8b4567`，接着只需要求出`(key ^ random) == 0xdeadbeef `中的`key`即可。编写`Python`代码求解，算出`key`的十进制数值是`3039230856`，提交`flag`：`Mommy, I thought libc random is unpredictable...`。
+
+```python
+from pwn import *
+
+shell = ssh(user='random', host='pwnable.kr', port=2222, password='guest')
+io = shell.process('./random')
+key = 0x6b8b4567 ^ 0xdeadbeef
+payload = str(key).encode()  # 3039230856
+io.sendline(payload)
+msg = io.recvline()  # Good!
+flag = io.recv()  
+log.success(flag)  # Mommy, I thought libc random is unpredictable...
+io.close()
+shell.close()
+```
+
+------
 

