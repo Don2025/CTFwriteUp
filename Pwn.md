@@ -9718,3 +9718,227 @@ shellshock@pwnable:/tmp/t0ur1st$ python exp.py
 ```
 
 提交 `b1NaRy_S34rch1nG_1s_3asy_p3asy` 即可。
+
+------
+
+### blackjack
+
+这是**Pwnable.kr**的第十二个挑战`coin1`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Hey! check out this C implementation of blackjack game!
+I found it online
+* http://cboard.cprogramming.com/c-programming/114023-simple-blackjack-program.html
+
+I like to give my flags to millionares.
+how much money you got?
+
+
+Running at : nc pwnable.kr 9009
+```
+
+题目描述已经给出了这题的`C`语言源程序，进行代码审计。注意到`betting()`函数中存在漏洞。这个函数询问玩家想在这一轮下注多少，然后检查下注金额是否不超过玩家当前拥有的现金数额。然而，该函数不会检查下注金额是否为负数。
+
+```c
+int betting() //Asks user amount to bet
+{
+    printf("\n\nEnter Bet: $");
+    scanf("%d", &bet);
+
+    if (bet > cash) //If player tries to bet more money than player has
+    {
+        printf("\nYou cannot bet more money than you have.");
+        printf("\nEnter Bet: ");
+        scanf("%d", &bet);
+        return bet;
+    }
+    else return bet;
+} // End Function
+```
+
+继续审计`play()`函数中的代码，赢钱的逻辑看起来不错，但输钱的逻辑并没有考虑到负赌注的情况。
+
+```c
+betting(); //Prompts user to enter bet amount
+
+while(i<=21) // While loop used to keep asking user to hit or stay at most twenty-one times
+             // because there is a chance user can generate twenty-one consecutive 1's
+{
+     if(p==21) //If user total is 21, win
+     {
+        printf("\nUnbelievable! You Win!\n");
+        won = won+1;
+        cash = cash+bet;
+        printf("\nYou have %d Wins and %d Losses. Awesome!\n", won, loss);
+        dealer_total=0;
+        askover();
+    }
+  
+    if(p>21) //If player total is over 21, loss
+    {
+        printf("\nWoah Buddy, You Went WAY over.\n");
+        loss = loss+1;
+        cash = cash - bet;
+        printf("\nYou have %d Wins and %d Losses. Awesome!\n", won, loss);
+        dealer_total=0;
+        askover();
+    }
+
+    if(p<=21) //If player total is less than 21, ask to hit or stay
+    {         
+        printf("\n\nWould You Like to Hit or Stay?");
+          
+        scanf("%c", &choice3);
+        while((choice3!='H') && (choice3!='h') && (choice3!='S') && (choice3!='s')) // If invalid choice entered
+        {                                                                           
+            printf("\n");
+            printf("Please Enter H to Hit or S to Stay.\n");
+            scanf("%c",&choice3);
+        }
+
+
+        if((choice3=='H') || (choice3=='h')) // If Hit, continues
+        { 
+            randcard();
+            player_total = p + l;
+            p = player_total;
+            printf("\nYour Total is %d\n", p);
+            dealer();
+            if(dealer_total==21) //Is dealer total is 21, loss
+            {
+                printf("\nDealer Has the Better Hand. You Lose.\n");
+                loss = loss+1;
+                cash = cash - bet;
+                printf("\nYou have %d Wins and %d Losses. Awesome!\n", won, loss);
+                dealer_total=0;
+                askover();
+            } 
+  
+            if(dealer_total>21) //If dealer total is over 21, win
+            {                      
+                printf("\nDealer Has Went Over!. You Win!\n");
+                won = won+1;
+                cash = cash+bet;
+                printf("\nYou have %d Wins and %d Losses. Awesome!\n", won, loss);
+                dealer_total=0;
+                askover();
+            }
+        }
+        if((choice3=='S') || (choice3=='s')) // If Stay, does not continue
+        {
+            printf("\nYou Have Chosen to Stay at %d. Wise Decision!\n", player_total);
+            stay();
+        }
+    }
+    i++; //While player total and dealer total are less than 21, re-do while loop 
+} // End While Loop
+```
+
+再来看`stay()`函数，同样没有考虑到赌注为负数的情况。这样看来，我们只需要摆烂就能赢钱，即在发牌后选择留，我们的负赌注将从现金总额中减去（负负得正即我们赚钱）。
+
+```c
+void stay() //Function for when user selects 'Stay'
+{
+    dealer(); //If stay selected, dealer continues going
+    if(dealer_total>=17)
+    {
+        if(player_total>=dealer_total) //If player's total is more than dealer's total, win
+        {
+            printf("\nUnbelievable! You Win!\n");
+            won = won+1;
+            cash = cash+bet;
+            printf("\nYou have %d Wins and %d Losses. Awesome!\n", won, loss);
+            dealer_total=0;
+            askover();
+        }
+        if(player_total<dealer_total) //If player's total is less than dealer's total, loss
+        {
+            printf("\nDealer Has the Better Hand. You Lose.\n");
+            loss = loss+1;
+            cash = cash - bet;
+            printf("\nYou have %d Wins and %d Losses. Awesome!\n", won, loss);
+            dealer_total=0;
+            askover();
+        }
+        if(dealer_total>21) //If dealer's total is more than 21, win
+        {
+            printf("\nUnbelievable! You Win!\n");
+            won = won+1;
+            cash = cash+bet;
+            printf("\nYou have %d Wins and %d Losses. Awesome!\n", won, loss);
+            dealer_total=0;
+            askover();
+        }
+    }
+    else
+    {
+        stay();
+    }
+} // End Function
+```
+
+因此最简单最消极最摆烂的做法就是：
+
+```bash
+$ nc pwnable.kr 9009
+Y          # Are You Ready? (Y/N)
+1          # Enter 1 to Begin the Greatest Game Ever Played.
+-5201314   # Enter Bet: a large negative number
+S          # Enter S to Stay.
+Y          # Enter Y to Play Again.
+YaY_I_AM_A_MILLIONARE_LOL   # flag
+```
+
+终端的部分显示如下：
+
+```bash
+ash: $500
+-------
+|D    |
+|  9  |
+|    D|
+-------
+
+Your Total is 9
+
+The Dealer Has a Total of 10
+
+Enter Bet: $-5201314
+
+
+Would You Like to Hit or Stay?
+Please Enter H to Hit or S to Stay.
+S
+
+You Have Chosen to Stay at 9. Wise Decision!
+
+The Dealer Has a Total of 20
+Dealer Has the Better Hand. You Lose.
+
+You have 0 Wins and 1 Losses. Awesome!
+
+Would You Like To Play Again?
+Please Enter Y for Yes or N for No
+Y
+```
+
+输入`Y`之后，在下一局游戏开始前，`flag`会被打印出来：`YaY_I_AM_A_MILLIONARE_LOL`。
+
+```bash
+YaY_I_AM_A_MILLIONARE_LOL
+
+
+Cash: $5201814
+-------
+|H    |
+|  K  |
+|    H|
+-------
+
+Your Total is 10
+
+The Dealer Has a Total of 11
+
+Enter Bet: $
+```
+
