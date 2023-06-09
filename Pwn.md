@@ -8472,3 +8472,317 @@ shell.close()
 
 ------
 
+### input
+
+这是**Pwnable.kr**的第七个挑战`input`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Mom? how can I pass my input to a computer program?
+
+ssh input2@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh input2@pwnable.kr -p2222
+input2@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Thu Jun  8 18:35:49 2023 from 35.146.21.146
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+input2@pwnable:~$ ls -la
+total 44
+drwxr-x---   5 root       input2  4096 Oct 23  2016 .
+drwxr-xr-x 117 root       root    4096 Nov 10  2022 ..
+d---------   2 root       root    4096 Jun 30  2014 .bash_history
+-r--r-----   1 input2_pwn root      55 Jun 30  2014 flag
+-r-sr-x---   1 input2_pwn input2 13250 Jun 30  2014 input
+-rw-r--r--   1 root       root    1754 Jun 30  2014 input.c
+dr-xr-xr-x   2 root       root    4096 Aug 20  2014 .irssi
+drwxr-xr-x   2 root       root    4096 Oct 23  2016 .pwntools-cache
+```
+
+我们可以看到三个文件`input`、`input.c`和`flag`，其中`input`是`ELF`二进制可执行文件，`input.c`是编译二进制文件的`C`代码，用户`input2`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat input.c`来查看`input.c`的代码。
+
+```c
+input2@pwnable:~$ cat input.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+int main(int argc, char* argv[], char* envp[]){
+    printf("Welcome to pwnable.kr\n");
+    printf("Let's see if you know how to give input to program\n");
+    printf("Just give me correct inputs then you will get the flag :)\n");
+
+    // argv
+    if(argc != 100) return 0;
+    if(strcmp(argv['A'],"\x00")) return 0;
+    if(strcmp(argv['B'],"\x20\x0a\x0d")) return 0;
+    printf("Stage 1 clear!\n");
+
+    // stdio
+    char buf[4];
+    read(0, buf, 4);
+    if(memcmp(buf, "\x00\x0a\x00\xff", 4)) return 0;
+    read(2, buf, 4);
+    if(memcmp(buf, "\x00\x0a\x02\xff", 4)) return 0;
+    printf("Stage 2 clear!\n");
+
+    // env
+    if(strcmp("\xca\xfe\xba\xbe", getenv("\xde\xad\xbe\xef"))) return 0;
+    printf("Stage 3 clear!\n");
+
+    // file
+    FILE* fp = fopen("\x0a", "r");
+    if(!fp) return 0;
+    if( fread(buf, 4, 1, fp)!=1 ) return 0;
+    if( memcmp(buf, "\x00\x00\x00\x00", 4) ) return 0;
+    fclose(fp);
+    printf("Stage 4 clear!\n");
+
+    // network
+    int sd, cd;
+    struct sockaddr_in saddr, caddr;
+    sd = socket(AF_INET, SOCK_STREAM, 0);
+    if(sd == -1){
+        printf("socket error, tell admin\n");
+        return 0;
+    }
+    saddr.sin_family = AF_INET;
+    saddr.sin_addr.s_addr = INADDR_ANY;
+    saddr.sin_port = htons( atoi(argv['C']) );
+    if(bind(sd, (struct sockaddr*)&saddr, sizeof(saddr)) < 0){
+        printf("bind error, use another port\n");
+        return 1;
+    }
+    listen(sd, 1);
+    int c = sizeof(struct sockaddr_in);
+    cd = accept(sd, (struct sockaddr *)&caddr, (socklen_t*)&c);
+    if(cd < 0){
+        printf("accept error, tell admin\n");
+        return 0;
+    }
+    if( recv(cd, buf, 4, 0) != 4 ) return 0;
+    if(memcmp(buf, "\xde\xad\xbe\xef", 4)) return 0;
+    printf("Stage 5 clear!\n");
+
+    // here's your flag
+    system("/bin/cat flag");
+    return 0;
+}
+```
+
+这题的文件有点长，我们拆开来分析。先来看 `argv` 这部分代码。
+
+```c
+if(argc != 100) return 0;
+if(strcmp(argv['A'],"\x00")) return 0;
+if(strcmp(argv['B'],"\x20\x0a\x0d")) return 0;
+printf("Stage 1 clear!\n");
+```
+
+程序要求输入`100`个参数，且第`'A'`个参数值为`\x00`，第`'B'`个参数值为`\x20\x0a\x0d`。在ASCII表中，字符`'A'`和`'B'`对应的ASCII码分别`65`和`66`。也就是说第`65`个参数值为`\x00`，第`66`个参数值为`\x20\x0a\x0d`。编写`Python`代码来求解`stage 1`。
+
+```python
+args = ['A']*100
+args[ord('A')] = '\x00'
+args[ord('B')] = '\x20\x0a\x0d'
+```
+
+接着来看 `stdio` 这部分代码。
+
+```c
+char buf[4];
+read(0, buf, 4);
+if(memcmp(buf, "\x00\x0a\x00\xff", 4)) return 0;
+read(2, buf, 4);
+if(memcmp(buf, "\x00\x0a\x02\xff", 4)) return 0;
+printf("Stage 2 clear!\n");
+```
+
+其中`read()`函数用于从文件描述符 `fd` 指定的文件中读取数据，并将读取的内容存储到 `buf` 指向的缓冲区中，最多读取 `count` 字节的数据，其函数声明如下：
+
+```c
+ssize_t read(int fd, void *buf, size_t count);
+```
+
+文件描述符`fd`用来标识要读取的文件。通常情况下，`0` 表示标准输入`STDIN`，`1` 表示标准输出`STDOUT`，`2` 表示标准错误输出`STDERR`，其他文件描述符通常由打开文件或套接字等操作获得。而在该程序中，分别从`STDIN`和`STDERR`进行读取。所以我们需要将输入传递给`STDIN`和`STDERR`，可以利用`os.pipe()`制作管道并传递给`process()`。
+
+```python
+r1, w1 = os.pipe()
+os.write(w1, '\x00\x0a\x00\xff')
+r2, w2 = os.pipe()
+os.write(w2, '\x00\x0a\x02\xff')
+```
+
+然后来看 `env` 这部分代码，我们必须把环境变量`0xdeadbeef` 的值设置为`0xcafebabe`。
+
+```c
+if(strcmp("\xca\xfe\xba\xbe", getenv("\xde\xad\xbe\xef"))) return 0;
+printf("Stage 3 clear!\n");
+```
+
+这一步很简单，直接弄个`env`传递给`process()`即可。
+
+```python
+env = {'\xde\xad\xbe\xef': '\xca\xfe\xba\xbe'}
+```
+
+现在来看 `file` 这部分代码，程度以只读权限打开文件`\x0a`，从中读取一个值并和`\x00\x00\x00\x00`进行比较。
+
+```c
+FILE* fp = fopen("\x0a", "r");
+if(!fp) return 0;
+if( fread(buf, 4, 1, fp)!=1 ) return 0;
+if( memcmp(buf, "\x00\x00\x00\x00", 4) ) return 0;
+fclose(fp);
+printf("Stage 4 clear!\n");
+```
+
+我们可以创建并打开文件`\x0a`，并将数值`\x00\x00\x00\x00`写入其中。
+
+```python
+with open('\x0a', 'w') as f:
+    f.write('\x00\x00\x00\x00')
+```
+
+最后来看 `network` 这部分代码，程序由第`66`个参数指定`socket`的通信端口，然后通过网络接收`4`个字节，并将接收到的数据与字符串`"\xde\xad\xbe\xef"`进行比较。
+
+```c
+int sd, cd;
+struct sockaddr_in saddr, caddr;
+sd = socket(AF_INET, SOCK_STREAM, 0);   // 创建一个可以使用IPv4地址进行通信的套接字，指定使用TCP协议
+if(sd == -1){
+    printf("socket error, tell admin\n");
+    return 0;
+}
+saddr.sin_family = AF_INET;
+saddr.sin_addr.s_addr = INADDR_ANY;
+saddr.sin_port = htons( atoi(argv['C']) );   // 程序由第66个参数指定端口
+if(bind(sd, (struct sockaddr*)&saddr, sizeof(saddr)) < 0){  // 使用bind函数将套接字绑定到指定的地址和端口上
+    printf("bind error, use another port\n");
+    return 1;
+}
+listen(sd, 1);  // 使用listen函数开始监听连接请求，最大连接数为1
+int c = sizeof(struct sockaddr_in);
+cd = accept(sd, (struct sockaddr *)&caddr, (socklen_t*)&c); // 接受客户端的连接请求，新套接字cd用于与客户端进行通信
+if(cd < 0){
+    printf("accept error, tell admin\n");
+    return 0;
+}
+if( recv(cd, buf, 4, 0) != 4 ) return 0;  // 从客户端接收数据，最多接收4字节存储在buf中，
+if(memcmp(buf, "\xde\xad\xbe\xef", 4)) return 0;  // 如果接收的数据与"\xde\xad\xbe\xef"相等则通过验证
+printf("Stage 5 clear!\n");
+```
+
+所以我们需要在程序的第`66`个参数添加端口号，并建立网络连接发送`4`个字节的数据`"\xde\xad\xbe\xef"`。完整的`Python`代码如下：
+
+```python
+from pwn import *
+import os
+
+shell = ssh(user='input2', host='pwnable.kr', port=2222, password='guest')
+# Stage 1
+args = ['A']*100
+args[ord('A')] = '\x00'
+args[ord('B')] = '\x20\x0a\x0d'
+# Stage 2
+r1, w1 = os.pipe()
+os.write(w1, b'\x00\x0a\x00\xff')
+r2, w2 = os.pipe()
+os.write(w2, b'\x00\x0a\x02\xff')
+# Stage 3
+env = {'\xde\xad\xbe\xef': '\xca\xfe\xba\xbe'}
+# Stage 4
+with open('\x0a', 'w') as f:
+    f.write('\x00\x00\x00\x00')  
+# Stage 5
+port = 6666
+args[ord('C')] = str(port)
+io = shell.process(executable='./input', argv=args, stdin=r1, stderr=r2, env=env)
+net = remote(shell.host, port)
+net.sendline(b'\xde\xad\xbe\xef')
+io.interactive()
+io.close()
+shell.close()
+```
+
+然而打不通！woc！`[ERROR] Could not connect to pwnable.kr on port 6666`。先`ssh`进入目标系统，然后以`input2@pwnable`的身份在`/tmp`目录下编写并运行`.py`文件，这样应该就不会因为防火墙的问题无法连接端口建立通信啦。
+
+```bash
+input2@pwnable:~$ mkdir /tmp/t0ur1st
+input2@pwnable:~$ cd /tmp/t0ur1st
+input2@pwnable:/tmp/t0ur1st$ ln -s /home/input2/flag flag
+input2@pwnable:/tmp/t0ur1st$ vim exp.py
+```
+
+在`exp.py`中编写以下`Python`代码：
+
+```python
+from pwn import *
+import os
+
+args = ['A']*100
+args[ord('A')] = '\x00'
+args[ord('B')] = '\x20\x0a\x0d'
+# Stage 2
+r1, w1 = os.pipe()
+os.write(w1, b'\x00\x0a\x00\xff')
+r2, w2 = os.pipe()
+os.write(w2, b'\x00\x0a\x02\xff')
+# Stage 3
+env = {'\xde\xad\xbe\xef': '\xca\xfe\xba\xbe'}
+# Stage 4
+with open('\x0a', 'w') as f:
+    f.write('\x00\x00\x00\x00')
+# Stage 5
+port = 6666
+args[ord('C')] = str(port)
+io = process(executable='/home/input2/input', argv=args, stdin=r1, stderr=r2, env=env)
+net = remote('localhost', port)
+net.sendline('\xde\xad\xbe\xef')
+io.interactive()
+```
+
+`:wq`保存退出`vim`后运行`exp.py`可以得到`flag`：`Mommy! I learned how to pass various input in Linux :)`。
+
+```bash
+input2@pwnable:/tmp/t0ur1st$ python exp.py
+[+] Starting local process '/home/input2/input': pid 147462
+[+] Opening connection to localhost on port 6666: Done
+[*] Switching to interactive mode
+Welcome to pwnable.kr
+Let's see if you know how to give input to program
+Just give me correct inputs then you will get the flag :)
+Stage 1 clear!
+Stage 2 clear!
+Stage 3 clear!
+Stage 4 clear!
+Stage 5 clear!
+[*] Process '/home/input2/input' stopped with exit code 0 (pid 147462)
+Mommy! I learned how to pass various input in Linux :)
+```
+
+------
+
