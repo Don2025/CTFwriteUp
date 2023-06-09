@@ -9162,7 +9162,7 @@ My daddy has a lot of ARMv5te muscle!
 
 ### mistake
 
-这是**Pwnable.kr**的第九个挑战`leg`，来自**[Toddler's Bottle]**部分。
+这是**Pwnable.kr**的第九个挑战`mistake`，来自**[Toddler's Bottle]**部分。
 
 ```bash
 We all make mistakes, let's move on.
@@ -9296,7 +9296,7 @@ Mommy, the operator priority always confuses me :(
 
 ### shellshock
 
-这是**Pwnable.kr**的第十个挑战`leg`，来自**[Toddler's Bottle]**部分。
+这是**Pwnable.kr**的第十个挑战`shellshock`，来自**[Toddler's Bottle]**部分。
 
 ```bash
 Mommy, there was a shocking news about bash.
@@ -9381,5 +9381,340 @@ only if I knew CVE-2014-6271 ten years ago..!!
 Segmentation fault (core dumped)
 ```
 
+相关链接：[**Shellshock: How does it actually work?**](https://fedoramagazine.org/shellshock-how-does-it-actually-work/)
+
 ------
 
+### coin1
+
+这是**Pwnable.kr**的第十一个挑战`coin1`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Mommy, I wanna play a game!
+(if your network response time is too slow, try nc 0 9007 inside pwnable.kr server)
+
+Running at : nc pwnable.kr 9007
+```
+
+根据题目描述，先`nc`进靶机看看情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ nc pwnable.kr 9007
+
+        ---------------------------------------------------
+        -              Shall we play a game?              -
+        ---------------------------------------------------
+
+        You have given some gold coins in your hand
+        however, there is one counterfeit coin among them
+        counterfeit coin looks exactly same as real coin
+        however, its weight is different from real one
+        real coin weighs 10, counterfeit coin weighes 9
+        help me to find the counterfeit coin with a scale
+        if you find 100 counterfeit coins, you will get reward :)
+        FYI, you have 60 seconds.
+
+        - How to play - 
+        1. you get a number of coins (N) and number of chances (C)
+        2. then you specify a set of index numbers of coins to be weighed
+        3. you get the weight information
+        4. 2~3 repeats C time, then you give the answer
+
+        - Example -
+        [Server] N=4 C=2        # find counterfeit among 4 coins with 2 trial
+        [Client] 0 1            # weigh first and second coin
+        [Server] 20                     # scale result : 20
+        [Client] 3                      # weigh fourth coin
+        [Server] 10                     # scale result : 10
+        [Client] 2                      # counterfeit coin is third!
+        [Server] Correct!
+
+        - Ready? starting in 3 sec... -
+
+N=622 C=10
+```
+
+简单来说，我们需要在有限的猜测次数下，从一组硬币中找到一枚假币，这应该可以用二分搜索法解决，每次猜出一半可能的硬币。主要问题在于我们需要在`60`秒内找到`100`枚假币。编写`Python`代码进行求解，然而超时啦！
+
+```python
+from pwn import *
+import re
+
+io = remote('pwnable.kr', 9007)
+log.info(io.recv())
+for _ in range(100):
+    msg = io.recv().decode()
+    log.info(msg)
+    match = re.findall(r'N=(\d+) C=(\d+)', msg)[0]
+    if match:
+        N, C = int(match[0]), int(match[1])
+    begin, end = 0, N-1
+    while begin <= end and C > 0:
+        mid = (begin + end) // 2
+        guess = ' '.join(str(i) for i in range(begin, mid+1))
+        io.sendline(guess.encode('utf-8'))
+        weight = int(io.recvline()[:-1])
+        if weight % 10 == 0:
+            begin = mid + 1
+        else:
+            end = mid - 1
+        C -= 1
+    for _ in range(C):
+        io.sendline(b'0')
+        io.recv()
+    io.sendline(str(begin).encode('utf-8'))
+    log.info(io.recv())
+
+
+log.success(io.recvline())  # Congrats! get your flag
+flag = io.recvline()  # b1NaRy_S34rch1nG_1s_3asy_p3asy
+log.success(flag)
+io.close()
+```
+
+题目说了如果网络响应时间太慢的话可以`SSH`进入`pwnable.kr`来进行求解，`localhost`就是如此丝滑，一下就算出`flag`啦。
+
+```bash
+shellshock@pwnable:~$ mkdir /tmp/t0ur1st
+shellshock@pwnable:~$ cd /tmp/t0ur1st
+shellshock@pwnable:/tmp/t0ur1st$ vim exp.py
+shellshock@pwnable:/tmp/t0ur1st$ python exp.py
+[+] Opening connection to localhost on port 9007: Done
+[*] 
+        ---------------------------------------------------
+        -              Shall we play a game?              -
+        ---------------------------------------------------
+        
+        You have given some gold coins in your hand
+        however, there is one counterfeit coin among them
+        counterfeit coin looks exactly same as real coin
+        however, its weight is different from real one
+        real coin weighs 10, counterfeit coin weighes 9
+        help me to find the counterfeit coin with a scale
+        if you find 100 counterfeit coins, you will get reward :)
+        FYI, you have 60 seconds.
+        
+        - How to play - 
+        1. you get a number of coins (N) and number of chances (C)
+        2. then you specify a set of index numbers of coins to be weighed
+        3. you get the weight information
+        4. 2~3 repeats C time, then you give the answer
+        
+        - Example -
+        [Server] N=4 C=2     # find counterfeit among 4 coins with 2 trial
+        [Client] 0 1         # weigh first and second coin
+        [Server] 20            # scale result : 20
+        [Client] 3            # weigh fourth coin
+        [Server] 10            # scale result : 10
+        [Client] 2             # counterfeit coin is third!
+        [Server] Correct!
+    
+        - Ready? starting in 3 sec... -
+        
+[*] N=798 C=10
+[*] Correct! (0)
+[*] N=490 C=9
+[*] Correct! (1)
+[*] N=491 C=9
+[*] Correct! (2)
+[*] N=694 C=10
+[*] Correct! (3)
+[*] N=292 C=9
+[*] Correct! (4)
+[*] N=637 C=10
+[*] Correct! (5)
+[*] N=216 C=8
+[*] Correct! (6)
+[*] N=246 C=8
+[*] Correct! (7)
+[*] N=304 C=9
+[*] Correct! (8)
+[*] N=416 C=9
+[*] Correct! (9)
+[*] N=461 C=9
+[*] Correct! (10)
+[*] N=515 C=10
+[*] Correct! (11)
+[*] N=531 C=10
+[*] Correct! (12)
+[*] N=134 C=8
+[*] Correct! (13)
+[*] N=696 C=10
+[*] Correct! (14)
+[*] N=476 C=9
+[*] Correct! (15)
+[*] N=785 C=10
+[*] Correct! (16)
+[*] N=218 C=8
+[*] Correct! (17)
+[*] N=732 C=10
+[*] Correct! (18)
+[*] N=587 C=10
+[*] Correct! (19)
+[*] N=962 C=10
+[*] Correct! (20)
+[*] N=675 C=10
+[*] Correct! (21)
+[*] N=589 C=10
+[*] Correct! (22)
+[*] N=945 C=10
+[*] Correct! (23)
+[*] N=706 C=10
+[*] Correct! (24)
+[*] N=362 C=9
+[*] Correct! (25)
+[*] N=627 C=10
+[*] Correct! (26)
+[*] N=50 C=6
+[*] Correct! (27)
+[*] N=547 C=10
+[*] Correct! (28)
+[*] N=652 C=10
+[*] Correct! (29)
+[*] N=118 C=7
+[*] Correct! (30)
+[*] N=921 C=10
+[*] Correct! (31)
+[*] N=174 C=8
+[*] Correct! (32)
+[*] N=675 C=10
+[*] Correct! (33)
+[*] N=908 C=10
+[*] Correct! (34)
+[*] N=976 C=10
+[*] Correct! (35)
+[*] N=353 C=9
+[*] Correct! (36)
+[*] N=315 C=9
+[*] Correct! (37)
+[*] N=908 C=10
+[*] Correct! (38)
+[*] N=156 C=8
+[*] Correct! (39)
+[*] N=960 C=10
+[*] Correct! (40)
+[*] N=104 C=7
+[*] Correct! (41)
+[*] N=200 C=8
+[*] Correct! (42)
+[*] N=615 C=10
+[*] Correct! (43)
+[*] N=387 C=9
+[*] Correct! (44)
+[*] N=825 C=10
+[*] Correct! (45)
+[*] N=730 C=10
+[*] Correct! (46)
+[*] N=472 C=9
+[*] Correct! (47)
+[*] N=358 C=9
+[*] Correct! (48)
+[*] N=551 C=10
+[*] Correct! (49)
+[*] N=736 C=10
+[*] Correct! (50)
+[*] N=702 C=10
+[*] Correct! (51)
+[*] N=682 C=10
+[*] Correct! (52)
+[*] N=158 C=8
+[*] Correct! (53)
+[*] N=166 C=8
+[*] Correct! (54)
+[*] N=440 C=9
+[*] Correct! (55)
+[*] N=707 C=10
+[*] Correct! (56)
+[*] N=656 C=10
+[*] Correct! (57)
+[*] N=3 C=2
+[*] Correct! (58)
+[*] N=348 C=9
+[*] Correct! (59)
+[*] N=476 C=9
+[*] Correct! (60)
+[*] N=845 C=10
+[*] Correct! (61)
+[*] N=68 C=7
+[*] Correct! (62)
+[*] N=255 C=8
+[*] Correct! (63)
+[*] N=912 C=10
+[*] Correct! (64)
+[*] N=413 C=9
+[*] Correct! (65)
+[*] N=948 C=10
+[*] Correct! (66)
+[*] N=873 C=10
+[*] Correct! (67)
+[*] N=414 C=9
+[*] Correct! (68)
+[*] N=472 C=9
+[*] Correct! (69)
+[*] N=756 C=10
+[*] Correct! (70)
+[*] N=626 C=10
+[*] Correct! (71)
+[*] N=859 C=10
+[*] Correct! (72)
+[*] N=208 C=8
+[*] Correct! (73)
+[*] N=890 C=10
+[*] Correct! (74)
+[*] N=694 C=10
+[*] Correct! (75)
+[*] N=629 C=10
+[*] Correct! (76)
+[*] N=936 C=10
+[*] Correct! (77)
+[*] N=41 C=6
+[*] Correct! (78)
+[*] N=330 C=9
+[*] Correct! (79)
+[*] N=492 C=9
+[*] Correct! (80)
+[*] N=655 C=10
+[*] Correct! (81)
+[*] N=654 C=10
+[*] Correct! (82)
+[*] N=72 C=7
+[*] Correct! (83)
+[*] N=737 C=10
+[*] Correct! (84)
+[*] N=425 C=9
+[*] Correct! (85)
+[*] N=526 C=10
+[*] Correct! (86)
+[*] N=361 C=9
+[*] Correct! (87)
+[*] N=198 C=8
+[*] Correct! (88)
+[*] N=657 C=10
+[*] Correct! (89)
+[*] N=509 C=9
+[*] Correct! (90)
+[*] N=371 C=9
+[*] Correct! (91)
+[*] N=773 C=10
+[*] Correct! (92)
+[*] N=260 C=9
+[*] Correct! (93)
+[*] N=905 C=10
+[*] Correct! (94)
+[*] N=776 C=10
+[*] Correct! (95)
+[*] N=379 C=9
+[*] Correct! (96)
+[*] N=331 C=9
+[*] Correct! (97)
+[*] N=602 C=10
+[*] Correct! (98)
+[*] N=632 C=10
+[*] Correct! (99)
+[+] Congrats! get your flag
+[+] b1NaRy_S34rch1nG_1s_3asy_p3asy
+[*] Closed connection to localhost port 9007
+```
+
+提交 `b1NaRy_S34rch1nG_1s_3asy_p3asy` 即可。
