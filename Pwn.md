@@ -9160,3 +9160,137 @@ My daddy has a lot of ARMv5te muscle!
 
 ------
 
+### mistake
+
+这是**Pwnable.kr**的第九个挑战`leg`，来自**[Toddler's Bottle]**部分。
+
+```bash
+We all make mistakes, let's move on.
+(don't take this too seriously, no fancy hacking skill is required at all)
+
+This task is based on real event
+Thanks to dhmonkey
+
+hint : operator priority
+
+ssh mistake@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh mistake@pwnable.kr -p2222
+mistake@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 04:26:08 2023 from 77.127.99.41
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+mistake@pwnable:~$ ls -la
+total 44
+drwxr-x---   5 root        mistake 4096 Oct 23  2016 .
+drwxr-xr-x 117 root        root    4096 Nov 10  2022 ..
+d---------   2 root        root    4096 Jul 29  2014 .bash_history
+-r--------   1 mistake_pwn root      51 Jul 29  2014 flag
+dr-xr-xr-x   2 root        root    4096 Aug 20  2014 .irssi
+-r-sr-x---   1 mistake_pwn mistake 8934 Aug  1  2014 mistake
+-rw-r--r--   1 root        root     792 Aug  1  2014 mistake.c
+-r--------   1 mistake_pwn root      10 Jul 29  2014 password
+drwxr-xr-x   2 root        root    4096 Oct 23  2016 .pwntools-cache
+```
+
+我们可以看到三个文件`mistake`、`mistake.c`和`flag`，其中`mistake`是`ELF`二进制可执行文件，`mistake.c`是编译二进制文件的`C`代码，用户`mistake`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat mistake.c`来查看`mistake.c`的代码。
+
+```c
+mistake@pwnable:~$ cat mistake.c
+#include <stdio.h>
+#include <fcntl.h>
+
+#define PW_LEN 10
+#define XORKEY 1
+
+void xor(char* s, int len){
+    int i;
+    for(i=0; i<len; i++){
+        s[i] ^= XORKEY;
+    }
+}
+
+int main(int argc, char* argv[]){
+
+    int fd;
+    if(fd=open("/home/mistake/password",O_RDONLY,0400) < 0){
+        printf("can't open password %d\n", fd);
+        return 0;
+    }
+
+    printf("do not bruteforce...\n");
+    sleep(time(0)%20);
+
+    char pw_buf[PW_LEN+1];
+    int len;
+    if(!(len=read(fd,pw_buf,PW_LEN) > 0)){
+        printf("read error\n");
+        close(fd);
+        return 0;
+    }
+
+    char pw_buf2[PW_LEN+1];
+    printf("input password : ");
+    scanf("%10s", pw_buf2);
+
+    // xor your input
+    xor(pw_buf2, 10);
+
+    if(!strncmp(pw_buf, pw_buf2, PW_LEN)){
+        printf("Password OK\n");
+        system("/bin/cat flag\n");
+    }
+    else{
+        printf("Wrong Password\n");
+    }
+
+    close(fd);
+    return 0;
+}
+```
+
+先来分析主函数的这部分代码：
+
+```c
+int fd;
+if(fd=open("/home/mistake/password",O_RDONLY,0400) < 0){
+    printf("can't open password %d\n", fd);
+    return 0;
+}
+```
+
+在这段代码中，编程者想的是：`open` 函数用于打开文件 `/home/mistake/password` 并返回文件描述符，然后将返回值与 `0` 进行比较。然而，由于运算符优先级的问题，条件判断的结果可能会出现错误。因为实际上，`<` 运算符的优先级高于 `=` 运算符，所以 `<` 运算符会在 `=` 运算符之前进行计算。这意味着 `open` 函数的返回值`1`会先与`0`进行比较，然后结果`0`会赋值给 `fd` 变量，因此该`if`语句实际上可以理解为`if(fd = 0)`。而`fd = 0`时是标准输入`STDIN`，这意味着用户能进行俩次输入，并且密码实际上是由用户的第一次输入所决定。用户第二次输入的密码会传递给`xor()`函数进行异或运算，所以答案已经显而易见啦。运行`./mistake`，第一次输入长度为`10`的全`1`字符串，第二次输入等长的全`0`字符串即可拿到`flag`：`Mommy, the operator priority always confuses me :(`。
+
+```bash
+mistake@pwnable:~$ ./mistake
+do not bruteforce...
+1111111111
+input password : 0000000000
+Password OK
+Mommy, the operator priority always confuses me :(
+```
+
+------
+
