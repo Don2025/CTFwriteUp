@@ -11536,3 +11536,123 @@ io.interactive()
 
 ------
 
+### blukat
+
+这是**Pwnable.kr**的第二十个挑战`blukat`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Sometimes, pwnable is strange...
+hint: if this challenge is hard, you are a skilled player.
+
+ssh blukat@pwnable.kr -p2222 (pw: guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh blukat@pwnable.kr -p2222
+blukat@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 10:50:24 2023 from 12.249.36.98
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+blukat@pwnable:~$ ls -la
+total 36
+drwxr-x---   4 root blukat     4096 Aug 16  2018 .
+drwxr-xr-x 117 root root       4096 Nov 10  2022 ..
+-r-xr-sr-x   1 root blukat_pwn 9144 Aug  8  2018 blukat
+-rw-r--r--   1 root root        645 Aug  8  2018 blukat.c
+dr-xr-xr-x   2 root root       4096 Aug 16  2018 .irssi
+-rw-r-----   1 root blukat_pwn   33 Jan  6  2017 password
+drwxr-xr-x   2 root root       4096 Aug 16  2018 .pwntools-cache
+```
+
+可以看到三个文件`blukat`、`blukat.c`和`password`，其中`blukat`是`ELF`二进制可执行文件，`blukat.c`是编译二进制文件的`C`代码。
+
+查看`blukat.c`的源代码。
+
+```c
+blukat@pwnable:~$ cat blukat.c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
+char flag[100];
+char password[100];
+char* key = "3\rG[S/%\x1c\x1d#0?\rIS\x0f\x1c\x1d\x18;,4\x1b\x00\x1bp;5\x0b\x1b\x08\x45+";
+void calc_flag(char* s){
+    int i;
+    for(i=0; i<strlen(s); i++){
+        flag[i] = s[i] ^ key[i];
+    }
+    printf("%s\n", flag);
+}
+int main(){
+    FILE* fp = fopen("/home/blukat/password", "r");
+    fgets(password, 100, fp);
+    char buf[100];
+    printf("guess the password!\n");
+    fgets(buf, 128, stdin);
+    if(!strcmp(password, buf)){
+        printf("congrats! here is your flag: ");
+        calc_flag(password);
+    }
+    else{
+        printf("wrong guess!\n");
+        exit(0);
+    }
+    return 0;
+}
+```
+
+题目描述中给出了`hint: if this challenge is hard, you are a skilled player.`。查看用户信息：
+
+```bash
+blukat@pwnable:~$ id
+uid=1104(blukat) gid=1104(blukat) groups=1104(blukat),1105(blukat_pwn)
+blukat@pwnable:~$ groups blukat
+blukat : blukat blukat_pwn
+```
+
+没想到这题`blukat`和`blukat_pwn`居然是同一个分组，那我们是不是有权限访问`password`呢？！
+
+```bash
+blukat@pwnable:~$ cat password
+cat: password: Permission denied
+blukat@pwnable:~$ file ./password
+./password: ASCII text
+blukat@pwnable:~$ xxd password
+00000000: 6361 743a 2070 6173 7377 6f72 643a 2050  cat: password: P
+00000010: 6572 6d69 7373 696f 6e20 6465 6e69 6564  ermission denied
+00000020: 0a
+```
+
+好家伙！这题居然还假装我们没有访问权限，其实密码就是`cat: password: Permission denied`。
+
+```bash
+blukat@pwnable:~$ cat password | ./blukat
+guess the password!
+congrats! here is your flag: Pl3as_DonT_Miss_youR_GrouP_Perm!!
+```
+
+将密码输入到二进制文件`blukat`中，得到`flag`：`Pl3as_DonT_Miss_youR_GrouP_Perm!!`。
+
+------
+
