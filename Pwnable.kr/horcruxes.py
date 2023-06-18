@@ -37,5 +37,5 @@ io.sendline(b'1')
 io.recvuntil(b'How many EXP did you earned? : ')
 io.sendline(str(result).encode())
 flag = io.recvline().decode()   # Magic_spell_1s_4vad4_K3daVr4!
-log.success(flag) 
+log.success('Flag: %s' % flag)
 io.close()

