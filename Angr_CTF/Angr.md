@@ -678,7 +678,7 @@ git clone https://github.com/jakespringer/angr_ctf.git
 先`file ./00_angr_find`查看文件类型。
 
 ```bash
-┌──(tyd㉿kali-linux)-[~/ctf/reverse/angr_ctf/]
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./00_angr_find
 ./00_angr_find: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=83edb9b0f7da06e0355b5310294ae256ded72ca1, not stripped
 ```
@@ -749,6 +749,10 @@ else:
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 00_angr_find.py 
+b'JXWVXRKX'
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./00_angr_find 
 Enter the password: JXWVXRKX
 Good Job.
@@ -769,7 +773,7 @@ Good Job.
 先`file ./01_angr_find`查看文件类型。
 
 ```bash
-┌──(tyd㉿kali-linux)-[~/ctf/reverse/angr_ctf/]
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./01_angr_find
 ./01_angr_avoid: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=b2a7c5e56cec829714441aee4b163c411ae24e3d, not stripped
 ```
@@ -824,6 +828,10 @@ else:
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 01_angr_avoid.py  
+b'HUJOZMYS'
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./01_angr_avoid         
 Enter the password: HUJOZMYS
 Good Job.
@@ -836,7 +844,7 @@ Good Job.
 先`file ./02_angr_find_condition`查看文件类型。
 
 ```bash
-┌──(tyd㉿kali-linux)-[~/ctf/reverse/angr_ctf/]
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./02_angr_find_condition
 02_angr_find_condition: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=8f449fc89161a9f0a1b895fb352b85894ae7117f, not stripped
 ```
@@ -900,6 +908,10 @@ else:
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 02_angr_find_condition.py
+b'HETOBRCU'
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./02_angr_find_condition    
 Enter the password: HETOBRCU
 Good Job.
@@ -912,7 +924,7 @@ Good Job.
 先`file ./03_angr_symbolic_registers`查看文件类型。
 
 ```bash
-┌──(tyd㉿kali-linux)-[~/ctf/reverse/angr_ctf/]
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./03_angr_symbolic_registers
 03_angr_symbolic_registers: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=c0059af3c6c186fb950c307552251aadc0648fb0, not stripped
 ```
@@ -1007,6 +1019,10 @@ else:
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 03_angr_symbolic_registers.py                                   
+b9ffd04e ccf63fe8 8fd4d959
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./03_angr_symbolic_registers
 Enter the password: b9ffd04e ccf63fe8 8fd4d959
 Good Job.
@@ -1019,7 +1035,7 @@ Good Job.
 先`file ./04_angr_simbolic_stack`查看文件类型。
 
 ```bash
-┌──(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./04_angr_symbolic_stack
 ./04_angr_symbolic_stack: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=cc18a41b58d7abfa868efc3be085b5712c6ea5ff, not stripped
 ```
@@ -1205,6 +1221,10 @@ else:
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 04_angr_simbolic_stack.py 
+[+] Congratulations! Solution is: 1704280884 2382341151
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./04_angr_symbolic_stack
 Enter the password: 1704280884 2382341151
 Good Job.
@@ -1218,6 +1238,136 @@ Good Job.
 - `solver.eval_exact(expression, n)`将会给出n个可行解，如果解的个数不等于n个，将会抛出异常。
 - `solver.min(expression)`将会给出最小可行解。
 - `solver.max(expression)`将会给出最大可行解。
+
+------
+
+### 05_angr_symbolic_memory
+
+先`file ./05_angr_symbolic_memory`查看文件类型和文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./05_angr_symbolic_memory
+./05_angr_symbolic_memory: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=ca0d1114af914bf2d4c73a18488e43c670f6f617, not stripped
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./05_angr_symbolic_memory                                                              130 ⨯
+[*] '/home/tyd/ctf/Angr_CTF/05_angr_symbolic_memory'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`05_angr_symbolic_memory`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [esp+Ch] [ebp-Ch]
+
+  memset(user_input, 0, 0x21u);
+  printf("Enter the password: ");
+  __isoc99_scanf("%8s %8s %8s %8s", user_input, &unk_A1BA1C8, &unk_A1BA1D0, &unk_A1BA1D8);
+  for ( i = 0; i <= 31; ++i )
+    *(_BYTE *)(i + 169583040) = complex_function(*(char *)(i + 169583040), i);
+  if ( !strncmp(user_input, "NJPURZPCDYEAXCSJZJMPSOMBFDDLHBVN", 0x20u) )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  return 0;
+}
+```
+
+双击`complex_function()`函数查看详情：
+
+```c
+int __cdecl complex_function(int a1, int a2)
+{
+  if ( a1 <= 64 || a1 > 90 )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  return (9 * a2 + a1 - 65) % 26 + 65;
+}
+```
+
+用户输入的那四个八字节长度的字符串是存放在`.bss`段上的，分别位于地址`[0xA1BA1C0, 0xA1BA1C8, 0xA1BA1D0, 0xA1BA1D8]`。
+
+```assembly
+.bss:0A1BA1C0 user_input      db 8 dup(?)             ; DATA XREF: main+18↑o
+.bss:0A1BA1C8 unk_A1BA1C8     db    ? ;               ; DATA XREF: main+42↑o
+.bss:0A1BA1D0 unk_A1BA1D0     db    ? ;               ; DATA XREF: main+3D↑o
+.bss:0A1BA1D8 unk_A1BA1D8     db    ? ;               ; DATA XREF: main+38↑o
+```
+
+输入的字符串经过`complex_function()`函数进行变换后与字符串`"NJPURZPCDYEAXCSJZJMPSOMBFDDLHBVN"`比较`0x20`个字符。
+
+```assembly
+.text:080485E0                 push    offset unk_A1BA1D8
+.text:080485E5                 push    offset unk_A1BA1D0
+.text:080485EA                 push    offset unk_A1BA1C8
+.text:080485EF                 push    offset user_input
+.text:080485F4                 push    offset a8s8s8s8s ; "%8s %8s %8s %8s"
+.text:080485F9                 call    ___isoc99_scanf
+.text:080485FE                 add     esp, 20h
+.text:08048601                 mov     [ebp+var_C], 0
+.text:08048608                 jmp     short loc_8048637
+```
+
+编写`Python`代码求解得到`NAXTHGNR JVSFTPWE LMGAUHWC XMDCPALU`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './05_angr_symbolic_memory'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+start_address = 0x8048601
+initial_state = project.factory.blank_state(
+    addr = start_address,
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS}
+)
+# The binary is calling scanf("%8s %8s %8s %8s").
+password0_address = 0xA1BA1C0
+password0 = claripy.BVS('p0', 64)
+initial_state.memory.store(password0_address, password0)
+password1 = claripy.BVS('p1', 64)
+initial_state.memory.store(password0_address+0x8, password1)
+password2 = claripy.BVS('p2', 64)
+initial_state.memory.store(password0_address+0x10, password2)
+password3 = claripy.BVS('p3', 64)
+initial_state.memory.store(password0_address+0x18, password3)
+simulation = project.factory.simgr(initial_state)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd0 = solution_state.solver.eval(password0, cast_to=bytes).decode()
+    passwd1 = solution_state.solver.eval(password1, cast_to=bytes).decode()
+    passwd2 = solution_state.solver.eval(password2, cast_to=bytes).decode()
+    passwd3 = solution_state.solver.eval(password3, cast_to=bytes).decode()
+    print('[+] Congratulations! Solution is: {} {} {} {}'.format(passwd0, passwd1, passwd2, passwd3))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 05_angr_symbolic_memory.py                                                                 1 ⨯
+[+] Congratulations! Solution is: NAXTHGNR JVSFTPWE LMGAUHWC XMDCPALU
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./05_angr_symbolic_memory
+Enter the password: NAXTHGNR JVSFTPWE LMGAUHWC XMDCPALU
+Good Job.
+```
 
 ------
 
