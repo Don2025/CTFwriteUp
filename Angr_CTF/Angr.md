@@ -62,7 +62,7 @@ c.NotebookApp.allow_remote_access = True   # 允许外部访问
 c.NotebookApp.ip='*'                       # 设置所有ip皆可访问
 c.NotebookApp.password = u'sha1:salt:hashed-password'  # 刚才生成的密钥'
 c.NotebookApp.open_browser = False       # 禁止自动打开浏览器
-c.NotebookApp.port = 2021                # 任意指定一个不冲突的端口
+c.NotebookApp.port = 8888                # 任意指定一个不冲突的端口
 c.NotebookApp.notebook_dir = '/home/ubuntu/JupyterProject/' #默认文件路径
 c.NotebookApp.allow_root = True          # 允许root身份运行jupyter notebook
 ```
@@ -94,8 +94,7 @@ sudo apt-get install python3-dev libffi-dev build-essential virtualenvwrapper
 直接 `pip` 安装 `angr` 的话会在 `import` 时报错，所以应该使用 `virtualenv` 来进行安装，我使用了以下命令行进行安装。
 
 ```bash
-virtualenv angr && pip install angr && source ./angr/bin/activate
-# z3包 pip install 安装速度过慢可以临时切换清华源 python3 -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple angr
+virtualenv angr && source ./angr/bin/activate && pip install angr -i https://pypi.tuna.tsinghua.edu.cn/simple 
 ```
 
 此外，如果不使用`virtualenv`来创建虚拟环境的话，用`conda`也可以。
@@ -109,7 +108,7 @@ pip install angr
 `angr`官方推荐使用虚拟环境运行，每次需要调用具有`angr`环境时，只需要执行：
 
 ```shell
-mkvirtualenv --python=$(which python3) angr
+virtualenv --python=$(which python3) angr
 ```
 
 ##### 如果遇上 mkvirtualenv: command not found 问题
@@ -154,69 +153,74 @@ pip3 install ipykernel
 python -m ipykernel install --name angr
 ```
 
-### 使用方法 （待完善）
+### 使用方法 
 
-[**angr API documentation**](https://api.angr.io)
+官方的API文档：[**angr API documentation**](https://api.angr.io)。`Angr`还有一个GUI版本可用：[**angr Management**](https://github.com/angr/angr-management)。
 
 `angr` 的使用步骤大致如下：
 
-- 创建 `Project` 对象，将一个二进制文件加载到分析平台。
+- 创建 `Project` 对象，`Project` 会解析二进制文件的结构，包括内存布局、符号表、重定位表等，以便进行静态和动态分析。
 
     ```python
     >>> import angr
-    >>> proj = angr.Project('./baby_reverse')
+    >>> proj = angr.Project('./00_angr_find')
     ```
 
-     `Project` 是angr中控制基础，
-
--  `Project` 有一些基础属性。
+- `Project` 有一些基础属性。
 
     ```python
-    
-    >>> proj.entry # 二进制文件的入口地址
-    0x4010a0
-    >>> proj.filename # 文件名
-    './baby_reverse'
-    ```
-
-- `arch`
-
-    ```python
+    >>> proj.filename  # 二进制文件名
+    './00_angr_find'
+    >>> proj.arch      # 二进制文件的体系结构
+    <Arch X86 (LE)>
+    >>> proj.entry     # 二进制文件的入口地址
+    134513744
+    >>> hex(proj.entry) 
+    '0x8048450'
     >>> import monkeyhex
-    >>> arch = proj.arch  # 架构
+    >>> proj.entry
+    >>> 0x8048450
+    >>> proj.loader   # 二进制文件的加载器, 用于解析二进制文件的结构, 程序加载时会将二进制文件和共享库映射到虚拟地址中, CLE模块就是用来处理这些的
+    <Loaded 00_angr_find, maps [0x8048000:0x8707fff]>
+    ```
+
+- `arch`也有一些基础属性。
+
+    ```python
+    >>> arch = proj.arch  # 二进制文件的架构
     >>> arch
-    <Arch AMD64 (LE)>
+    <Arch X86 (LE)>
     >>> arch.name
-    'AMD64'
+    'X86'
     >>> arch.bits
-    0x40
+    0x20
     >>> arch.bytes
-    0x8
+    0x4
     >>> arch.vex_arch
-    'VexArchAMD64'
+    'VexArchX86'
     >>> arch.qemu_name
-    'x86_64'
+    'i386'
     >>> arch.ida_processor
     'metapc'
     >>> arch.triplet
-    'x86_64-linux-gnu'
+    'i386-linux-gnu'
     >>> arch.max_inst_bytes
     0xf
     >>> arch.ip_offset
-    0xb8
+    0x44
     >>> arch.sp_offset
-    0x30
+    0x18
     >>> arch.bp_offset
-    0x38
+    0x1c
     >>> arch.lr_offset
     >>> arch.vex_conditional_helpers
     True
     >>> arch.syscall_num_offset
-    0x10
+    0x8
     >>> arch.call_pushes_ret
     True
     >>> arch.stack_change
-    -0x8
+    -0x4
     >>> arch.memory_endness
     'Iend_LE'
     >>> arch.register_endness
@@ -227,36 +231,188 @@ python -m ipykernel install --name angr
     {'short': 0x10, 'int': 0x20, 'long': 0x40, 'long long': 0x40}
     ```
 
-- 设置 `state` 
-
-- loader
+- 二进制文件的加载器 `loader` 用于解析二进制文件的结构，程序加载时会将二进制文件和共享库映射到虚拟地址中，`CLE`模块就是用来处理这些的。
   
   ```python
   >>> loader = proj.loader
   >>> loader
   <Loaded baby_reverse, maps [0x400000:0xb07fff]>
-  >>> loader.main_object # Project加载的二进制文件信息 名字 映射地址
-  <ELF Object baby_reverse, maps [0x400000:0x40407f]>
-  >>> loader.main_object.pic # 查询主对象是否开启了PIC
-  True
-  >>> loader.main_object.execstack # 查询主对象是否开启了NX 栈是否可执行
+  >>> loader.main_object  # Project加载的二进制文件信息 名字 映射地址
+  <ELF Object 00_angr_find, maps [0x8048000:0x804a03f]>
+  >>> loader.main_object.pic  # 查询主对象是否开启了PIC, 即查询二进制程序是否开启地址随机化
   False
-  >>> loader.shared_objects # 共享目标文件的信息 名字 映射地址 
-  OrderedDict([('baby_reverse', <ELF Object baby_reverse, maps [0x400000:0x40407f]>), ('libc.so.6', <ELF Object libc.so.6, maps [0x500000:0x727e4f]>), ('ld-linux-x86-64.so.2', <ELF Object ld-linux-x86-64.so.2, maps [0x800000:0x83b2d7]>), ('extern-address space', <ExternObject Object cle##externs, maps [0x900000:0x97ffff]>), ('cle##tls', <ELFTLSObjectV2 Object cle##tls, maps [0xa00000:0xa1500f]>)])
+  >>> loader.main_object.execstack  # 查询主对象是否开启了NX 栈是否可执行, 即查询二进制文件是否拥有可执行栈
+  False
+  >>> loader.shared_objects  # 与二进制文件共同加载的共享库信息, 共享目标文件的信息 名字 映射地址 
+  {'00_angr_find': <ELF Object 00_angr_find, maps [0x8048000:0x804a03f]>,
+   'libc.so.6': <ELF Object libc.so.6, maps [0x8100000:0x832791b]>,
+   'ld-linux.so.2': <ELF Object ld-linux.so.2, maps [0x8400000:0x8434a3f]>,
+   'extern-address space': <ExternObject Object cle##externs, maps [0x8500000:0x8507fff]>,
+   'cle##tls': <ELFTLSObjectV2 Object cle##tls, maps [0x8600000:0x8614807]>}
+  >>> loader.all_elf_objects
+  [<ELF Object 00_angr_find, maps [0x8048000:0x804a03f]>,
+   <ELF Object libc.so.6, maps [0x8100000:0x832791b]>,
+   <ELF Object ld-linux.so.2, maps [0x8400000:0x8434a3f]>]
+  >>> loader.extern_object
+  <ExternObject Object cle##externs, maps [0x8500000:0x8507fff]>
+   >>> loader.main_object.plt
+  {'strcmp': 0x80483d0,
+   'printf': 0x80483e0,
+   '__stack_chk_fail': 0x80483f0,
+   'puts': 0x8048400,
+   'exit': 0x8048410,
+   '__libc_start_main': 0x8048420,
+   '__isoc99_scanf': 0x8048430,
+   '__gmon_start__': 0x8048440}
+  >>> loader.main_object.imports['__libc_start_main']
+  <cle.backends.elf.relocation.i386.R_386_JMP_SLOT object at 0x7f0f4739c750>
   >>> loader.min_addr
-  0x400000
+  0x8048000
   >>> loader.max_addr
-  0xb07fff
+  0x8707fff
+  >>> printf = loader.find_symbol('printf')
+  >>> printf
+  <Symbol "printf" in libc.so.6 at 0x8153e40>
+  >>> printf.name   # 符号名称 
+  'printf'
+  >>> printf.owner  # 拥有该符号的ELF对象
+  <ELF Object libc.so.6, maps [0x8100000:0x832791b]>
+  >>> printf.rebased_addr  # 将库加载到进程的地址空间后, 内存中符号的绝对地址
+  0x8153e40
+  >>> printf.linked_addr   # 库文件中该符号的地址
+  0x53e40
+  >>> printf.relative_addr  # 相对于库文件基地址的该符号地址
+  0x53e40
+  >>> printf.is_import  # 该符号是否为导入的符号, 即它是否在另一个库中定义而在该库中使用的符号
+  False
+  >>> printf.is_export  # 该符号是否为导出的符号, 即它在此库中定义并且能提供给其他库或程序使用
+  True
   ```
   
-- `factory`
+- 通过`factory`提供的构造函数可以方便地创建对象。
 
   ```python
-  
+  >>> factory = proj.factory
+  >>> factory
+  <angr.factory.AngrObjectFactory object at 0x7f0f46644c10>
+  >>> block = factory.block(proj.entry)  # 创建一个起始地址为二进制文件入口点地址的基本代码块对象
+  >>> block
+  <Block for 0x8048450, 33 bytes>
+  >>> block.pp()   # 基本代码块的汇编指令代码 pp为pretty print的缩写
+           _start:
+  8048450  xor     ebp, ebp
+  8048452  pop     esi
+  8048453  mov     ecx, esp
+  8048455  and     esp, 0xfffffff0
+  8048458  push    eax
+  8048459  push    esp
+  804845a  push    edx
+  804845b  push    __libc_csu_fini
+  8048460  push    __libc_csu_init
+  8048465  push    ecx
+  8048466  push    esi
+  8048467  push    main
+  804846c  call    __libc_start_main
+  >>> block.instructions  # 基本代码块的汇编指令数目
+  0xd
+  >>> block.instruction_addrs  # 基本代码块的每条汇编指令的起始地址
+  (0x8048450,
+   0x8048452,
+   0x8048453,
+   0x8048455,
+   0x8048458,
+   0x8048459,
+   0x804845a,
+   0x804845b,
+   0x8048460,
+   0x8048465,
+   0x8048466,
+   0x8048467,
+   0x804846c)
   ```
 
+`project`对象只能表示程序的初始镜像。在用`angr`执行程序时，需要用`SimState`对象来表示模拟的程序状态，`SimState`对象包含任何能够在运行过程中被改变的实时数据，如内存、寄存器、文件系统数据...... 
 
-使用 `proj.factory.simulation_manager`可以模拟执行
+注意`i386`和`amd64`的寄存器是不同的，所以`32`位和`64`位的二进制程序的`.regs`属性下的子属性也不一样。
+
+```python
+>>> state = factory.entry_state()
+>>> state
+<SimState @ 0x8048450>
+# 访问寄存器值
+>>> state.regs  
+<angr.state_plugins.view.SimRegNameView object at 0x7f0f45fd4550>
+>>> state.regs.eax
+<BV32 0x1c>
+>>> state.regs.eip
+<BV32 0x8048450>
+>>> addr = state.regs.esp
+>>> addr
+<BV32 0x7ffeffac>
+>>> state.mem[addr].int.resolved  # 访问内存值(以C语言中的int型)
+<BV32 0x1>
+>>> state.mem[addr].double = 5.2  # 设置内存值(以C语言的double类型)
+>>> state.mem[addr].double.resolved
+<FP64 FPV(5.2, DOUBLE)>
+>>> state.regs.esi = state.solver.BVV(6, 64)  # 设置寄存器值
+>>> state.regs.esi
+<BV32 0x6>
+```
+
+`python`中的整数型和`bitvector`类型的相互转化如下：
+
+```python
+>>> bv = state.solver.BVV(0x1234, 32)  # int转bitvector
+>>> pi = state.solver.eval(bv)         # bitvector转int
+>>> bv
+<BV32 0x1234>
+>>> pi
+0x1234
+```
+
+通过`proj.factory.simulation_manager`或者`proj.factory.simgr`创建模拟管理器，我们可以模拟执行二进制文件。
+
+```python
+>>> simgr = proj.factory.simgr(state)
+>>> simgr
+<SimulationManager with 1 active>
+>>> simgr.active
+[<SimState @ 0x8048450>]
+>>> simgr.explore(find=0x8048678)
+<SimulationManager with 1 active, 16 deadended, 1 found>
+>>> simgr.found
+[<SimState @ 0x8048678>]
+>>> simgr.found[0].posix.dumps(0)
+b'JXWVXRKX'
+>>> simgr.active[0].regs.eip  # 查看模拟执行后当前state的eip
+<BV32 0x8048670>
+>>> state.regs.eip  # 原始state的eip并没变
+<BV32 0x8048450>
+```
+
+此外，`angr`在`Project.analyses.`中提供了大量函数用于程序分析。
+
+```python
+>>> cfg = proj.analyses.CFGFast()  # 控制流分析图
+>>> cfg
+<CFGFast Analysis Result at 0x7fcd8b69b150>
+>>> cfg.graph
+<networkx.classes.digraph.DiGraph object at 0x7fcd82c2a210>  # 详情请查看networkx
+>>> len(cfg.graph.nodes())  # 返回图中节点的数量
+0x1ca61
+>>> entry_node = cfg.get_any_node(proj.entry)  # 获取程序入口地址处的节点
+>>> entry_node
+<CFGNode _start [33]>
+>>> len(list(cfg.graph.successors(entry_node)))  # 计算指定节点的后继节点数量
+0x1
+# 可以安装scipy和matplotlib模块画图
+>>> import networkx as nx
+>>> import matplotlib
+>>> matplotlib.use('Agg')
+>>> import matplotlib.pyplot as plt
+>>> nx.draw(cfg.graph)
+>>> plt.savefig('tmp.png')
+```
 
 ------
 
@@ -545,7 +701,31 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 }
 ```
 
-可以看到`complex_function()`函数对用户输入的字符串进行处理后，与字符串`"JACEJGCS"`进行比较，若相等则输出`"Good Job."`。其中`puts("Good Job.");`的地址为`0x8048678`，编写`Python`代码用`angr`进行求解可以得到正确输入为`"JXWVXRKX"`。
+可以看到`complex_function()`函数对用户输入的字符串进行处理后，与字符串`"JACEJGCS"`进行比较，若相等则输出`"Good Job."`。双击查看`complex_function()`函数：
+
+```c
+int __cdecl complex_function(int a1, int a2)
+{
+  if ( a1 <= 64 || a1 > 90 )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  return (3 * a2 + a1 - 65) % 26 + 65;
+}
+```
+
+其中`puts("Good Job.");`的`"Good Job"`地址为`0x8048678`，相应的汇编代码如下：
+
+```assembly
+.text:08048675 loc_8048675:                            ; CODE XREF: main+9A↑j
+.text:08048675                 sub     esp, 0Ch
+.text:08048678                 push    offset aGoodJob ; "Good Job."
+.text:0804867D                 call    _puts
+.text:08048682                 add     esp, 10h
+```
+
+编写`Python`代码用`angr`进行求解可以得到正确输入为`"JXWVXRKX"`。
 
 ```python
 import angr
@@ -561,6 +741,14 @@ else:
     raise Exception('Could not find the solution')
 ```
 
+这道基础题主要是让我们熟悉`Angr`的基本使用流程，一般步骤如下：
+
+- 创建`project`加载二进制文件
+- 设置程序入口`state`
+- 创建`simgr`将初始状态加载到模拟器中
+- 使用`simgr.explore()`函数运行分析
+- 通过`simgr.found`属性获取符号执行的路径，解析执行结果
+
 ------
 
 ### 01_angr_avoid
@@ -573,13 +761,37 @@ else:
 ./01_angr_avoid: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=b2a7c5e56cec829714441aee4b163c411ae24e3d, not stripped
 ```
 
-用`IDA Pro 32bit`打开二进制文件`01_angr_avoid`，按`F5`反汇编主函数源码，发现`IDA Pro`报错`too big function`，打开`IDA Pro`根目录的`ctg`目录下的`hexrays.cfg`，将`64`修改为`1024`即可。
+用`IDA Pro 32bit`打开二进制文件`01_angr_avoid`，按`F5`反汇编主函数源码，发现`IDA Pro`报错`too big function`，打开`IDA Pro`根目录的`ctg`目录下的`hexrays.cfg`，将`64`修改为`1024`即可，然而发现再次按`F5`依旧很慢，可以选择用 [**retdec**](https://github.com/avast/retdec) 来查看反汇编源码。
 
 ```
 MAX_FUNCSIZE            = 1024        // Functions over 1024K are not decompiled
 ```
 
-其实直接看汇编代码也行，我们需要找到`"Good Job."`，其下面那行调用函数地址为`0x080485e5`，而`avoid_me`函数的地址为`0x080485A8`，编写`Python`代码用`angr`进行求解可以得到正确输入为`"HUJOZMYS"`。
+其实直接看汇编代码也行，我们需要找到`"Good Job."`，其下面那行调用函数地址为`0x080485e5`。
+
+```assembly
+.text:080485E0                 push    offset aGoodJob ; "Good Job."
+.text:080485E5                 call    _puts
+```
+
+而`avoid_me`函数的起始地址为`0x080485A8`。
+
+```assembly
+.text:080485A8                 public avoid_me
+.text:080485A8 avoid_me        proc near               ; CODE XREF: main+1CA↓p
+.text:080485A8                                         ; main+1FB↓p ...
+.text:080485A8 ; __unwind {
+.text:080485A8                 push    ebp
+.text:080485A9                 mov     ebp, esp
+.text:080485AB                 mov     should_succeed, 0
+.text:080485B2                 nop
+.text:080485B3                 pop     ebp
+.text:080485B4                 retn
+.text:080485B4 ; } // starts at 80485A8
+.text:080485B4 avoid_me        endp
+```
+
+编写`Python`代码用`angr`进行求解可以得到正确输入为`"HUJOZMYS"`。
 
 ```python
 import angr
@@ -642,20 +854,15 @@ import angr
 project = angr.Project('./02_angr_find_condition')
 initial_state = project.factory.entry_state()
 simulation = project.factory.simgr(initial_state)
-
 # set expected function to judge whether the output is succeessful according to the state.
 # state.posix is the api for posix, and dumps(file discription number) will get the bytes for the pointed file. sys.stdout.fileno() is the stdout file discription number. we can replace it by 1.
-def is_successful(state):
-    return b'Good Job' in state.posix.dumps(1)
-
+is_successful = lambda state: b'Good Job' in state.posix.dumps(1)
 # set unexpected function
-def should_abort(state):
-    return b'Try again' in state.posix.dumps(1)
-
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
 simulation.explore(find=is_successful, avoid=should_abort)
 if simulation.found:
     solution_state = simulation.found[0]
-    print(solution_state.posix.dumps(0)) # 0 == sys.stdin.fileno()
+    print(solution_state.posix.dumps(0))  # 0 == sys.stdin.fileno()
 else:
     raise Exception('Could not find the solution')
 ```
@@ -697,48 +904,33 @@ int __cdecl main(int argc, const char **argv, const char **envp)
 }
 ```
 
-相应的汇编代码为：
+双击`get_user_input()`函数查看详情：
 
 ```assembly
-.text:0804895A                 lea     ecx, [esp+4]
-.text:0804895E                 and     esp, 0FFFFFFF0h
-.text:08048961                 push    dword ptr [ecx-4]
-.text:08048964                 push    ebp
-.text:08048965                 mov     ebp, esp
-.text:08048967                 push    ecx
-.text:08048968                 sub     esp, 14h
-.text:0804896B                 sub     esp, 0Ch
-.text:0804896E                 push    offset aEnterThePasswo ; "Enter the password: "
-.text:08048973                 call    _printf
-.text:08048978                 add     esp, 10h
-.text:0804897B                 call    get_user_input
-.text:08048980                 mov     [ebp+var_14], eax
-.text:08048983                 mov     [ebp+var_10], ebx
-.text:08048986                 mov     [ebp+var_C], edx
-.text:08048989                 sub     esp, 0Ch
-.text:0804898C                 push    [ebp+var_14]
-.text:0804898F                 call    complex_function_1
-.text:08048994                 add     esp, 10h
-.text:08048997                 mov     ecx, eax
-.text:08048999                 mov     [ebp+var_14], ecx
-.text:0804899C                 sub     esp, 0Ch
-.text:0804899F                 push    [ebp+var_10]
-.text:080489A2                 call    complex_function_2
-.text:080489A7                 add     esp, 10h
-.text:080489AA                 mov     ecx, eax
-.text:080489AC                 mov     [ebp+var_10], ecx
-.text:080489AF                 sub     esp, 0Ch
-.text:080489B2                 push    [ebp+var_C]
-.text:080489B5                 call    complex_function_3
-.text:080489BA                 add     esp, 10h
-.text:080489BD                 mov     ecx, eax
-.text:080489BF                 mov     [ebp+var_C], ecx
-.text:080489C2                 cmp     [ebp+var_14], 0
-.text:080489C6                 jnz     short loc_80489D4
-.text:080489C8                 cmp     [ebp+var_10], 0
-.text:080489CC                 jnz     short loc_80489D4
-.text:080489CE                 cmp     [ebp+var_C], 0
-.text:080489D2                 jz      short loc_80489E6
+int get_user_input()
+{
+  int v1; // [esp+0h] [ebp-18h] BYREF
+  int v2; // [esp+4h] [ebp-14h] BYREF
+  int v3[4]; // [esp+8h] [ebp-10h] BYREF
+
+  v3[1] = __readgsdword(0x14u);
+  __isoc99_scanf("%x %x %x", &v1, &v2, v3);
+  return v1;
+}
+```
+
+关键汇编代码如下：
+
+```assembly
+.text:0804892A                 push    offset aXXX     ; "%x %x %x"
+.text:0804892F                 call    ___isoc99_scanf
+.text:08048934                 add     esp, 10h
+.text:08048937                 mov     ecx, [ebp+var_18]
+.text:0804893A                 mov     eax, ecx
+.text:0804893C                 mov     ecx, [ebp+var_14]
+.text:0804893F                 mov     ebx, ecx
+.text:08048941                 mov     ecx, [ebp+var_10]
+.text:08048944                 mov     edx, ecx
 ```
 
 我们把`angr`执行的起始地址设置为`0x8048980`，用户输入的三个参数分别存入了`eax`，`ebx`，`edx`这三个寄存器。创建符号变量后，将这三个寄存器进行符号化处理，最后再对符号变量进行求解，得到`b9ffd04e ccf63fe8 8fd4d959`。
@@ -761,7 +953,7 @@ initial_state.regs.edx = password2
 # set expected function to judge whether the output is succeessful according to the state.
 def is_successful(state):
     return b'Good Job' in state.posix.dumps(1)
-
+is_successful = lambda state: b'Good Job' in state.posix.dumps(1)
 # set unexpected function
 def should_abort(state):
     return b'Try again' in state.posix.dumps(1)
