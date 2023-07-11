@@ -249,13 +249,15 @@ python -m ipykernel install --name angr
    'ld-linux.so.2': <ELF Object ld-linux.so.2, maps [0x8400000:0x8434a3f]>,
    'extern-address space': <ExternObject Object cle##externs, maps [0x8500000:0x8507fff]>,
    'cle##tls': <ELFTLSObjectV2 Object cle##tls, maps [0x8600000:0x8614807]>}
-  >>> loader.all_elf_objects
+  >>> loader.all_elf_objects   # 所有ELF对象文件
   [<ELF Object 00_angr_find, maps [0x8048000:0x804a03f]>,
    <ELF Object libc.so.6, maps [0x8100000:0x832791b]>,
    <ELF Object ld-linux.so.2, maps [0x8400000:0x8434a3f]>]
-  >>> loader.extern_object
+  >>> loader.extern_object  # 外部对象文件
   <ExternObject Object cle##externs, maps [0x8500000:0x8507fff]>
-   >>> loader.main_object.plt
+  >>> loader.kernel_object  # 内核对象文件
+  <KernelObject Object cle##kernel, maps [0x8700000:0x8707fff]>
+  >>> loader.main_object.plt
   {'strcmp': 0x80483d0,
    'printf': 0x80483e0,
    '__stack_chk_fail': 0x80483f0,
@@ -266,6 +268,8 @@ python -m ipykernel install --name angr
    '__gmon_start__': 0x8048440}
   >>> loader.main_object.imports['__libc_start_main']
   <cle.backends.elf.relocation.i386.R_386_JMP_SLOT object at 0x7f0f4739c750>
+  >>> loader.main_object.segments
+  <Regions: [<ELFSegment flags=0x5, relro=0x0, vaddr=0x8048000, memsize=0x8b4, filesize=0x8b4, offset=0x0>, <ELFSegment flags=0x4, relro=0x1, vaddr=0x8049f08, memsize=0xf8, filesize=0xf8, offset=0xf08>, <ELFSegment flags=0x6, relro=0x0, vaddr=0x804a000, memsize=0x40, filesize=0x3d, offset=0x1000>]>
   >>> loader.min_addr
   0x8048000
   >>> loader.max_addr
@@ -741,6 +745,15 @@ else:
     raise Exception('Could not find the solution')
 ```
 
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./00_angr_find 
+Enter the password: JXWVXRKX
+Good Job.
+```
+
 这道基础题主要是让我们熟悉`Angr`的基本使用流程，一般步骤如下：
 
 - 创建`project`加载二进制文件
@@ -807,6 +820,15 @@ else:
     raise Exception('Could not find the solution')
 ```
 
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./01_angr_avoid         
+Enter the password: HUJOZMYS
+Good Job.
+```
+
 ------
 
 ### 02_angr_find_condition
@@ -856,15 +878,31 @@ initial_state = project.factory.entry_state()
 simulation = project.factory.simgr(initial_state)
 # set expected function to judge whether the output is succeessful according to the state.
 # state.posix is the api for posix, and dumps(file discription number) will get the bytes for the pointed file. sys.stdout.fileno() is the stdout file discription number. we can replace it by 1.
-is_successful = lambda state: b'Good Job' in state.posix.dumps(1)
+# set expected function to judge whether the output is succeessful according to the state.
+def is_successful(state):
+    return b'Good Job' in state.posix.dumps(1)
+# is_successful = lambda state: b'Good Job' in state.posix.dumps(1)
+
 # set unexpected function
-should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+def should_abort(state):
+    return b'Try again' in state.posix.dumps(1)
+# should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+
 simulation.explore(find=is_successful, avoid=should_abort)
 if simulation.found:
     solution_state = simulation.found[0]
     print(solution_state.posix.dumps(0))  # 0 == sys.stdin.fileno()
 else:
     raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./02_angr_find_condition    
+Enter the password: HETOBRCU
+Good Job.
 ```
 
 ------
@@ -919,7 +957,7 @@ int get_user_input()
 }
 ```
 
-关键汇编代码如下：
+其中寄存器传参的关键汇编代码如下：
 
 ```assembly
 .text:0804892A                 push    offset aXXX     ; "%x %x %x"
@@ -933,7 +971,7 @@ int get_user_input()
 .text:08048944                 mov     edx, ecx
 ```
 
-我们把`angr`执行的起始地址设置为`0x8048980`，用户输入的三个参数分别存入了`eax`，`ebx`，`edx`这三个寄存器。创建符号变量后，将这三个寄存器进行符号化处理，最后再对符号变量进行求解，得到`b9ffd04e ccf63fe8 8fd4d959`。
+我们把`angr`执行的起始地址设置为`0x8048980`，用户输入的三个参数分别存入了`eax`，`ebx`，`edx`这三个寄存器。创建符号变量后，将这三个寄存器进行符号化处理，最后再对符号变量进行求解。编写`Python`代码求解得到`b9ffd04e ccf63fe8 8fd4d959`。
 
 ```python
 import angr
@@ -949,15 +987,10 @@ password1 = claripy.BVS('p1', 32)
 initial_state.regs.ebx = password1
 password2 = claripy.BVS('p2', 32)
 initial_state.regs.edx = password2
-
 # set expected function to judge whether the output is succeessful according to the state.
-def is_successful(state):
-    return b'Good Job' in state.posix.dumps(1)
 is_successful = lambda state: b'Good Job' in state.posix.dumps(1)
 # set unexpected function
-def should_abort(state):
-    return b'Try again' in state.posix.dumps(1)
-
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
 simulation = project.factory.simgr(initial_state)
 simulation.explore(find=is_successful, avoid=should_abort)
 if simulation.found:
@@ -969,6 +1002,222 @@ if simulation.found:
 else:
     raise Exception('Could not find the solution')
 ```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./03_angr_symbolic_registers
+Enter the password: b9ffd04e ccf63fe8 8fd4d959
+Good Job.
+```
+
+------
+
+### 04_angr_simbolic_stack
+
+先`file ./04_angr_simbolic_stack`查看文件类型。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./04_angr_symbolic_stack
+./04_angr_symbolic_stack: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=cc18a41b58d7abfa868efc3be085b5712c6ea5ff, not stripped
+```
+
+用`IDA Pro 32bit`打开二进制文件`04_angr_simbolic_stack`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  printf("Enter the password: ");
+  handle_user();
+  return 0;
+}
+```
+
+双击`handle_user()`函数查看详情。
+
+```c
+int handle_user()
+{
+  int result; // eax
+  int v1; // [esp+8h] [ebp-10h] BYREF
+  int v2[3]; // [esp+Ch] [ebp-Ch] BYREF
+
+  __isoc99_scanf("%u %u", v2, &v1);
+  v2[0] = complex_function0(v2[0]);
+  v1 = complex_function1(v1);
+  if ( v2[0] == 1999643857 && v1 == -1136455217 )
+    result = puts("Good Job.");
+  else
+    result = puts("Try again.");
+  return result;
+}
+```
+
+其中，`complex_function0()`函数如下：
+
+```c
+int __cdecl complex_function0(int a1)
+{
+  return a1 ^ 0x12A567E5;
+}
+```
+
+`complex_function1()`函数如下：
+
+```c
+int __cdecl complex_function1(int a1)
+{
+  return a1 ^ 0x31BCB5D0;
+}
+```
+
+其中`handle_user()`函数相应的汇编代码如下：
+
+```assembly
+.text:08048679                 public handle_user
+.text:08048679 handle_user     proc near               ; CODE XREF: main+21↓p
+.text:08048679
+.text:08048679 var_10          = dword ptr -10h
+.text:08048679 var_C           = dword ptr -0Ch
+.text:08048679
+.text:08048679 ; __unwind {
+.text:08048679                 push    ebp
+.text:0804867A                 mov     ebp, esp
+.text:0804867C                 sub     esp, 18h
+.text:0804867F                 sub     esp, 4
+.text:08048682                 lea     eax, [ebp+var_10]
+.text:08048685                 push    eax
+.text:08048686                 lea     eax, [ebp+var_C]
+.text:08048689                 push    eax
+.text:0804868A                 push    offset aUU      ; "%u %u"
+.text:0804868F                 call    ___isoc99_scanf
+.text:08048694                 add     esp, 10h
+.text:08048697                 mov     eax, [ebp+var_C]   ; 参数1 [ebp-0Ch]
+.text:0804869A                 sub     esp, 0Ch
+.text:0804869D                 push    eax
+.text:0804869E                 call    complex_function0
+.text:080486A3                 add     esp, 10h
+.text:080486A6                 mov     [ebp+var_C], eax
+.text:080486A9                 mov     eax, [ebp+var_10]  ; 参数2 [ebp-10h]
+.text:080486AC                 sub     esp, 0Ch
+.text:080486AF                 push    eax
+.text:080486B0                 call    complex_function1
+.text:080486B5                 add     esp, 10h
+.text:080486B8                 mov     [ebp+var_10], eax
+.text:080486BB                 mov     eax, [ebp+var_C]
+.text:080486BE                 cmp     eax, 773024D1h
+.text:080486C3                 jnz     short loc_80486CF
+.text:080486C5                 mov     eax, [ebp+var_10]
+.text:080486C8                 cmp     eax, 0BC4311CFh
+.text:080486CD                 jz      short loc_80486E1
+.text:080486CF
+.text:080486CF loc_80486CF:                            ; CODE XREF: handle_user+4A↑j
+.text:080486CF                 sub     esp, 0Ch
+.text:080486D2                 push    offset s        ; "Try again."
+.text:080486D7                 call    _puts
+.text:080486DC                 add     esp, 10h
+.text:080486DF                 jmp     short loc_80486F1
+.text:080486E1 ; ---------------------------------------------------------------------------
+.text:080486E1
+.text:080486E1 loc_80486E1:                            ; CODE XREF: handle_user+54↑j
+.text:080486E1                 sub     esp, 0Ch
+.text:080486E4                 push    offset aGoodJob ; "Good Job."
+.text:080486E9                 call    _puts
+.text:080486EE                 add     esp, 10h
+.text:080486F1
+.text:080486F1 loc_80486F1:                            ; CODE XREF: handle_user+66↑j
+.text:080486F1                 nop
+.text:080486F2                 leave
+.text:080486F3                 retn
+.text:080486F3 ; } // starts at 8048679
+.text:080486F3 handle_user     endp
+```
+
+上题是用寄存器传参，而这题变成用栈空间传参，我们需要学习怎么对栈空间中的值进行符号化处理。参数在栈上的分布情况大致如下：
+
+- `password1`占用栈地址：`| 0x10 | 0x0F | 0x0E | 0x0D |`。
+- `password2`占用栈地址：`| 0x0C | 0x0B | 0x0A | 0x09 |`。
+
+```
+  #            /-------- The stack --------\
+  # [esp] ->   |                           |
+  #                        . . .
+  #            |---------------------------|
+  # [ebp-0x10] |   password0, first byte   |
+  #            |---------------------------|
+  # [ebp-0x0F] |   password0, second byte  |
+  #            |---------------------------|
+  # [ebp-0x0E] |   password0, third byte   |
+  #            |---------------------------|
+  # [ebp-0x0D] |   password0, last byte    |  
+  #            |---------------------------|
+  # [ebp-0x0C] |   password1, first byte   |
+  #            |---------------------------|
+  # [ebp-0x0B] |   password1, second byte  |
+  #            |---------------------------|
+  # [ebp-0x0A] |   password1, third byte   |
+  #            |---------------------------|
+  # [ebp-0x09] |   password1, last byte    |
+  #            |---------------------------|
+  #                        . . .
+  #            |---------------------------|
+  #            |       more padding        |
+  #            |---------------------------|
+  #                        . . .
+  #            |---------------------------|
+  # [ebp] ->   |         padding           |
+  #            \---------------------------/
+```
+
+编写`Python`代码求解得到俩个密码：`1704280884 2382341151`。
+
+```python
+import angr
+import claripy
+
+project = angr.Project('./04_angr_symbolic_stack')
+start_address = 0x8048697
+initial_state = project.factory.blank_state(addr=start_address)
+initial_state.regs.ebp = initial_state.regs.esp
+password0 = claripy.BVS('p0', 32)
+password1 = claripy.BVS('p1', 32)
+# simulate the stack
+padding = 0x8
+initial_state.regs.esp -= padding
+initial_state.stack_push(password0)
+initial_state.stack_push(password1)
+simulation = project.factory.simgr(initial_state)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd0 = solution_state.solver.eval(password0)
+    passwd1 = solution_state.solver.eval(password1)
+    print('[+] Congratulations! Solution is: {} {}'.format(passwd0, passwd1))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./04_angr_symbolic_stack
+Enter the password: 1704280884 2382341151
+Good Job.
+```
+
+这里展开说下`solver`。
+
+- `solver.eval(expression)` 将会解出一个可行解。
+- `solver.eval_one(expression)`将会给出一个表达式的可行解，若有多个可行解，则抛出异常。
+- `solver.eval_upto(expression, n)`将会给出最多n个可行解，如果不足n个就给出所有的可行解。
+- `solver.eval_exact(expression, n)`将会给出n个可行解，如果解的个数不等于n个，将会抛出异常。
+- `solver.min(expression)`将会给出最小可行解。
+- `solver.max(expression)`将会给出最大可行解。
 
 ------
 
