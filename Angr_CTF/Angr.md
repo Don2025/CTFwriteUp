@@ -681,6 +681,15 @@ git clone https://github.com/jakespringer/angr_ctf.git
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./00_angr_find
 ./00_angr_find: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=83edb9b0f7da06e0355b5310294ae256ded72ca1, not stripped
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./00_angr_find         
+[*] '/home/tyd/ctf/Angr_CTF/00_angr_find'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
 ```
 
 用`IDA Pro 32bit`打开二进制文件`00_angr_find`，按`F5`反汇编源码并查看主函数。
@@ -770,12 +779,21 @@ Good Job.
 
 ### 01_angr_avoid
 
-先`file ./01_angr_find`查看文件类型。
+先`file ./01_angr_avoid`查看文件类型。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
-└─$ file ./01_angr_find
+└─$ file ./01_angr_avoid
 ./01_angr_avoid: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=b2a7c5e56cec829714441aee4b163c411ae24e3d, not stripped
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./01_angr_avoid
+[*] '/home/tyd/ctf/Angr_CTF/01_angr_avoid'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
 ```
 
 用`IDA Pro 32bit`打开二进制文件`01_angr_avoid`，按`F5`反汇编主函数源码，发现`IDA Pro`报错`too big function`，打开`IDA Pro`根目录的`ctg`目录下的`hexrays.cfg`，将`64`修改为`1024`即可，然而发现再次按`F5`依旧很慢，可以选择用 [**retdec**](https://github.com/avast/retdec) 来查看反汇编源码。
@@ -847,6 +865,15 @@ Good Job.
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./02_angr_find_condition
 02_angr_find_condition: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=8f449fc89161a9f0a1b895fb352b85894ae7117f, not stripped
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./02_angr_find_condition    
+[*] '/home/tyd/ctf/Angr_CTF/02_angr_find_condition'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
 ```
 
 用`IDA Pro 32bit`打开二进制文件`02_angr_find_condition`，按`F5`反汇编源码并查看主函数。
@@ -927,6 +954,15 @@ Good Job.
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./03_angr_symbolic_registers
 03_angr_symbolic_registers: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=c0059af3c6c186fb950c307552251aadc0648fb0, not stripped
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./03_angr_symbolic_registers
+[*] '/home/tyd/ctf/Angr_CTF/03_angr_symbolic_registers'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
 ```
 
 用`IDA Pro 32bit`打开二进制文件`03_angr_symbolic_registers`，按`F5`反汇编源码并查看主函数。
@@ -1038,6 +1074,15 @@ Good Job.
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ file ./04_angr_symbolic_stack
 ./04_angr_symbolic_stack: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=cc18a41b58d7abfa868efc3be085b5712c6ea5ff, not stripped
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./04_angr_symbolic_stack         
+[*] '/home/tyd/ctf/Angr_CTF/04_angr_symbolic_stack'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
 ```
 
 用`IDA Pro 32bit`打开二进制文件`04_angr_simbolic_stack`，按`F5`反汇编源码并查看主函数。
@@ -1251,7 +1296,7 @@ Good Job.
 ./05_angr_symbolic_memory: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=ca0d1114af914bf2d4c73a18488e43c670f6f617, not stripped
 
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
-└─$ checksec ./05_angr_symbolic_memory                                                              130 ⨯
+└─$ checksec ./05_angr_symbolic_memory                                     
 [*] '/home/tyd/ctf/Angr_CTF/05_angr_symbolic_memory'
     Arch:     i386-32-little
     RELRO:    Partial RELRO
@@ -1360,12 +1405,150 @@ else:
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
-└─$ python 05_angr_symbolic_memory.py                                                                 1 ⨯
+└─$ python 05_angr_symbolic_memory.py                                                      
 [+] Congratulations! Solution is: NAXTHGNR JVSFTPWE LMGAUHWC XMDCPALU
                                                                                                           
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./05_angr_symbolic_memory
 Enter the password: NAXTHGNR JVSFTPWE LMGAUHWC XMDCPALU
+Good Job.
+```
+
+------
+
+### 06_angr_symbolic_dynamic_memory
+
+先`file ./06_angr_symbolic_dynamic_memory`查看文件类型和文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./06_angr_symbolic_dynamic_memory
+./06_angr_symbolic_dynamic_memory: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=a57d92f3fa4453d8d7655412932dc0f3dfa1fcf6, not stripped
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./06_angr_symbolic_dynamic_memory                                            
+[*] '/home/tyd/ctf/Angr_CTF/06_angr_symbolic_dynamic_memory'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`06_angr_symbolic_dynamic_memory`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char *v3; // ebx
+  char *v4; // ebx
+  int v6; // [esp-10h] [ebp-1Ch]
+  int i; // [esp+0h] [ebp-Ch]
+
+  buffer0 = (char *)malloc(9u);
+  buffer1 = (char *)malloc(9u);
+  memset(buffer0, 0, 9u);
+  memset(buffer1, 0, 9u);
+  printf("Enter the password: ");
+  __isoc99_scanf("%8s %8s", buffer0, buffer1, v6);
+  for ( i = 0; i <= 7; ++i )
+  {
+    v3 = &buffer0[i];
+    *v3 = complex_function(buffer0[i], i);
+    v4 = &buffer1[i];
+    *v4 = complex_function(buffer1[i], i + 32);
+  }
+  if ( !strncmp(buffer0, "UODXLZBI", 8u) && !strncmp(buffer1, "UAORRAYF", 8u) )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  free(buffer0);
+  free(buffer1);
+  return 0;
+}
+```
+
+双击`complex_function()`函数查看详情：
+
+```c
+int __cdecl complex_function(int a1, int a2)
+{
+  if ( a1 <= 64 || a1 > 90 )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  return (13 * a2 + a1 - 65) % 26 + 65;
+}
+```
+
+注意到程序使用`malloc()`函数分配了两个大小为`9`字节的缓冲区，并用 `memset()`函数将其初始化为`0`。`buffer0`和`buffer1`这俩个缓冲区都是在`.bss`段上的，用户的输入被作为格式化字符串存入这俩个缓冲区内。经过`complex_function()`函数的变换后的字符串分别与字符串`"UODXLZBI"`和`"UAORRAYF"`。
+
+```assembly
+.bss:0ABCC8A4 buffer0         dd ?                    ; DATA XREF: main+1F↑w
+.bss:0ABCC8AC buffer1         dd ?                    ; DATA XREF: main+31↑w
+```
+
+我们可以选择地址`0x8048699`作为初始状态，这样可以跳过所有的`malloc()`函数。
+
+```assembly
+.text:0804868A                 push    edx
+.text:0804868B                 push    eax
+.text:0804868C                 push    offset a8s8s    ; "%8s %8s"
+.text:08048691                 call    ___isoc99_scanf
+.text:08048696                 add     esp, 10h
+.text:08048699                 mov     [ebp+var_C], 0
+.text:080486A0                 jmp     short loc_8048706
+```
+
+由于缓冲区的大小是`8`字节，我们初始化两个大小为`64`位的符号位向量。我们可以任选俩个堆地址放入缓冲区`buffer0`和`buffer1`中， `endness` 用于设置端序，`angr`默认为大端序`BE`，我们直接将其设置为与二进制文件的架构端序一致即可。编写`Python`代码求解得到`UBDKLMBV UNOERNYS`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './06_angr_symbolic_dynamic_memory'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+start_address = 0x8048699
+initial_state = project.factory.blank_state(
+    addr = start_address,
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS}
+)
+# The binary is calling scanf("%8s %8s").
+password0 = claripy.BVS('p0', 64)
+password1 = claripy.BVS('p1', 64)
+fake_heap_address0 = 0xffff666
+pointer_to_malloc_memory_address0 = 0xABCC8A4
+initial_state.memory.store(pointer_to_malloc_memory_address0, fake_heap_address0, endness=project.arch.memory_endness)
+initial_state.memory.store(fake_heap_address0, password0)
+fake_heap_address1 = 0xffff676
+pointer_to_malloc_memory_address1 = 0xABCC8AC
+initial_state.memory.store(pointer_to_malloc_memory_address1, fake_heap_address1, endness=project.arch.memory_endness)
+initial_state.memory.store(fake_heap_address1, password1)
+simulation = project.factory.simgr(initial_state)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd0 = solution_state.solver.eval(password0, cast_to=bytes).decode()
+    passwd1 = solution_state.solver.eval(password1, cast_to=bytes).decode()
+    print('[+] Congratulations! Solution is: {} {}'.format(passwd0, passwd1))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 06_angr_symbolic_dynamic_memory.py
+[+] Congratulations! Solution is: UBDKLMBV UNOERNYS
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./06_angr_symbolic_dynamic_memory     
+Enter the password: UBDKLMBV UNOERNYS
 Good Job.
 ```
 
