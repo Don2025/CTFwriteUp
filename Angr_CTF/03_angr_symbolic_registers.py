@@ -11,17 +11,12 @@ password1 = claripy.BVS('p1', 32)
 initial_state.regs.ebx = password1
 password2 = claripy.BVS('p2', 32)
 initial_state.regs.edx = password2
-
 # set expected function to judge whether the output is succeessful according to the state.
-def is_succcessful(state):
-    return b'Good Job' in state.posix.dumps(1)
-
+is_successful = lambda state: b'Good Job' in state.posix.dumps(1)
 # set unexpected function
-def should_abort(state):
-    return b'Try again' in state.posix.dumps(1)
-
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
 simulation = project.factory.simgr(initial_state)
-simulation.explore(find=is_succcessful, avoid=should_abort)
+simulation.explore(find=is_successful, avoid=should_abort)
 if simulation.found:
     solution_state = simulation.found[0]
     passwd0 = solution_state.solver.eval(password0)
