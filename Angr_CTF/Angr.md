@@ -744,12 +744,15 @@ int __cdecl complex_function(int a1, int a2)
 import angr
 
 project = angr.Project('./00_angr_find')
-initial_state = project.factory.entry_state()
-simgr = project.factory.simgr(initial_state)
-simgr.explore(find=0x8048678)
-if simgr.found:
-    solution_state = simgr.found[0]
-    print(solution_state.posix.dumps(0))
+initial_state = project.factory.entry_state(add_options={
+        angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+        angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+simulation = project.factory.simgr(initial_state)
+simulation.explore(find=0x8048678)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd = solution_state.posix.dumps(0).decode()
+    print('[+] Congratulations! Solution is: %s' % passwd)
 else:
     raise Exception('Could not find the solution')
 ```
@@ -759,7 +762,7 @@ else:
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ python 00_angr_find.py 
-b'JXWVXRKX'
+[+] Congratulations! Solution is: JXWVXRKX
 
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./00_angr_find 
@@ -1553,6 +1556,148 @@ Good Job.
 ```
 
 ------
+
+### 07_angr_symbolic_file
+
+先`file ./07_angr_symbolic_file`查看文件类型和文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./07_angr_symbolic_file          
+./07_angr_symbolic_file: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=d407b80daa3eac2fb804414a1ff45f3850bea38b, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./07_angr_symbolic_file 
+[*] '/home/tyd/ctf/Angr_CTF/07_angr_symbolic_file'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`07_angr_symbolic_file`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl __noreturn main(int argc, const char **argv, const char **envp)
+{
+  int i; // [esp+Ch] [ebp-Ch]
+
+  memset(buffer, 0, sizeof(buffer));
+  printf("Enter the password: ");
+  __isoc99_scanf("%64s", buffer);
+  ignore_me((int)buffer, 0x40u);
+  memset(buffer, 0, sizeof(buffer));
+  fp = fopen("OJKSQYDP.txt", "rb");
+  fread(buffer, 1u, 0x40u, fp);
+  fclose(fp);
+  unlink("OJKSQYDP.txt");
+  for ( i = 0; i <= 7; ++i )
+    *(_BYTE *)(i + 134520992) = complex_function(*(char *)(i + 134520992), i);
+  if ( strncmp(buffer, "AQWLCTXB", 9u) )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  puts("Good Job.");
+  exit(0);
+}
+```
+
+程序使用`fread()`函数从文件中读取密码，如果密码经过`complex_function()`函数处理后得到的字符串等于`"AQWLCTXB"`则密码正确。
+
+双击`ignore_me()`函数查看详情，该函数的作用是把用户输入的内容存入`OJKSQYDP.txt`中，主函数随后从该文件中读取数据存入`buffer`。
+
+```python
+unsigned int __cdecl ignore_me(int a1, size_t n)
+{
+  void *v2; // esp
+  _BYTE v4[12]; // [esp+0h] [ebp-28h] BYREF
+  void *ptr; // [esp+Ch] [ebp-1Ch]
+  size_t v6; // [esp+10h] [ebp-18h]
+  void *s; // [esp+14h] [ebp-14h]
+  FILE *stream; // [esp+18h] [ebp-10h]
+  unsigned int v9; // [esp+1Ch] [ebp-Ch]
+
+  ptr = (void *)a1;
+  v9 = __readgsdword(0x14u);
+  v6 = n - 1;
+  v2 = alloca(16 * ((n + 15) / 0x10));
+  s = v4;
+  memset(v4, 0, n);
+  unlink("OJKSQYDP.txt");
+  stream = fopen("OJKSQYDP.txt", "a+b");
+  fwrite(ptr, 1u, n, stream);
+  fseek(stream, 0, 0);
+  __isoc99_fscanf(stream, "%64s", s);
+  fseek(stream, 0, 0);
+  fwrite(s, 1u, n, stream);
+  fclose(stream);
+  return __readgsdword(0x14u) ^ v9;
+}
+```
+
+双击`complex_function()`函数查看详情：
+
+```c
+int __cdecl complex_function(int a1, int a2)
+{
+  if ( a1 <= 64 || a1 > 90 )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  return (17 * a2 + a1 - 65) % 26 + 65;
+}
+```
+
+编写`Python`代码求解得到`AZOMMMZM`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './07_angr_symbolic_file'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+start_address = 0x80488D6
+initial_state = project.factory.blank_state(
+    addr = start_address,
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS}
+)
+filename = 'OJKSQYDP.txt'
+file_size_bytes = 64
+password = claripy.BVS('password', file_size_bytes*8)
+passwd_file = angr.storage.SimFile(filename, content=password, size=file_size_bytes)
+initial_state.fs.insert(filename, passwd_file)
+simulation = project.factory.simgr(initial_state)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd = solution_state.solver.eval(password, cast_to=bytes).decode()
+    print('[+] Congratulations! Solution is: {}'.format(passwd))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python ./07_angr_symbolic_file.py
+[+] Congratulations! Solution is: AZOMMMZM
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./07_angr_symbolic_file                                                                         
+Enter the password: AZOMMMZM
+Good Job.
+```
+
+------
+
+
 
 ## 刷CTF时遇到的可用Angr的逆向题
 
