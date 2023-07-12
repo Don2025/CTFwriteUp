@@ -22,6 +22,7 @@ if simulation.found:
     passwd0 = solution_state.solver.eval(password0)
     passwd1 = solution_state.solver.eval(password1)
     passwd2 = solution_state.solver.eval(password2)
-    print(' '.join(map('{:x}'.format, [passwd0, passwd1, passwd2])))
+    solution = ' '.join(map('{:x}'.format, [passwd0, passwd1, passwd2]))
+    print('[+] Congratulations! Solution is:', solution)
 else:
     raise Exception('Could not find the solution')

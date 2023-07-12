@@ -1054,7 +1054,8 @@ if simulation.found:
     passwd0 = solution_state.solver.eval(password0)
     passwd1 = solution_state.solver.eval(password1)
     passwd2 = solution_state.solver.eval(password2)
-    print(' '.join(map('{:x}'.format, [passwd0, passwd1, passwd2])))
+    solution = ' '.join(map('{:x}'.format, [passwd0, passwd1, passwd2]))
+    print('[+] Congratulations! Solution is:', solution)
 else:
     raise Exception('Could not find the solution')
 ```
@@ -1063,8 +1064,8 @@ else:
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
-└─$ python 03_angr_symbolic_registers.py                                   
-b9ffd04e ccf63fe8 8fd4d959
+└─$ python 03_angr_symbolic_registers.py
+[+] Congratulations! Solution is: b9ffd04e ccf63fe8 8fd4d959
 
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./03_angr_symbolic_registers
