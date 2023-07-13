@@ -772,11 +772,11 @@ Good Job.
 
 这道基础题主要是让我们熟悉`Angr`的基本使用流程，一般步骤如下：
 
-- 创建`project`加载二进制文件
-- 设置程序入口`state`
-- 创建`simgr`将初始状态加载到模拟器中
-- 使用`simgr.explore()`函数运行分析
-- 通过`simgr.found`属性获取符号执行的路径，解析执行结果
+- 创建`project`加载二进制文件。
+- 设置程序入口`state`，`add_options`参数用于添加选项，这里设置了符号执行过程中对未约束的内存和寄存器进行填充。
+- 创建`simgr`将初始状态加载到模拟器中。
+- 使用`simgr.explore()`函数运行分析。
+- 通过`simgr.found`属性获取符号执行的路径，解析执行结果。
 
 ------
 
@@ -1657,7 +1657,7 @@ int __cdecl complex_function(int a1, int a2)
 }
 ```
 
-编写`Python`代码求解得到`AZOMMMZM`。
+我们需要使用Angr模拟一个文件系统，设置密码的文件名和大小，创建一个符号变量作为密码，使用`Claripy`模块的`BVS`函数创建符号变量`password`，`file_size_bytes*8`指定密码的位数，接着用`SimFile`创建一个包含密码的仿真文件，并利用`fs.insert`将其插入到初始状态的文件系统中。编写`Python`代码求解得到`AZOMMMZM`。
 
 ```python
 import angr
@@ -1703,7 +1703,143 @@ Good Job.
 
 ------
 
+### 08_angr_constraints
 
+先`file ./08_angr_constraints`查看文件类型和文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./08_angr_constraints                       
+./08_angr_constraints: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=3c61d9f5ff23e1919a2f19f7e1a9c67e3f2be7e4, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./08_angr_constraints   
+[*] '/home/tyd/ctf/Angr_CTF/08_angr_constraints'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`08_angr_constraints`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [esp+Ch] [ebp-Ch]
+
+  qmemcpy(&password, "AUPDNNPROEZRJWKB", 16);
+  memset(&buffer, 0, 0x11u);
+  printf("Enter the password: ");
+  __isoc99_scanf("%16s", &buffer);
+  for ( i = 0; i <= 15; ++i )
+    *(_BYTE *)(i + 134520912) = complex_function(*(char *)(i + 134520912), 15 - i);
+  if ( check_equals_AUPDNNPROEZRJWKB(&buffer, 16) )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  return 0;
+}
+```
+
+该程序将字符串`"AUPDNNPROEZRJWKB"`拷贝到变量`password`中，随后用`memset()`将变量`buffer`初始化为`0x11`个零字节。`scanf`函数读取用户输入的字符串，最多读取16个字符，并将其存储到变量`buffer`中。调用`check_equals_AUPDNNPROEZRJWKB`函数，将`buffer`和长度`16`作为参数传递给它。如果返回值为真，则密码匹配输出`"Good Job."`，否则输出`"Try again."`。`buffer`变量在`.bss`段上：
+
+```assembly
+.bss:0804A050                 public buffer
+.bss:0804A050 buffer          db    ? ;               ; DATA XREF: main+40↑o
+```
+
+双击`complex_function()`函数查看详情。
+
+```c
+int __cdecl complex_function(int a1, int a2)
+{
+  if ( a1 <= 64 || a1 > 90 )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  return (a1 - 65 + 53 * a2) % 26 + 65;
+}
+```
+
+双击`check_equals_AUPDNNPROEZRJWKB()`函数查看详情。该函数实际上是将主函数中传入的`buffer`和`password`进行比值操作。
+
+```c
+_BOOL4 __cdecl check_equals_AUPDNNPROEZRJWKB(int a1, unsigned int a2)
+{
+  int v3; // [esp+8h] [ebp-8h]
+  unsigned int i; // [esp+Ch] [ebp-4h]
+
+  v3 = 0;
+  for ( i = 0; i < a2; ++i )
+  {
+    if ( *(_BYTE *)(i + a1) == *(_BYTE *)(i + 134520896) )
+      ++v3;
+  }
+  return v3 == a2;
+}
+```
+
+我们可以跳过`scanf()`选择`0x8048625`创建初始状态。
+
+```assembly
+.text:08048613                 push    offset buffer
+.text:08048618                 push    offset a16s     ; "%16s"
+.text:0804861D                 call    ___isoc99_scanf
+.text:08048622                 add     esp, 10h
+.text:08048625                 mov     [ebp+var_C], 0
+.text:0804862C                 jmp     short loc_8048663
+```
+
+我们需要保证在进入 `check_equals_AUPDNNPROEZRJWKB` 函数时，`buffer` 处的内容和字符串 `AUPDNNPROEZRJWKB` 相同，因此可以直接添加条件判断求解。编写`Python`代码求解得到`LGCRCDGJHYUNGUJB`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './08_angr_constraints'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+start_address = 0x8048625
+initial_state = project.factory.blank_state(
+    addr = start_address,
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS}
+)
+passwd_bytes = 0x10
+char_size_bits = 0x8
+password = claripy.BVS('password', passwd_bytes*char_size_bits)
+buffer_address = 0x804A050
+initial_state.memory.store(buffer_address, password)
+simulation = project.factory.simgr(initial_state)
+check_address = 0x8048565  # check_equals_AUPDNNPROEZRJWKB()
+constrained_value = b'AUPDNNPROEZRJWKB' # If the value is equal to "AUPDNNPROEZRJWKB", WARNING: BVV value is being coerced from a unicode string, encoding as utf-8.
+simulation.explore(find=check_address)
+if simulation.found:
+    solution_state = simulation.found[0]
+    buffer_content = solution_state.memory.load(buffer_address, passwd_bytes)
+    solution_state.solver.add(buffer_content == constrained_value)
+    passwd = solution_state.solver.eval(password, cast_to=bytes).decode()
+    print('[+] Congratulations! Solution is: {}'.format(passwd))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 08_angr_constraints.py
+[+] Congratulations! Solution is: LGCRCDGJHYUNGUJB
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./08_angr_constraints  
+Enter the password: LGCRCDGJHYUNGUJB
+Good Job.
+```
+
+------
 
 ## 刷CTF时遇到的可用Angr的逆向题
 
