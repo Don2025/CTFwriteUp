@@ -675,7 +675,7 @@ git clone https://github.com/jakespringer/angr_ctf.git
 
 ### 00_angr_find
 
-先`file ./00_angr_find`查看文件类型。
+先用`file ./00_angr_find`查看文件类型，并用`checksec ./00_angr_find`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -782,7 +782,7 @@ Good Job.
 
 ### 01_angr_avoid
 
-先`file ./01_angr_avoid`查看文件类型。
+先用`file ./01_angr_avoid`查看文件类型，并用`checksec ./01_angr_avoid`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -865,7 +865,7 @@ Good Job.
 
 ### 02_angr_find_condition
 
-先`file ./02_angr_find_condition`查看文件类型。
+先用`file ./02_angr_find_condition`查看文件类型，并用`checksec ./02_angr_find_condition`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -956,7 +956,7 @@ Good Job.
 
 ### 03_angr_simbolic_registers
 
-先`file ./03_angr_symbolic_registers`查看文件类型。
+先用`file ./03_angr_symbolic_registers`查看文件类型，并用`checksec ./03_angr_symbolic_registers`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -1077,7 +1077,7 @@ Good Job.
 
 ### 04_angr_simbolic_stack
 
-先`file ./04_angr_simbolic_stack`查看文件类型。
+先用`file ./04_angr_simbolic_stack`查看文件类型，并用`checksec ./04_angr_simbolic_stack`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -1297,7 +1297,7 @@ Good Job.
 
 ### 05_angr_symbolic_memory
 
-先`file ./05_angr_symbolic_memory`查看文件类型和文件信息。
+先用`file ./05_angr_symbolic_memory`查看文件类型，并用`checksec ./05_angr_symbolic_memory`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -1427,7 +1427,7 @@ Good Job.
 
 ### 06_angr_symbolic_dynamic_memory
 
-先`file ./06_angr_symbolic_dynamic_memory`查看文件类型和文件信息。
+先用`file ./06_angr_symbolic_dynamic_memory`查看文件类型，并用`checksec ./06_angr_symbolic_dynamic_memory`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -1565,7 +1565,7 @@ Good Job.
 
 ### 07_angr_symbolic_file
 
-先`file ./07_angr_symbolic_file`查看文件类型和文件信息。
+先用`file ./07_angr_symbolic_file`查看文件类型，并用`checksec ./07_angr_symbolic_file`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -1705,7 +1705,7 @@ Good Job.
 
 ### 08_angr_constraints
 
-先`file ./08_angr_constraints`查看文件类型和文件信息。
+先用`file ./08_angr_constraints`查看文件类型，并用`checksec ./08_angr_constraints`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -1843,7 +1843,7 @@ Good Job.
 
 ### 09_angr_hooks
 
-先`file ./09_angr_hooks`查看文件类型和文件信息。
+先用`file ./09_angr_hooks`查看文件类型，并用`checksec ./09_angr_hooks`查看文件信息。
 
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
@@ -1977,6 +1977,95 @@ else:
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./09_angr_hooks        
 Enter the password: ZXIDRXEORJOTFFJNWUFAOUBLOGLQCCGK
+Good Job.
+```
+
+------
+
+### 10_angr_simprocedures
+
+先用`file ./10_angr_simprocedures`查看文件类型，并用`checksec ./10_angr_simprocedures`查看文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./10_angr_simprocedures
+./10_angr_simprocedures: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=f68c208bfdc6b9b1bb43f81e10e4aa5810a10cfa, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./10_angr_simprocedures
+[*] '/home/tyd/ctf/Angr_CTF/10_angr_simprocedures'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`10_angr_simprocedures`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [esp+20h] [ebp-28h]
+  char s[17]; // [esp+2Bh] [ebp-1Dh] BYREF
+  unsigned int v6; // [esp+3Ch] [ebp-Ch]
+
+  v6 = __readgsdword(0x14u);
+  memcpy(&password, "ORSDDWXHZURJRBDH", 0x10u);
+  memset(s, 0, sizeof(s));
+  printf("Enter the password: ");
+  __isoc99_scanf("%16s", s);
+  for ( i = 0; i <= 15; ++i )
+    s[i] = complex_function(s[i], 18 - i);
+  if ( check_equals_ORSDDWXHZURJRBDH(s, 16) )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  return 0;
+}
+```
+
+这题跟上题很相似，但是这题的对`check_equals_ORSDDWXHZURJRBDH()`调用点有很多，使人难以每次都对地址进行`hook`，我们可以直接钩取函数，声明一个类并定义`run()`方法来取代想要钩取的函数，然后调用`project.hook_symbol()`方法直接以函数名为参数进行钩取函数，`Angr`会自动查找与目标函数符号关联的地址并执行`hook`操作。编写`Python`代码求解得到`MSWKNJNAVTTOZMRY`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './10_angr_simprocedures'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+initial_state = project.factory.entry_state(
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+check_equal_symbol = 'check_equals_ORSDDWXHZURJRBDH'
+class CheckEqual(angr.SimProcedure):
+    def run(self, address, length):
+        constrained_value = b'ORSDDWXHZURJRBDH'
+        content = self.state.memory.load(address, length)
+        return claripy.If(content == constrained_value, claripy.BVV(1, 32), claripy.BVV(0, 32))
+
+project.hook_symbol(check_equal_symbol, CheckEqual())
+simulation = project.factory.simgr(initial_state)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd = solution_state.posix.dumps(0).decode()
+    print('[+] Congratulations! Solution is: {}'.format(passwd))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 10_angr_simprocedures.py      
+[+] Congratulations! Solution is: MSWKNJNAVTTOZMRY
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./10_angr_simprocedures
+Enter the password: MSWKNJNAVTTOZMRY
 Good Job.
 ```
 
