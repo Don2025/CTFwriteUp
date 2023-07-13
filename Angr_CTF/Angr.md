@@ -1793,7 +1793,7 @@ _BOOL4 __cdecl check_equals_AUPDNNPROEZRJWKB(int a1, unsigned int a2)
 .text:0804862C                 jmp     short loc_8048663
 ```
 
-我们需要保证在进入 `check_equals_AUPDNNPROEZRJWKB` 函数时，`buffer` 处的内容和字符串 `AUPDNNPROEZRJWKB` 相同，因此可以直接添加条件判断求解。编写`Python`代码求解得到`LGCRCDGJHYUNGUJB`。
+我们需要保证程序运行到地址`0x08048565`处执行 `check_equals_AUPDNNPROEZRJWKB` 函数时，`buffer` 地址`0x804A050`中存放的内容和字符串 `AUPDNNPROEZRJWKB` 相同，因此可以直接添加条件判断求解。编写`Python`代码求解得到`LGCRCDGJHYUNGUJB`。
 
 ```python
 import angr
@@ -1836,6 +1836,147 @@ else:
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./08_angr_constraints  
 Enter the password: LGCRCDGJHYUNGUJB
+Good Job.
+```
+
+------
+
+### 09_angr_hooks
+
+先`file ./09_angr_hooks`查看文件类型和文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./09_angr_hooks                                                                                 
+./09_angr_hooks: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=0ae8a2b66c13ff8c3d18656da5cb251317b162e5, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./09_angr_hooks      
+[*] '/home/tyd/ctf/Angr_CTF/09_angr_hooks'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`09_angr_hooks`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  _BOOL4 v3; // eax
+  int i; // [esp+8h] [ebp-10h]
+  int j; // [esp+Ch] [ebp-Ch]
+
+  qmemcpy(password, "XYMKBKUHNIQYNQXE", 16);
+  memset(buffer, 0, 0x11u);
+  printf("Enter the password: ");
+  __isoc99_scanf("%16s", buffer);
+  for ( i = 0; i <= 15; ++i )
+    *(_BYTE *)(i + 134520916) = complex_function(*(char *)(i + 134520916), 18 - i);
+  equals = check_equals_XYMKBKUHNIQYNQXE(buffer, 16);
+  for ( j = 0; j <= 15; ++j )
+    *(_BYTE *)(j + 134520900) = complex_function(*(char *)(j + 134520900), j + 9);
+  __isoc99_scanf("%16s", buffer);
+  v3 = equals && !strncmp(buffer, password, 0x10u);
+  equals = v3;
+  if ( v3 )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  return 0;
+}
+```
+
+程序将字符串`"XYMKBKUHNIQYNQXE"`拷贝到变量`password`中，并使用`memset`将变量`buffer`初始化为17个零字节。随后用`scanf`函数读取用户输入的字符串，最多读取16个字符，并将其存储到变量`buffer`中。调用`check_equals_XYMKBKUHNIQYNQXE`函数，将`buffer`和长度16作为参数传递给它，并将返回值赋给`equals`变量。再次使用`scanf`函数读取用户输入的字符串，最多读取16个字符，并将其存储到变量`buffer`中。将`equals`与`!strncmp(buffer, password, 0x10u)`的结果进行逻辑与运算，若结果为真则表示密码正确。
+
+双击`complex_function()`函数查看详情。
+
+```c
+int __cdecl complex_function(int a1, int a2)
+{
+  if ( a1 <= 64 || a1 > 90 )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  return (a1 - 65 + 23 * a2) % 26 + 65;
+}
+```
+
+双击`check_equals_XYMKBKUHNIQYNQXE()`函数查看详情。
+
+```c
+_BOOL4 __cdecl check_equals_XYMKBKUHNIQYNQXE(int a1, unsigned int a2)
+{
+  int v3; // [esp+8h] [ebp-8h]
+  unsigned int i; // [esp+Ch] [ebp-4h]
+
+  v3 = 0;
+  for ( i = 0; i < a2; ++i )
+  {
+    if ( *(_BYTE *)(i + a1) == *(_BYTE *)(i + 134520900) )
+      ++v3;
+  }
+  return v3 == a2;
+}
+```
+
+上一道题中我们使用增加条件约束的方法来减少符号执行的路径分支，而在这题中我们直接利用`hook`来改写程序，具体操作如下：
+
+- `@project.hook(check_address, length = skip_len_bytes)`装饰器将自定义`hook`函数与指定地址关联，以便执行`hook`逻辑。
+- 自定义`hook`函数`skip_check_equal()`，用于在指定地址`check_address`处进行`hook`，而`length`决定了要覆盖的指令字节数，或者说是要跳过的指令字节数。
+- `skip_check_equal()`函数中使用 `state.memory` 的 `.load(addr, size)`方法读出`buffer`处的内存数据，并进行比值操作。如果判断出`buffer == 'XYMKBKUHNIQYNQXE'`为真则将`$eax`寄存器设置为`1`，否则将`$eax`寄存器设置为`0`。
+
+编写`Python`代码求解得到`ZXIDRXEORJOTFFJNWUFAOUBLOGLQCCGK`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './09_angr_hooks'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+initial_state = project.factory.entry_state(
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+check_address = 0x80486B3  # check_equals_XYMKBKUHNIQYNQXE
+skip_len_bytes = 5
+@project.hook(check_address, length=skip_len_bytes)
+def skip_check_equal(state):
+    buffer_address = 0x804A054
+    passwd_bytes = 0x10
+    buffer_content = state.memory.load(buffer_address, passwd_bytes)
+    constrained_value = b'XYMKBKUHNIQYNQXE'
+    register_size_bits = 32
+    state.regs.eax = claripy.If(
+        buffer_content == constrained_value,
+        claripy.BVV(1, register_size_bits),   # 若判断条件为真则将$eax寄存器设置为1
+        claripy.BVV(0, register_size_bits)    # 否则将$eax寄存器设置为0
+    )
+
+simulation = project.factory.simgr(initial_state)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd = solution_state.posix.dumps(0).decode()
+    print('[+] Congratulations! Solution is: {}'.format(passwd))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 09_angr_hooks.py      
+[+] Congratulations! Solution is: ZXIDRXEORJOTFFJNWUFAOUBLOGLQCCGK
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./09_angr_hooks        
+Enter the password: ZXIDRXEORJOTFFJNWUFAOUBLOGLQCCGK
 Good Job.
 ```
 
