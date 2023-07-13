@@ -2071,6 +2071,102 @@ Good Job.
 
 ------
 
+### 11_angr_sim_scanf
+
+先用`file ./11_angr_sim_scanf`查看文件类型，并用`checksec ./11_angr_sim_scanf`查看文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./11_angr_sim_scanf         
+./11_angr_sim_scanf: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=04d5fb026631b84a4dfdc2ad047ac6e30b0ecf17, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./11_angr_sim_scanf    
+[*] '/home/tyd/ctf/Angr_CTF/11_angr_sim_scanf'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`11_angr_sim_scanf`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [esp+20h] [ebp-28h]
+  char s[20]; // [esp+28h] [ebp-20h] BYREF
+  unsigned int v7; // [esp+3Ch] [ebp-Ch]
+
+  v7 = __readgsdword(0x14u);
+  memset(s, 0, sizeof(s));
+  qmemcpy(s, "SUQMKQFX", 8);
+  for ( i = 0; i <= 7; ++i )
+    s[i] = complex_function(s[i], i);
+  printf("Enter the password: ");
+  __isoc99_scanf("%u %u", buffer0, buffer1);
+  if ( !strncmp(buffer0, s, 4u) && !strncmp(buffer1, &s[4], 4u) )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  return 0;
+}
+```
+
+跟上题类似，我们需要对`scanf()`函数进行`hook`操作。在 [**05_angr_symbolic_memory**](05_angr_symbolic_memory) 中已经学习过如何符号化内存啦，在这题中`scanf()`函数是要向内存中写入数据的，所以我们要用`state.memory`模块的`.store(addr, val)`方法将符号位向量写入那俩个字符串的内存区域。编写`Python`代码求解得到`1448564819 1398294103`。然而这题直接用 [**00_angr_find**](#00_angr_find) 中的方法无脑梭哈也能解答。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './11_angr_sim_scanf'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+initial_state = project.factory.entry_state(
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+scanf_symbol = '__isoc99_scanf'
+class ReplaceScanf(angr.SimProcedure):
+    def run(self, format_string, param0, param1):
+        scanf0 = claripy.BVS('scanf0', 32)
+        scanf1 = claripy.BVS('scanf1', 32)
+        scanf0_addr = param0
+        self.state.memory.store(scanf0_addr, scanf0, endness=project.arch.memory_endness)
+        scanf1_addr = param1
+        self.state.memory.store(scanf1_addr, scanf1, endness=project.arch.memory_endness)
+        self.state.globals['solutions'] = (scanf0, scanf1)
+
+project.hook_symbol(scanf_symbol, ReplaceScanf())
+simulation = project.factory.simgr(initial_state)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    (solution0, solution1) = solution_state.globals['solutions']
+    passwd0 = solution_state.solver.eval(solution0)
+    passwd1 = solution_state.solver.eval(solution1)
+    print('[+] Congratulations! Solution is: {} {}'.format(passwd0, passwd1))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 11_angr_sim_scanf.py
+WARNING  | 2023-07-13 17:52:33,347 | angr.project   | Address is already hooked, during hook(0x8100018, <SimProcedure ReplaceScanf>). Re-hooking.                                                                   
+[+] Congratulations! Solution is: 1448564819 1398294103
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./11_angr_sim_scanf    
+Enter the password: 1448564819 1398294103
+Good Job.
+```
+
+------
+
 ## 刷CTF时遇到的可用Angr的逆向题
 
 ### [Baby_re1](https://ce.pwnthebox.com/challenges?type=2&id=100)
