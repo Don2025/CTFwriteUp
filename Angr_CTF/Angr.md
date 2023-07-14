@@ -2292,6 +2292,135 @@ Good Job.
 
 ------
 
+### 13_angr_static_binary
+
+先用`file ./13_angr_static_binary`查看文件类型，并用`checksec ./13_angr_static_binary`查看文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./13_angr_static_binary
+./13_angr_static_binary: ELF 32-bit LSB executable, Intel 80386, version 1 (GNU/Linux), statically linked, for GNU/Linux 2.6.32, BuildID[sha1]=89d11f111deddc580fac3d22a1f6c352d1883cd5, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./13_angr_static_binary
+[*] '/home/tyd/ctf/Angr_CTF/13_angr_static_binary'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`13_angr_static_binary`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int i; // [esp+1Ch] [ebp-3Ch]
+  int j; // [esp+20h] [ebp-38h]
+  char v6[20]; // [esp+24h] [ebp-34h] BYREF
+  char v7[20]; // [esp+38h] [ebp-20h] BYREF
+  unsigned int v8; // [esp+4Ch] [ebp-Ch]
+
+  v8 = __readgsdword(0x14u);
+  for ( i = 0; i <= 19; ++i )
+    v7[i] = 0;
+  qmemcpy(v7, "PYIEFPIC", 8);
+  printf("Enter the password: ");
+  _isoc99_scanf("%8s", v6);
+  for ( j = 0; j <= 7; ++j )
+    v6[j] = complex_function(v6[j], j);
+  if ( !strcmp(v6, v7) )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  return 0;
+}
+```
+
+双击`complex_function()`函数查看详情：
+
+```c
+int __cdecl complex_function(int a1, int a2)
+{
+  if ( a1 <= 64 || a1 > 90 )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  return (37 * a2 + a1 - 65) % 26 + 65;
+}
+```
+
+这题求解真正需要用的函数只有`printf`，`scanf`，`puts`，即完成`angr`所需的输出、输入、路径选择的功能，在`IDA Pro`中找出地址：
+
+```assembly
+.text:0804ED40                 public printf
+.text:0804ED40 printf          proc near               ; CODE XREF: print_msg+13↑p
+.text:0804ED40                                         ; main+5A↑p
+
+.text:0804ED80                 public __isoc99_scanf
+.text:0804ED80 __isoc99_scanf  proc near               ; CODE XREF: main+6E↑p
+
+.text:0804F350                 public puts ; weak
+.text:0804F350 puts            proc near               ; CODE XREF: complex_function+1A↑p
+.text:0804F350                                         ; main+D1↑p ...
+
+text:08048D10 ; int __cdecl _libc_start_main(int (__cdecl *main)(int, char **, char **), int argc, char **ubp_av, void (*init)(void), void (*fini)(void), void (*rtld_fini)(void), void *stack_end)
+.text:08048D10                 public __libc_start_main
+.text:08048D10 __libc_start_main proc near             ; CODE XREF: _start+1C↑p
+```
+
+此外`Linux`中`C`程序启动的过程是一定需要用到`__libc_start_main`的。
+
+- `execve` 开始执行。
+- `execve` 内部把bin程序加载后，会把`.interp`指定的 动态加载器加载。
+- 动态加载器把需要加载的`so`都加载起来，特别的把 `libc.so.6` 加载。
+- 调用到`libc.so.6`里的`__libc_start_main`函数，真正开始执行程序，调用`main()`函数。
+
+编写`Python`代码求解得到`PNMXNMUD`。
+
+```python
+import angr
+
+path_to_binary = './13_angr_static_binary'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+initial_state = project.factory.entry_state(
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+project.hook(0x804ed40, angr.SIM_PROCEDURES['libc']['printf']())
+project.hook(0x804ed80, angr.SIM_PROCEDURES['libc']['scanf']())
+project.hook(0x804f350, angr.SIM_PROCEDURES['libc']['puts']())
+project.hook(0x8048d10, angr.SIM_PROCEDURES['glibc']['__libc_start_main']())
+simulation = project.factory.simgr(initial_state, veritesting=True)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd = solution_state.posix.dumps(0).decode()
+    print('[+] Congratulations! Solution is: %s' % passwd)
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 13_angr_static_binary.py
+[+] Congratulations! Solution is: PNMXNMUD
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./13_angr_static_binary              
+Enter the password: PNMXNMUD
+Good Job.
+```
+
+------
+
+
+
 ## 刷CTF时遇到的可用Angr的逆向题
 
 ### [Baby_re1](https://ce.pwnthebox.com/challenges?type=2&id=100)
