@@ -2419,6 +2419,147 @@ Good Job.
 
 ------
 
+### 14_angr_shared_library
+
+先用`file ./14_angr_shared_library`查看文件类型，并用`checksec ./14_angr_shared_library`查看文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./14_angr_shared_library
+./14_angr_shared_library: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=3184fc82e0803b9c64f405d2e1924810e71110c7, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./14_angr_shared_library
+[*] '/home/tyd/ctf/Angr_CTF/14_angr_shared_library'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`14_angr_shared_library`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s[16]; // [esp+1Ch] [ebp-1Ch] BYREF
+  unsigned int v5; // [esp+2Ch] [ebp-Ch]
+
+  v5 = __readgsdword(0x14u);
+  memset(s, 0, sizeof(s));
+  printf("Enter the password: ");
+  __isoc99_scanf("%8s", s);
+  if ( validate(s, 8) )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  return 0;
+}
+```
+
+双击`validate()`函数查看详情：
+
+```c
+// attributes: thunk
+int __cdecl validate(int a1, int a2)
+{
+  return validate(a1, a2);
+}
+```
+
+无法查看源码，因为这是一个外部导入函数，其源代码在它所处的库文件`lib14_angr_shared_library.so`中。用`IDA`打开库文件进行分析能够找到`validate()`函数的具体实现代码。
+
+```c
+_BOOL4 __cdecl validate(char *s1, int a2)
+{
+  char *v3; // esi
+  char s2[4]; // [esp+4h] [ebp-24h]
+  int v5; // [esp+8h] [ebp-20h]
+  int j; // [esp+18h] [ebp-10h]
+  int i; // [esp+1Ch] [ebp-Ch]
+
+  if ( a2 <= 7 )
+    return 0;
+  for ( i = 0; i <= 19; ++i )
+    s2[i] = 0;
+  *(_DWORD *)s2 = 'GKLW';
+  v5 = 'HWJL';
+  for ( j = 0; j <= 7; ++j )
+  {
+    v3 = &s1[j];
+    *v3 = complex_function(s1[j], j);
+  }
+  return strcmp(s1, s2) == 0;
+}
+```
+
+双击`complex_function()`函数查看详情：
+
+```c
+int __cdecl complex_function(signed int a1, int a2)
+{
+  if ( a1 <= 64 || a1 > 90 )
+  {
+    puts("Try again.");
+    exit(1);
+  }
+  return (41 * a2 + a1 - 65) % 26 + 65;
+}
+```
+
+我们调用`.call_state`创建`state`对象，构造一个已经准备好执行`validate()`函数的状态，同时需要设定好`validate()`传入的参数，其函数声明为`validate(char *s1, int a2)`。我们可以通过`BVV(value,size)` 和 `BVS( name, size)`创建位向量，将缓冲区地址设定在`0x3000000`，而`32`位程序里`int`型为`4`字节，即`32`比特。从IDA中不难得出`validate`的偏移量为`0x6D7`，因为需要比较的字符串长度为`8`，故利用`BVV`传入参数`int a2`。然后利用`BVS`创建一个符号位向量，作为符号化字符串传入我们之前设定好的缓冲区地址中。编写`Python`代码求解得到`WWGNDMKG`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './lib14_angr_shared_library.so'
+base_address = 0x8048000
+project = angr.Project(path_to_binary, load_options={
+    'main_opts': {
+        'base_addr': base_address
+    }
+})
+buffer_pointer = claripy.BVV(0x3000000, 32)
+validate_address = base_address + 0x6d7
+initial_state = project.factory.call_state(
+    validate_address, buffer_pointer, claripy.BVV(8, 32),
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+password = claripy.BVS('password', 64)
+initial_state.memory.store(buffer_pointer, password)
+simulation = project.factory.simgr(initial_state)
+success_address = base_address + 0x783
+simulation.explore(find=success_address)
+if simulation.found:
+    solution_state = simulation.found[0]
+    solution_state.add_constraints(solution_state.regs.eax != 0)
+    passwd = solution_state.solver.eval(password, cast_to=bytes).decode()
+    print('[+] Congratulations! Solution is: %s' % passwd)
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 14_angr_shared_library.py
+WARNING  | 2023-07-14 16:16:56,496 | angr.calling_conventions | Guessing call prototype. Please specify prototype.                                                                                                  
+[+] Congratulations! Solution is: WWGNDMKG
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ export LD_LIBRARY_PATH=/home/tyd/ctf/Angr_CTF:$LD_LIBRARY_PATH
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./14_angr_shared_library                                      
+Enter the password: WWGNDMKG
+Good Job.
+```
+
+------
+
 
 
 ## 刷CTF时遇到的可用Angr的逆向题
