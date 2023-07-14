@@ -2167,6 +2167,131 @@ Good Job.
 
 ------
 
+### 12_angr_veritesting
+
+先用`file ./12_angr_veritesting`查看文件类型，并用`checksec ./12_angr_veritesting`查看文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./12_angr_veritesting
+./12_angr_veritesting: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=7687fe588ecd0d96f86d97f7bc57c00e6820a254, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./12_angr_veritesting
+[*] '/home/tyd/ctf/Angr_CTF/12_angr_veritesting'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`12_angr_veritesting`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  int v3; // ebx
+  int v5; // [esp-14h] [ebp-60h]
+  int v6; // [esp-10h] [ebp-5Ch]
+  int v7; // [esp-Ch] [ebp-58h]
+  int v8; // [esp-8h] [ebp-54h]
+  int v9; // [esp-4h] [ebp-50h]
+  const char **v10; // [esp+0h] [ebp-4Ch]
+  int v11; // [esp+4h] [ebp-48h]
+  int v12; // [esp+8h] [ebp-44h]
+  int v13; // [esp+Ch] [ebp-40h]
+  int v14; // [esp+10h] [ebp-3Ch]
+  int v15; // [esp+10h] [ebp-3Ch]
+  int v16; // [esp+14h] [ebp-38h]
+  int i; // [esp+14h] [ebp-38h]
+  int v18; // [esp+18h] [ebp-34h]
+  _DWORD v19[9]; // [esp+1Ch] [ebp-30h] BYREF
+  unsigned int v20; // [esp+40h] [ebp-Ch]
+  int *v21; // [esp+44h] [ebp-8h]
+
+  v21 = &argc;
+  v10 = argv;
+  v20 = __readgsdword(0x14u);
+  memset((char *)v19 + 3, 0, 0x21u);
+  printf("Enter the password: ");
+  ((void (__stdcall *)(const char *, char *, int, int, int, int, int, const char **, int, int, int, int, int, int, _DWORD))__isoc99_scanf)(
+    "%32s",
+    (char *)v19 + 3,
+    v5,
+    v6,
+    v7,
+    v8,
+    v9,
+    v10,
+    v11,
+    v12,
+    v13,
+    v14,
+    v16,
+    v18,
+    v19[0]);
+  v15 = 0;
+  for ( i = 0; i <= 31; ++i )
+  {
+    v3 = *((char *)v19 + i + 3);
+    if ( v3 == complex_function(75, i + 93) )
+      ++v15;
+  }
+  if ( v15 != 32 || (_BYTE)v20 )
+    puts("Try again.");
+  else
+    puts("Good Job.");
+  return 0;
+}
+```
+
+这题很容易产生路径爆炸：
+
+```c
+for ( i = 0; i <= 31; ++i )
+{
+    v3 = *((char *)v19 + i + 3);
+    if ( v3 == complex_function(75, i + 93) )
+      ++v15;
+}
+```
+
+我们可以启用`Veritesting=True`来让符号执行引起在动态符号执行 `DSE` 和静态符号执行 `SSE` 之间协同工作从而减少路径爆炸的问题。编写`Python`代码求解得到`CXSNIDYTOJEZUPKFAVQLGBWRMHCXSNID`。
+
+```python
+import angr
+
+path_to_binary = './12_angr_veritesting'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+initial_state = project.factory.entry_state()
+simulation = project.factory.simgr(initial_state, veritesting=True)
+is_succcessful = lambda state: b'Good Job' in state.posix.dumps(1)
+should_abort = lambda state: b'Try again' in state.posix.dumps(1)
+simulation.explore(find=is_succcessful, avoid=should_abort)
+if simulation.found:
+    solution_state = simulation.found[0]
+    passwd = solution_state.posix.dumps(0).decode()
+    print('[+] Congratulations! Solution is: %s' % passwd)
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。可能需要多运行几次才能计算出结果。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 12_angr_veritesting.py      
+[+] Congratulations! Solution is: OQSUWYACEGIKMOQSUWYACEGIKMOQSUWY
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./12_angr_veritesting
+Enter the password: OQSUWYACEGIKMOQSUWYACEGIKMOQSUWY
+Good Job.
+```
+
+------
+
 ## 刷CTF时遇到的可用Angr的逆向题
 
 ### [Baby_re1](https://ce.pwnthebox.com/challenges?type=2&id=100)
