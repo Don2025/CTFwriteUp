@@ -2668,6 +2668,124 @@ Good Job.
 
 ------
 
+### 16_angr_arbitrary_write
+
+先用`file ./16_angr_arbitrary_write`查看文件类型，并用`checksec ./16_angr_arbitrary_write`查看文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./16_angr_arbitrary_write
+./16_angr_arbitrary_write: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=bf402256c6a5456d4fa7d75ce66f06ac7e3e7a74, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./16_angr_arbitrary_write
+[*] '/home/tyd/ctf/Angr_CTF/16_angr_arbitrary_write'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`16_angr_arbitrary_write`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char s[16]; // [esp+Ch] [ebp-1Ch] BYREF
+  char *dest; // [esp+1Ch] [ebp-Ch]
+
+  dest = unimportant_buffer;
+  memset(s, 0, sizeof(s));
+  strncpy(password_buffer, "PASSWORD", 0xCu);
+  printf("Enter the password: ");
+  __isoc99_scanf("%u %20s", &key, s);
+  if ( key == 11604995 )
+    strncpy(dest, s, 0x10u);
+  else
+    strncpy(unimportant_buffer, s, 0x10u);
+  if ( !strncmp(password_buffer, "NDYNWEUJ", 8u) )
+    puts("Good Job.");
+  else
+    puts("Try again.");
+  return 0;
+}
+```
+
+这道题需要通过控制 `strncpy` 的源数据和目的地址来实现向任意地址写入任意数据。约束源数据为引用字符串，目标指针指向安全缓存。我们需要添加约束条件检查`strncpy`的`dest`是否为`password_buffer`且`src`是否为密码字符串`"NDYNWEUJ"`。需要注意的是我们获取到的`strncpy_src`是`src`字符串的地址，因此我们还得用`state.memory.load(strncpy_src, strncpy_len)`把`src`的内容给提取出来。编写`Python`代码求解得到`11604995 NDYNWEUJCCCC3CCCDCXW`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './16_angr_arbitrary_write'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+initial_state = project.factory.entry_state(
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+scanf_symbol = '__isoc99_scanf'
+class ReplaceScanf(angr.SimProcedure):
+    def run(self, format_string, param0, param1):
+        scanf0 = claripy.BVS('scanf0',  32)
+        scanf1 = claripy.BVS('scanf1', 20*8)
+        for ch in scanf1.chop(bits=8):
+            self.state.add_constraints(ch >= '0', ch <='z')
+        scanf0_address = param0
+        self.state.memory.store(scanf0_address, scanf0, endness=project.arch.memory_endness)
+        scanf1_address = param1
+        self.state.memory.store(scanf1_address, scanf1)
+        self.state.globals['solutions'] = (scanf0, scanf1)
+
+project.hook_symbol(scanf_symbol, ReplaceScanf())
+
+def check_strncpy(state):
+    strncpy_dest = state.memory.load(state.regs.esp+4, 4, endness=project.arch.memory_endness)
+    strncpy_src = state.memory.load(state.regs.esp+8, 4, endness=project.arch.memory_endness)
+    strncpy_len = state.memory.load(state.regs.esp+12, 4, endness=project.arch.memory_endness)
+    src_content = state.memory.load(strncpy_src, strncpy_len)
+    if state.solver.symbolic(strncpy_dest) and state.solver.symbolic(src_content):
+        password_value = b'NDYNWEUJ'
+        password_buffer = 0x57584344
+        src_hold_password = src_content[-1:-64] == password_value
+        dest_equals_buffer = strncpy_dest == password_buffer
+        copied_state = state.copy()
+        if copied_state.satisfiable(extra_constraints=(src_hold_password, dest_equals_buffer)):
+            state.add_constraints(src_hold_password, dest_equals_buffer)
+            return True
+        else:
+            return False
+    else:
+        return False
+
+simulation = project.factory.simgr(initial_state)
+strncpy_plt = project.loader.main_object.plt['strncpy']  # 0x8048410
+is_succcessful = lambda state: check_strncpy(state) if state.addr == strncpy_plt else False
+simulation.explore(find=is_succcessful)
+if simulation.found:
+    solution_state = simulation.found[0]
+    (solution0, solution1) = solution_state.globals['solutions']
+    passwd0 = solution_state.solver.eval(solution0)
+    passwd1 = solution_state.solver.eval(solution1, cast_to=bytes).decode()
+    print('[+] Congratulations! Solution is: {} {}'.format(passwd0, passwd1))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 16_angr_arbitrary_write.py
+[+] Congratulations! Solution is: 11604995 NDYNWEUJCCCC3CCCDCXW
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./16_angr_arbitrary_write
+Enter the password: 11604995 NDYNWEUJCCCC3CCCDCXW
+Good Job.
+```
+
+------
+
 ## 刷CTF时遇到的可用Angr的逆向题
 
 ### [Baby_re1](https://ce.pwnthebox.com/challenges?type=2&id=100)
