@@ -12,7 +12,7 @@ class ReplaceScanf(angr.SimProcedure):
         scanf0 = claripy.BVS('scanf0',  32)
         scanf1 = claripy.BVS('scanf1', 20*8)
         for ch in scanf1.chop(bits=8):
-            self.state.add_constraints(ch >= '0', ch <='z')
+            self.state.add_constraints(ch >= b'0', ch <= b'z')
         scanf0_address = param0
         self.state.memory.store(scanf0_address, scanf0, endness=project.arch.memory_endness)
         scanf1_address = param1

