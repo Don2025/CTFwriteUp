@@ -2560,7 +2560,113 @@ Good Job.
 
 ------
 
+### 15_angr_arbitrary_read
 
+先用`file ./15_angr_arbitrary_read`查看文件类型，并用`checksec ./15_angr_arbitrary_read`查看文件信息。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ file ./15_angr_arbitrary_read
+./15_angr_arbitrary_read: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux.so.2, for GNU/Linux 2.6.32, BuildID[sha1]=dbdc748680fa2f82d95a379e7243264d1f699949, not stripped
+                                                                                                          
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ checksec ./15_angr_arbitrary_read
+[*] '/home/tyd/ctf/Angr_CTF/15_angr_arbitrary_read'
+    Arch:     i386-32-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x8048000)
+```
+
+用`IDA Pro 32bit`打开二进制文件`15_angr_arbitrary_read`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  char v4; // [esp+Ch] [ebp-1Ch] BYREF
+  char *s; // [esp+1Ch] [ebp-Ch]
+
+  s = try_again;
+  printf("Enter the password: ");
+  __isoc99_scanf("%u %20s", &key, &v4);
+  if ( key == 36134347 || key != 41810812 )
+    puts(try_again);
+  else
+    puts(s);
+  return 0;
+}
+```
+
+这道题需要通过输入数字和字符串将程序溢出达到任意读的目的。首先我们需要像前几题一样对`scanf()`函数进行`hook`操作，程序输出的函数使用的是`puts`，我们可以添加约束条件检查它输出的字符串是否为`"Good Job."`，具体来说是判断`puts`的第一个参数（指向被打印字符串的指针）是否能被修改为`"Good Job."`的地址。编写`Python`代码求解得到`41810812 CCCCCCCCCCCCCCCCGJOH`。
+
+```python
+import angr
+import claripy
+
+path_to_binary = './15_angr_arbitrary_read'
+project = angr.Project(path_to_binary, auto_load_libs=False)
+initial_state = project.factory.entry_state(
+    add_options = { angr.options.SYMBOL_FILL_UNCONSTRAINED_MEMORY,
+                    angr.options.SYMBOL_FILL_UNCONSTRAINED_REGISTERS})
+scanf_symbol = '__isoc99_scanf'
+class ReplaceScanf(angr.SimProcedure):
+    def run(self, format_string, param0, param1):
+        scanf0 = claripy.BVS('scanf0',  32)
+        scanf1 = claripy.BVS('scanf1', 20*8)
+        for ch in scanf1.chop(bits=8):
+            self.state.add_constraints(ch >= '0', ch <='z')
+        scanf0_address = param0
+        self.state.memory.store(scanf0_address, scanf0, endness=project.arch.memory_endness)
+        scanf1_address = param1
+        self.state.memory.store(scanf1_address, scanf1)
+        self.state.globals['solutions'] = (scanf0, scanf1)
+
+project.hook_symbol(scanf_symbol, ReplaceScanf())
+
+def check_puts(state):
+    puts_parameter = state.memory.load(state.regs.esp+4, 4, endness=project.arch.memory_endness)
+    if state.solver.symbolic(puts_parameter):
+        goodjob_address = 0x484F4A47
+        copied_state = state.copy()
+        copied_state.add_constraints(puts_parameter == goodjob_address)
+        if copied_state.satisfiable():
+            state.add_constraints(puts_parameter == goodjob_address)
+            return True
+        else:
+            return False
+    else:
+        return False
+
+simulation = project.factory.simgr(initial_state)
+puts_plt = project.loader.main_object.plt['puts']  # 0x8048370
+is_succcessful = lambda state: check_puts(state) if state.addr == puts_plt else False
+simulation.explore(find=is_succcessful)
+if simulation.found:
+    solution_state = simulation.found[0]
+    (solution0, solution1) = solution_state.globals['solutions']
+    passwd0 = solution_state.solver.eval(solution0)
+    passwd1 = solution_state.solver.eval(solution1, cast_to=bytes).decode()
+    print('[+] Congratulations! Solution is: {} {}'.format(passwd0, passwd1))
+else:
+    raise Exception('Could not find the solution')
+```
+
+运行程序进行验证无误。
+
+```bash
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ python 15_angr_arbitrary_read.py
+WARNING  | 2023-07-15 10:59:30,039 | angr.project   | Address is already hooked, during hook(0x4850000c, <SimProcedure ReplaceScanf>). Re-hooking.
+[+] Congratulations! Solution is: 41810812 CCCCCCCCCCCCCCCCGJOH
+
+┌──(angr)─(tyd㉿kali-linux)-[~/ctf/Angr_CTF]
+└─$ ./15_angr_arbitrary_read        
+Enter the password: 41810812 CCCCCCCCCCCCCCCCGJOH
+Good Job.
+```
+
+------
 
 ## 刷CTF时遇到的可用Angr的逆向题
 
