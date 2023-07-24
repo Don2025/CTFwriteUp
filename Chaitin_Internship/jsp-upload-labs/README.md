@@ -166,12 +166,9 @@ e99dbf4ab2a3   tomcat:8.5   "catalina.sh run"   9 minutes ago   Up 9 minutes   0
 
 # 进入镜像环境
 ┌──(tyd㉿Kali)-[~/docker]
-└─$ sudo docker exec -ti e99dbf4ab2a3 bas
-OCI runtime exec failed: exec failed: unable to start container process: exec: "bas": executable file not found in $PATH: unknown
+└─$ sudo docker exec -ti e99dbf4ab2a3 bash
 
 # 查看配置文件conf/web.xml中readonly的设置        
-┌──(tyd㉿Kali)-[~/docker]
-└─$ sudo docker exec -ti e99dbf4ab2a3 bash
 root@e99dbf4ab2a3:/usr/local/tomcat# cat conf/web.xml | grep readonly  
 <!--   readonly            Is this context "read only", so HTTP           -->
 <init-param><param-name>readonly</param-name><param-value>false</param-value></init-param>
