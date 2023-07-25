@@ -175,6 +175,33 @@ root@e99dbf4ab2a3:/usr/local/tomcat# cat conf/web.xml | grep readonly
 <init-param><param-name>readonly</param-name><param-value>false</param-value></init-param>
 ```
 
+然而，127.0.0.1:8080却发现404啦。 
+
+> ### HTTP状态 404 - 未找到
+>
+> ------
+>
+> **类型** 状态报告
+>
+> **描述** 源服务器未能找到目标资源的表示或者是不愿公开一个已经存在的资源表示。
+>
+> ------
+>
+> ##### Apache Tomcat/8.5.91
+
+我们需要把`webapps`文件夹删除，用默认的`webapps.dist`覆盖掉`webapps`即可正常访问。
+
+```bash
+┌──(tyd㉿Kali)-[~/jsp-upload]
+└─$ sudo docker exec -ti jsp-upload_tomcat_1 bash
+root@a6f794d9cce5:/usr/local/tomcat# rm -rf webapps
+root@a6f794d9cce5:/usr/local/tomcat# ls
+bin           CONTRIBUTING.md  logs            README.md      temp
+BUILDING.txt  lib              native-jni-lib  RELEASE-NOTES  webapps.dist
+conf          LICENSE          NOTICE          RUNNING.txt    work
+root@a6f794d9cce5:/usr/local/tomcat# mv webapps.dist webapps
+```
+
 登录到`Docker Hub`。
 
 ```bash
@@ -202,3 +229,29 @@ sudo docker push t0ur1st/jsp-upload
 ```bash
 sudo docker pull t0ur1st/jsp-upload
 ```
+
+使用`docker run`运行容器，其中：`-d`表示在后台运行容器（分离模式），`-p 8080:8080`将容器的`8080`端口映射到主机上的`8080`，`--name jsp-upload-app`指定容器名称，`t0ur1st/jsp`上传参数：指定要用于容器的`image`的名称。
+
+```bash
+sudo docker run -d -p 8080:8080 --name jsp-upload-app t0ur1st/jsp-upload
+```
+
+------
+
+然而第一次打的时候发现打不穿，试试这个：
+
+```bash
+sudo docker run -it --rm -p 8080:8080 arm64v8/tomcat:8.5.19
+```
+
+修改好`Dockerfile`后上传新的`tag`
+
+```bash
+sudo docker images
+sudo docker tag f2276b323157 t0ur1st/jsp-upload:v1
+sudo docker push t0ur1st/jsp-upload:v1
+sudo docker pull t0ur1st/jsp-upload:v1
+sudo docker run -d -p 8080:8080 --name jsp-upload-app t0ur1st/jsp-upload
+```
+
+------
