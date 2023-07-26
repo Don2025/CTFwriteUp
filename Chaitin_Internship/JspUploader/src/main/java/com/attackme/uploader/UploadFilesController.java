@@ -9,10 +9,7 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.*;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Controller
 public class UploadFilesController {
@@ -45,14 +42,14 @@ public class UploadFilesController {
             fileName = multipartFile.getOriginalFilename();
             suffixName = fileName.substring(fileName.lastIndexOf(".")+1);
             if(!isValidFileExtension(suffixName)) {
-                return "redirect:/upload?invalidFileExtension=true";
+                 return "redirect:/upload?invalidFileExtension=true";
             }
-            // fileName = UUID.randomUUID() + suffixName;
+            fileName = UUID.randomUUID() + "." + suffixName;
             try {
                 fileIn = multipartFile.getInputStream();
                 list.add(multipartFile.getInputStream());
                 upload(fileIn, filePath, fileName);
-                model.addAttribute("filename",fileName);
+                model.addAttribute("filename","/uploads/"+fileName);
                 return "upload";
             } catch (IOException e) {
                 throw new RuntimeException(e);

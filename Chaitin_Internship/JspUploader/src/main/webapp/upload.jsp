@@ -10,8 +10,8 @@
     <label>Upload image files ("jpg", "jpeg", "png", "gif"):</label> <input type="file" name="file"/>
     <input type="submit" value="uploadFile"/>
 </form>
-<p>Image:${filename}</p>
-<img src="${filename}"/>
+<p>Image:</p>
+<img src="${filename}" style="max-width: 300px; max-height: 300px;"/>
 <!-- Check if the "invalidFileExtension" parameter is present in the URL and display an alert -->
 <script>
     function showAlert() {
