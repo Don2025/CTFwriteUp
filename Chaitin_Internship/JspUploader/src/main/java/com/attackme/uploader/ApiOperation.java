@@ -1,4 +1,4 @@
-package cn.attackme.myuploader.controller;
+package com.attackme.uploader;
 
 public @interface ApiOperation {
     String value();

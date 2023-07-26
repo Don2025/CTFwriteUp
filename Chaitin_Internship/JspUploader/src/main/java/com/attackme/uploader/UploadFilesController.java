@@ -1,13 +1,7 @@
-package cn.attackme.myuploader.controller;
+package com.attackme.uploader;
 
-import com.sun.org.apache.xml.internal.serializer.AttributesImplSerializer;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.RequestContext;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.servlet.ServletFileUpload;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,13 +16,13 @@ import java.util.Map;
 
 @Controller
 public class UploadFilesController {
-    @RequestMapping("/index")
-    public String index() {
-        return "index";
+    @RequestMapping("/upload")
+    public String uploadPage() {
+        return "/upload";
     }
 
-    @PostMapping(value="/uploadFile")
-    @ApiOperation(value = "upload",httpMethod = "POST")
+    @RequestMapping("/uploadFile")
+    @ApiOperation(value = "uploadFile",httpMethod = "POST")
     public String uploadFile(@RequestParam("file") MultipartFile file, Model model, HttpServletRequest request) throws IOException {
         MultipartHttpServletRequest multipartHttpServletRequest = (MultipartHttpServletRequest) request;
         Map<String, MultipartFile> fileMap = multipartHttpServletRequest.getFileMap();
@@ -42,22 +36,24 @@ public class UploadFilesController {
             savePath.mkdirs();
         }
         String fileName = file.getOriginalFilename();
-        String suffixName = fileName.substring(fileName.lastIndexOf("."));
+        String suffixName = fileName.substring(fileName.lastIndexOf(".")+1);
         MultipartFile multipartFile = file;
         InputStream fileIn = null;
         List<InputStream> list = new ArrayList<InputStream>();
         for (Map.Entry<String, MultipartFile> entity : fileMap.entrySet()) {
             multipartFile = entity.getValue();
             fileName = multipartFile.getOriginalFilename();
-            suffixName = fileName.substring(fileName.lastIndexOf("."), fileName.length());
+            suffixName = fileName.substring(fileName.lastIndexOf(".")+1);
             if(!isValidFileExtension(suffixName)) {
-                return "redirect:/index?invalidFileExtension=true";
+                return "redirect:/upload?invalidFileExtension=true";
             }
             // fileName = UUID.randomUUID() + suffixName;
             try {
                 fileIn = multipartFile.getInputStream();
                 list.add(multipartFile.getInputStream());
                 upload(fileIn, filePath, fileName);
+                model.addAttribute("filename",fileName);
+                return "upload";
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }  finally {
@@ -66,17 +62,7 @@ public class UploadFilesController {
                 }
             }
         }
-        model.addAttribute("filename",fileName);
-        StringBuilder result = new StringBuilder();
-        result.append("<html>\n" +
-                "<head>\n" +
-                "    <title>Here You Go!</title>\n" +
-                "</head>\n" +
-                "<body>");
-        result.append("<img src=" + fileName + "/>");
-        result.append("</body>\n" +
-                "</html>");
-        return result.toString();
+        return "upload";
     }
 
     public static void upload(InputStream fileIn, String filePath, String uniqueFileName) throws IOException {
@@ -93,7 +79,7 @@ public class UploadFilesController {
     }
 
     private boolean isValidFileExtension(String fileExtension) {
-        List<String> allowedExtensions = Arrays.asList("jpg", "jpeg", "png", "gif", "pdf");
+        List<String> allowedExtensions = Arrays.asList("jpg", "jpeg", "png", "gif");
         String lowercaseExtension = fileExtension.toLowerCase();
         return allowedExtensions.contains(lowercaseExtension);
     }
