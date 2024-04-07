@@ -290,3 +290,61 @@ print(flag) # flag{ISEC-sohgC_szLVvXd_wgKt_ugyhBRUNrtTFf}
 
 ------
 
+## Bugku
+
+### 好多压缩包
+
+下载附件，解压得到 68 个压缩包，并且每个压缩文件里都有一个 4 个字节大小的名为 `data.txt` 的 `txt` 文件，于是尝试用 `CRC32` 碰撞还原出所有压缩包中的文件内容。
+
+循环冗余校验（Cyclic Redundancy Check， CRC）是一种根据网络数据包或计算机文件等数据产生简短固定位数校验码的一种信道编码技术，主要用来检测或校验数据传输或者保存后可能出现的错误。它是利用除法及余数的原理来作错误侦测的。
+
+每个文件都有唯一的 `CRC32` 值，即使文件中有个一个 bit 发生了变化，`CRC32` 值也会不同。`CRC32` 爆破：知道文件中一段数据的长度和文件的 `CRC32` 值，编写脚本程序，利用穷举法与其 `CRC32` 对照，从而达到猜解数据的目的（通常只适用于较小的文本文件，文件太大穷举难度太大）。
+
+```python
+import zipfile
+import string
+import binascii
+
+def CrackCrc(crc):
+    for i in dic:
+        for j in dic:
+            for p in dic:
+                for q in dic:
+                    s = i + j + p + q
+                    if crc == (binascii.crc32(s.encode('utf-8')) & 0xffffffff):
+                        # print(s)
+                        f.write(s)
+                        return
+
+def CrackZip():
+    for I in range(68):
+        file = 'out' + str(I) + '.zip'
+        f = zipfile.ZipFile(file, 'r')
+        GetCrc = f.getinfo('data.txt')
+        crc = GetCrc.CRC
+        #以上3行为获取压缩包CRC32值的步骤
+        #print(hex(crc))
+        CrackCrc(crc)
+
+dic = string.ascii_letters + string.digits + '+/='
+
+f = open('out.txt', 'w')
+CrackZip()
+f.close()
+```
+
+得到如下内容：
+
+```
+z5BzAAANAAAAAAAAAKo+egCAIwBJAAAAVAAAAAKGNKv+a2MdSR0zAwABAAAAQ01UCRUUy91BT5UkSNPoj5hFEVFBRvefHSBCfG0ruGnKnygsMyj8SBaZHxsYHY84LEZ24cXtZ01y3k1K1YJ0vpK9HwqUzb6u9z8igEr3dCCQLQAdAAAAHQAAAAJi0efVT2MdSR0wCAAgAAAAZmxhZy50eHQAsDRpZmZpeCB0aGUgZmlsZSBhbmQgZ2V0IHRoZSBmbGFnxD17AEAHAA==
+```
+
+base64 decode 得到：
+
+![](https://paper.tanyaodan.com/Bugku/%E5%A5%BD%E5%A4%9A%E5%8E%8B%E7%BC%A9%E5%8C%85.png)
+
+解码出来的字符串提示包含关键字 `flag.txt`，及字符串 “fix the file and get the flag” 提示修复文件，这里猜测应该是某种文件，但是头尾不完整需要补充
+
+注意到结尾处存在 `rar` 的文件尾 `C43D7B00400700`，但缺少文件头，于是补上 rar 的文件头` 526172211A0700`，保存为新文件得到 `flag`：`flag{nev3r_enc0de_t00_sm4ll_fil3_w1th_zip}`。
+
+------
