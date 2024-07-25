@@ -1,8 +1,13 @@
+import sys
 import json
 from datetime import datetime
 
 # 从文件中加载一个包含JSON数据的列表
-with open('1.json', 'r', encoding='utf-8') as file:
+if len(sys.argv) < 2:
+    print("Usage: python json2md.exe <filename>")
+    sys.exit(1)
+filename = sys.argv[1]
+with open(filename, 'r', encoding='utf-8') as file:
     json_data = json.load(file)
 
 n = len(json_data)
