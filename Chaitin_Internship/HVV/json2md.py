@@ -1,8 +1,9 @@
 import sys
 import json
+import pytz
 from datetime import datetime
 
-# 从文件中加载一个包含JSON数据的列表
+# 从命令行参数指定的文件中加载一个包含JSON数据的列表
 if len(sys.argv) < 2:
     print("Usage: python json2md.exe <filename>")
     sys.exit(1)
@@ -29,7 +30,11 @@ markdown_content = f"""## {today}{time_of_day}蜜罐捕获信息
 txt_content = ""
 for i in range(n):
     data = json_data[i]
-    specific_time = datetime.utcfromtimestamp(data['lastAttackTime'])
+    utc_time = datetime.utcfromtimestamp(data['lastAttackTime'])
+    # 将UTC时间转换为UTC+8时区时间
+    utc8 = pytz.timezone('Asia/Shanghai')
+    utc8_time = utc_time.replace(tzinfo=pytz.utc).astimezone(utc8)
+    specific_time = str(utc8_time)[:-6]
     events = ''
     for event in data['event']:
         if 'zmap扫描' in event['event_name']:
