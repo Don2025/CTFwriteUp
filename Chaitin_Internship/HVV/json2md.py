@@ -5,7 +5,7 @@ from datetime import datetime
 
 # 从命令行参数指定的文件中加载一个包含JSON数据的列表
 if len(sys.argv) < 2:
-    print("Usage: python json2md.exe <filename>")
+    print("Usage: json2md.exe <filename>")
     sys.exit(1)
 filename = sys.argv[1]
 with open(filename, 'r', encoding='utf-8') as file:
@@ -15,9 +15,9 @@ n = len(json_data)
 print("本次一共捕获{}条蜜罐信息".format(n))
 today = datetime.now().date()  # 获取今天日期
 hour = datetime.now().time().hour
-if hour >= 8 and hour < 12:
+if hour >= 8 and hour < 13:
     time_of_day = "上午"
-elif hour >= 14 and hour < 17:
+elif hour >= 13 and hour < 19:
     time_of_day = "下午"
 else:
     time_of_day = "晚上"
@@ -30,10 +30,9 @@ markdown_content = f"""## {today}{time_of_day}蜜罐捕获信息
 txt_content = ""
 for i in range(n):
     data = json_data[i]
-    utc_time = datetime.utcfromtimestamp(data['lastAttackTime'])
-    # 将UTC时间转换为UTC+8时区时间
+    # 将UTC时间戳转换为UTC+8时区时间
     utc8 = pytz.timezone('Asia/Shanghai')
-    utc8_time = utc_time.replace(tzinfo=pytz.utc).astimezone(utc8)
+    utc8_time = datetime.fromtimestamp(data['lastAttackTime'], tz=utc8)
     specific_time = str(utc8_time)[:-6]
     events = ''
     for event in data['event']:
